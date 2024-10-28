@@ -10,7 +10,7 @@ class FourRoomGridWorld(gym.Env):
     """
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, size=50):
+    def __init__(self, render_mode=None, size=12):
         assert size % 2 == 0  # Otherwise wall cannot be in the middle
         assert size >= 10  # Ensure minimum size to allow space for walls and holes
 
@@ -27,9 +27,9 @@ class FourRoomGridWorld(gym.Env):
 
         self.observation_space = spaces.Dict(
             {
-                "agent": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "target": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "start": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "agent": spaces.Box(0, size, shape=(2,), dtype=int),
+                "target": spaces.Box(0, size, shape=(2,), dtype=int),
+                "start": spaces.Box(0, size, shape=(2,), dtype=int),
             }
         )
 
@@ -67,19 +67,9 @@ class FourRoomGridWorld(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
-        # Initialize agent location to a valid position
-        self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int)
-        while not self._position_is_not_in_wall(self._agent_location):
-            self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int)
-
-        # Initialize target location to a valid position, different from the agent's location
-        self._target_location = self._agent_location
-        while not self._position_is_not_in_wall(self._target_location) or np.array_equal(self._target_location,
-                                                                                         self._agent_location):
-            self._target_location = self.np_random.integers(0, self.size, size=2, dtype=int)
-
-        # Set the start location to the agent's initial location
+        self._agent_location = np.array([self.size - 1, 0], dtype=int)  # Top right corner
         self._start_location = self._agent_location
+        self._target_location = np.array([0, self.size - 1], dtype=int)  # Bottom left corner
 
         observation = self._get_obs()
         info = self._get_info()
@@ -88,7 +78,6 @@ class FourRoomGridWorld(gym.Env):
             self._render_frame()
 
         return observation, info
-
 
     def step(self, action):
         # Calculate the potential new position
@@ -108,11 +97,12 @@ class FourRoomGridWorld(gym.Env):
             reward = -1
 
         new_position = self._agent_location + direction
-        if new_position[0] < 0 or new_position[0] > self.size - 1 or new_position[1] < 0 or new_position[1] > self.size - 1:
+        if new_position[0] < 0 or new_position[0] > self.size - 1 or new_position[1] < 0 or new_position[
+            1] > self.size - 1:
             reward = -1
 
         if terminated:
-            reward = 1
+            reward = 1000
 
         # Get updated observation and info
         observation = self._get_obs()
@@ -144,11 +134,11 @@ class FourRoomGridWorld(gym.Env):
         for x in range(self.size):
             for y in range(self.size):
                 if (
-                    (x == self.x_wall_position or y == self.y_wall_position) and
-                    not (np.array_equal([x, y], self.hole_1_position) or
-                         np.array_equal([x, y], self.hole_2_position) or
-                         np.array_equal([x, y], self.hole_3_position) or
-                         np.array_equal([x, y], self.hole_4_position))
+                        (x == self.x_wall_position or y == self.y_wall_position) and
+                        not (np.array_equal([x, y], self.hole_1_position) or
+                             np.array_equal([x, y], self.hole_2_position) or
+                             np.array_equal([x, y], self.hole_3_position) or
+                             np.array_equal([x, y], self.hole_4_position))
                 ):
                     pygame.draw.rect(
                         canvas,

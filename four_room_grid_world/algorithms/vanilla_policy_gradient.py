@@ -98,11 +98,11 @@ def train_policy_gradient(env, policy_net, optimizer, gamma, num_episodes=10_000
         if episode % 100 == 0:  # Test every 100 episodes
             print(f"Episode {episode}, Total Reward: {sum(rewards)}")
             print("Start test")
-            test_agent(env, policy_net)
+            test_agent(env, policy_net, episode)
             print("End test")
 
 
-def test_agent(env, policy_net):
+def test_agent(env, policy_net, episode):
     state, _ = env.reset()  # Updated to match new Gym API
     done = False
     total_reward = 0
@@ -125,7 +125,7 @@ def test_agent(env, policy_net):
     print(f"Test Reward: {total_reward}")
 
     # Create a GIF from the collected frames
-    gif_path = f'gifs/cartpole_test_reward_{total_reward}.gif'
+    gif_path = f'gifs/episode_{episode}_reward_{total_reward}.gif'
     imageio.mimsave(gif_path, frames, fps=30)  # Adjust fps for desired speed
     print(f"Saved GIF to {gif_path}")
 

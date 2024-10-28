@@ -3,6 +3,7 @@ import os.path
 import imageio
 import numpy as np
 import gym
+from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 import four_room_grid_world.env.registration  # Do not remove this import
@@ -16,8 +17,8 @@ class QLearningAgent:
     Learns to avoid hitting walls and the grid border.
     """
 
-    def __init__(self, env, learning_rate=0.1, discount_factor=0.99, exploration_prob=1.0, exploration_decay=0.99,
-                 min_exploration_prob=0.1):
+    def __init__(self, env, learning_rate=0.2, discount_factor=0.99, exploration_prob=1.0, exploration_decay=0.99,
+                 min_exploration_prob=0.5):
         self.env = env
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
@@ -61,6 +62,7 @@ class QLearningAgent:
             self.exploration_prob = max(self.min_exploration_prob, self.exploration_prob * self.exploration_decay)
 
             if episode % 100 == 0:
+                self.plot_action_value_table(episode)
                 self.test_agent(episode)
 
     def evaluate(self, episodes):
@@ -77,6 +79,20 @@ class QLearningAgent:
                 done = done or truncated
 
         return total_reward / episodes
+
+    def plot_action_value_table(self, episode):
+        highest_action_values = np.max(self.q_table, axis=2)
+
+        plt.figure(figsize=(8, 6))
+
+        plt.imshow(highest_action_values, cmap='hot', interpolation='nearest')
+        plt.colorbar(label='Highest Action Value')
+        plt.title(f'Action Value Heatmap for Episode {episode}')
+        plt.xlabel('X Coordinate')
+        plt.ylabel('Y Coordinate')
+        plt.savefig(f'gifs_Q_learning/action_value_heatmap_episode_{episode}.png')
+        plt.close()
+        print(f"Saved action value heatmap to gifs_Q_learning/action_value_heatmap_episode_{episode}.png")
 
     def test_agent(self, episode):
         state, _ = self.env.reset()

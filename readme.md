@@ -16,5 +16,4 @@ The only algorithm that is at least somewhat working is the QLearning algorithm.
 
 # TODO
 - Create a separate package for the environment
-- Why do the policy gradient methods not even learn to avoid hitting the wall
-- Maybe add option to environment to generate the goal in the same room as the start to test algorithms in a simpler environment
+

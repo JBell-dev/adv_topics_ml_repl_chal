@@ -79,7 +79,7 @@ def compute_returns(rewards, gamma=0.99):
 
 
 # Training loop using Actor-Critic
-def train_actor_critic(env, actor_net, critic_net, actor_optimizer, critic_optimizer, gamma, num_episodes=500):
+def train_actor_critic(env, actor_net, critic_net, actor_optimizer, critic_optimizer, gamma, num_episodes=1_000):
     for episode in range(num_episodes):
         states, actions, rewards = collect_trajectory(env, actor_net)
         returns = compute_returns(rewards, gamma)
@@ -113,10 +113,10 @@ def train_actor_critic(env, actor_net, critic_net, actor_optimizer, critic_optim
 
         if episode % 100 == 0:  # Test every 100 episodes
             print(f"Episode {episode}, Total Reward: {sum(rewards)}")
-            test_agent(env, actor_net)
+            test_agent(env, actor_net, episode)
 
 
-def test_agent(env, actor_net):
+def test_agent(env, actor_net, episode):
     state, _ = env.reset()
     done = False
     total_reward = 0
@@ -137,7 +137,7 @@ def test_agent(env, actor_net):
     print(f"Test Reward: {total_reward}")
 
     # Create a GIF from the collected frames
-    gif_path = f'gifs_actor_critic/cartpole_test_reward_{total_reward}.gif'
+    gif_path = f'gifs_actor_critic/episode_{episode}_reward_{total_reward}.gif'
     imageio.mimsave(gif_path, frames, fps=30)
     print(f"Saved GIF to {gif_path}")
 
