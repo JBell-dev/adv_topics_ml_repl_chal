@@ -63,7 +63,7 @@ class QLearningAgent:
 
             if episode % 100 == 0:
                 self.plot_action_value_table(episode)
-                self.test_agent(episode)
+                # self.test_agent(episode)
 
     def evaluate(self, episodes):
         total_reward = 0
@@ -121,7 +121,7 @@ class QLearningAgent:
 
 
 # Create the environment
-env = gym.make("advtop/FourRoomGridWorld-v0", render_mode="rgb_array", max_episode_steps=1_000)
+env = gym.make("advtop/FourRoomGridWorld-v0", render_mode="rgb_array", max_episode_steps=2_000_000, size=34)
 env = EnvTransformator(env)  # Wrap the environment to get only the agent's location
 
 # Initialize the Q-learning agent

@@ -3,6 +3,8 @@ Link to paper https://arxiv.org/pdf/2407.13755
 
 Code from paper https://github.com/Improbable-AI/random-latent-exploration/tree/main.
 
+**The env folder will be deleted soon because it relies on the gym library which is deprecated. Use the env_gymnasium library which relies on gymnasium.**
+
 ## Four Rooms Environment 
 The four rooms environment is in a 51x51 grid. There is a horizontal and a vertical wall, dividing the grid world into 4 rooms. The rooms are connected by 4 holes, which are located at +-5 from the centre cell of the grid. Since the two walls occupy a row/column the number of states is 50x50+4. The start state is red, the goal state is green, and the agent's location is a blue circle.
 
@@ -14,6 +16,11 @@ The EnvTransformator is required because in the FourRoomGridWorld apart from the
 ### four_room_grid_world/algorithms
 The only algorithm that is at least somewhat working is the QLearning algorithm. The other algorithms do not even learn to avoid hitting the wall/grid border forever.
 
-# TODO
-- Create a separate package for the environment
+## Visualization
+- Rollout of multiple trajectories from a policy trained with
+RLE in the middle of the training (1.5 million timesteps), where
+each color denotes a distinct trajectory. 
+- State visitation counts of all the methods after training for  2.5M timesteps without any task reward
 
+## TODO
+- Create a separate package for the environment

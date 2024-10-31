@@ -6,11 +6,16 @@ import numpy as np
 
 class FourRoomGridWorld(gym.Env):
     """
+    DO NOT USE THIS CLASS. USE env_gymnasium/FourRoomGridWorld instead.
     Adopted from https://www.gymlibrary.dev/content/environment_creation/#subclassing-gym-env.
     """
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, size=12):
+    def __init__(self, render_mode=None, size=50, is_reward_free=False):
+        # If is_reward_free is True then the agent does reward-free exploration (main section of paper)
+        # Otherwise it learns to get to the goal state (appendix of paper)
+        self._is_reward_free = is_reward_free
+
         assert size % 2 == 0  # Otherwise wall cannot be in the middle
         assert size >= 10  # Ensure minimum size to allow space for walls and holes
 
@@ -89,7 +94,9 @@ class FourRoomGridWorld(gym.Env):
             self._agent_location = new_position
 
         # Check if the episode has terminated (i.e., agent reached the target)
-        terminated = np.array_equal(self._agent_location, self._target_location)
+        terminated = False
+        if not self._is_reward_free:  # We do not have a goal in reward free exploration
+            terminated = np.array_equal(self._agent_location, self._target_location)
 
         reward = 0
 
