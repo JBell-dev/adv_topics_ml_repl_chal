@@ -16,11 +16,17 @@ The EnvTransformator is required because in the FourRoomGridWorld apart from the
 ### four_room_grid_world/algorithms
 The only algorithm that is at least somewhat working is the QLearning algorithm. The other algorithms do not even learn to avoid hitting the wall/grid border forever.
 
+## Algorithms
+- Proximal Policy Optimization (PPO) (from [PPO CleanRL](https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/ppo.py))
+- Random Network Distillation (RND) (from [RND CleanRL](https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/ppo.py), must be adapted from Atari)
+- NoisyNet (from PPO CleanRL and https://github.com/Kaixhin/NoisyNet-A3C/, must be adapted from Atari)
+- RLE (adopt from Isaac Gym RLE)
+
 ## Visualization
 - Rollout of multiple trajectories from a policy trained with
 RLE in the middle of the training (1.5 million timesteps), where
 each color denotes a distinct trajectory. 
-- State visitation counts of all the methods after training for  2.5M timesteps without any task reward
+- State visitation counts of all the methods after training for 2.5M time steps without any task reward
 
 ## TODO
-- Create a separate package for the environment
+- Create a separate package for the environment?

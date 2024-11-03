@@ -7,6 +7,7 @@ import numpy as np
 class FourRoomGridWorld(gym.Env):
     """
     Adopted from https://www.gymlibrary.dev/content/environment_creation/#subclassing-gym-env.
+    Locations are 2-tuples (x,y) where x is the horizontal axis and y is the vertical axis.
     """
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
@@ -24,8 +25,8 @@ class FourRoomGridWorld(gym.Env):
         # Define wall hole positions
         self.hole_1_position = np.array([self.x_wall_position, size // 2 - 5])
         self.hole_2_position = np.array([self.x_wall_position, size // 2 + 5])
-        self.hole_3_position = np.array([size // 2 - 5, self.y_wall_position])
-        self.hole_4_position = np.array([size // 2 + 5, self.y_wall_position])
+        self.hole_3_position = np.array([size // 2 - 10, self.y_wall_position])
+        self.hole_4_position = np.array([size // 2 + 10, self.y_wall_position])
 
         self.observation_space = spaces.Box(0, size, shape=(2,), dtype=int)
 
@@ -44,7 +45,7 @@ class FourRoomGridWorld(gym.Env):
         self.clock = None
 
     def _get_obs(self):
-        return self._target_location
+        return self._agent_location
 
     def _get_info(self):
         return {"distance": np.linalg.norm(self._agent_location - self._target_location, ord=1)}
@@ -92,11 +93,12 @@ class FourRoomGridWorld(gym.Env):
         reward = 0
 
         if not self._position_is_not_in_wall(new_position):
-            reward = -1
+            reward = -1  # TODO -1
 
         new_position = self._agent_location + direction
-        if new_position[0] < 0 or new_position[0] > self.size - 1 or new_position[1] < 0 or new_position[1] > self.size - 1:
-            reward = -1
+        if new_position[0] < 0 or new_position[0] > self.size - 1 or new_position[1] < 0 or new_position[
+            1] > self.size - 1:
+            reward = -1  # TODO -1
 
         if terminated:
             reward = 1

@@ -12,11 +12,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import tyro
+from matplotlib import pyplot as plt
+from matplotlib.colors import LogNorm
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 import four_room_grid_world.env_gymnasium.registration  # Do not remove this import
-from four_room_grid_world.env_gymnasium.FourRoomGridWorld import FourRoomGridWorld
+from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
 
 
 @dataclass
@@ -83,13 +85,17 @@ class Args:
     """the number of iterations (computed in runtime)"""
 
 
+# TODO by me
+ENV_SIZE = 50
+
+
 def make_env(env_id, idx, capture_video, run_name):
     def thunk():
         if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=None, size=50)
+            env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=None, size=ENV_SIZE)
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
-            env = gym.make(env_id, max_episode_steps=10_000_000, size=50)
+            env = gym.make(env_id, max_episode_steps=None, size=ENV_SIZE)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
 
@@ -167,6 +173,8 @@ if __name__ == "__main__":
     envs = gym.vector.SyncVectorEnv(
         [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
     )
+    envs = StateVisitCountWrapper(envs)  # TODO Added by me
+
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
     agent = Agent(envs).to(device)
@@ -187,6 +195,7 @@ if __name__ == "__main__":
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
 
+    # TODO Added by me: in total the agent is trained for 2_500_000 steps (NOT EPISODES)
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
@@ -211,6 +220,20 @@ if __name__ == "__main__":
             next_done = np.logical_or(terminations, truncations)
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
+
+            if global_step == 500_000 or global_step == 2_400_000:  # TODO Added by me
+                sorted_dict = dict(sorted(infos["visit_counts"].items(), key=lambda item: item[1], reverse=True))
+                print(sorted_dict)
+
+                states = np.zeros(shape=(ENV_SIZE + 1, ENV_SIZE + 1))
+                for (x, y), count in infos["visit_counts"].items():
+                    states[y, x] = count  # imshow expects row, column
+
+                # Apply a logarithmic color scale
+                plt.imshow(states, cmap='viridis', norm=LogNorm(vmin=1, vmax=states.max() or 1))
+                plt.colorbar()
+                plt.title(f"State visit count at time step {global_step:,}")
+                plt.show()
 
             if "final_info" in infos:
                 for info in infos["final_info"]:
