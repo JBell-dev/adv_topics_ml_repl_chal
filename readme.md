@@ -24,3 +24,8 @@ each color denotes a distinct trajectory.
 
 ## TODO
 - Create a separate package for the environment
+
+-Need to ask about the combination they do on the paper for the feature network
+-improve plotting capabilities
+-add the other algos
+-isaac still a problem to solve for rle
