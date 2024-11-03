@@ -29,4 +29,9 @@ each color denotes a distinct trajectory.
 - State visitation counts of all the methods after training for 2.5M time steps without any task reward
 
 ## TODO
+<<<<<<< HEAD
 - Create a separate package for the environment?
+-Need to ask about the combination they do on the paper for the feature network
+-improve plotting capabilities
+-add the other algos
+-isaac still a problem to solve for rle

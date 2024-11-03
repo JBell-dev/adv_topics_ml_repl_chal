@@ -20,9 +20,97 @@ from torch.utils.tensorboard import SummaryWriter
 import four_room_grid_world.env_gymnasium.registration  # Do not remove this import
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
 
+# Add these imports at the top
+import imageio
+from PIL import Image
+import matplotlib.pyplot as plt
+
+def record_episode(env, agent, device, max_steps=200, filename="episode.gif"):
+    frames = []
+    obs, _ = env.reset()
+    obs = torch.Tensor(obs).to(device)
+    
+    for step in range(max_steps):
+        frames.append(env.render())
+        
+        with torch.no_grad():
+            action, _, _, _ = agent.get_action_and_value(obs)
+            action = action.cpu().item()
+        
+        obs, _, terminated, truncated, _ = env.step(action)
+        obs = torch.Tensor(obs).to(device)
+        
+        if terminated or truncated:
+            break
+    
+    imageio.mimsave(filename, frames, duration=1000/30)
+
+def record_episode_with_probs(env, agent, device, max_steps=200, filename="episode.gif", iteration=0):
+    frames = []
+    obs, _ = env.reset()
+    obs = torch.Tensor(obs).to(device)
+    
+    # Store action probabilities for plotting
+    all_probs = []
+    accumulated_reward = 0
+    
+    for step in range(max_steps):
+        frames.append(env.render())
+        
+        with torch.no_grad():
+            # Get action and probabilities
+            logits = agent.actor(obs)
+            probs = torch.nn.functional.softmax(logits, dim=-1)
+            action = torch.distributions.Categorical(logits=logits).sample()
+            
+            # Store probabilities
+            all_probs.append(probs.cpu().numpy())
+            
+            action = action.cpu().item()
+        
+        obs, reward, terminated, truncated, _ = env.step(action)
+        accumulated_reward += reward
+        obs = torch.Tensor(obs).to(device)
+        
+        if terminated or truncated:
+            break
+    
+    # Save the GIF
+    imageio.mimsave(filename, frames, duration=1000/30)
+    
+    # Plot probability histogram
+    if len(all_probs) > 0:
+        all_probs = np.array(all_probs)
+        # Calculate the average probability for each action across all steps
+        action_counts = all_probs.sum(axis=0)  # Sum probabilities for each action
+        
+        plt.figure(figsize=(10, 5))
+        num_actions = len(action_counts)
+        plt.bar(range(num_actions), action_counts / len(all_probs))
+        plt.title(f'Action Distribution - Iteration {iteration}\nAccumulated Reward: {accumulated_reward:.2f}')
+        plt.xlabel('Action')
+        plt.ylabel('Average Probability')
+        plt.xticks(range(num_actions))
+        plt.grid(True)
+        
+        # Save the plot
+        plot_filename = filename.replace('.gif', '_probs.png')
+        plt.savefig(plot_filename)
+        plt.close()
+        
+        print(f"Episode {iteration} - Accumulated Reward: {accumulated_reward:.2f}")
 
 @dataclass
 class Args:
+    """
+    Configuration class that defines all hyperparameters and settings:
+    - exp_name: Experiment name for logging
+    - env_id: The environment to train on
+    - total_timesteps: Total number of environment steps to train for
+    - learning_rate: Learning rate for the optimizer
+    - num_envs: Number of parallel environments
+    ... and many other PPO-specific parameters
+    """
     exp_name: str = os.path.basename(__file__)[: -len(".py")]
     """the name of this experiment"""
     seed: int = 1
@@ -90,6 +178,12 @@ ENV_SIZE = 50
 
 
 def make_env(env_id, idx, capture_video, run_name):
+    """
+    Factory function that creates and wraps environments:
+    - Sets up video recording if enabled
+    - Wraps environment to record episode statistics
+    - Configures environment parameters like max steps
+    """
     def thunk():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=None, size=ENV_SIZE)
@@ -109,6 +203,19 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 class Agent(nn.Module):
+    """
+    Neural network architecture with two main components:
+    
+    1. Actor (Policy) Network:
+       - Takes state as input
+       - Outputs action probabilities
+       - Architecture: Input -> 64 -> 64 -> Action Space Size
+    
+    2. Critic (Value) Network:
+       - Takes state as input
+       - Outputs value estimate of the state
+       - Architecture: Input -> 64 -> 64 -> 1
+    """
     def __init__(self, envs):
         super().__init__()
         self.critic = nn.Sequential(
@@ -180,7 +287,9 @@ if __name__ == "__main__":
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
-    # ALGO Logic: Storage setup
+    record_env = gym.make(args.env_id, render_mode="rgb_array", max_episode_steps=None, size=ENV_SIZE)
+
+    # ALGO Logic: Storage setup -> experience collection
     obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
     actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -242,6 +351,19 @@ if __name__ == "__main__":
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
+        #HERE I ADDED THIS TO CHECK WHETHER THE AGENT IS LEARNING
+        if iteration % 100 == 0:  # Save GIF and plot every 100 iterations
+            gif_path = f"gifs_ppo/episode_{iteration}.gif"
+            os.makedirs("gifs_ppo", exist_ok=True)
+            record_episode_with_probs(
+                env=record_env,
+                agent=agent,
+                device=device,
+                filename=gif_path,
+                iteration=iteration
+            )
+            print(f"Saved episode recording and probability plot to {gif_path}")
+
         # bootstrap value if not done
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)
@@ -293,11 +415,21 @@ if __name__ == "__main__":
                 pg_loss1 = -mb_advantages * ratio
                 pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
                 pg_loss = torch.max(pg_loss1, pg_loss2).mean()
+                """
+                PPO's key feature: Clipped objective function
+                - Prevents too large policy updates
+                - ratio: new_policy / old_policy
+                - clipping prevents ratio from going too far from 1
+                """
 
                 # Value loss
                 newvalue = newvalue.view(-1)
                 if args.clip_vloss:
                     v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
+                    """
+                    Value function is trained to predict expected returns
+                    Can also be clipped to prevent large updates
+                    """
                     v_clipped = b_values[mb_inds] + torch.clamp(
                         newvalue - b_values[mb_inds],
                         -args.clip_coef,
@@ -324,7 +456,7 @@ if __name__ == "__main__":
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
-        # TRY NOT TO MODIFY: record rewards for plotting purposes
+        # TRY NOT TO MODIFY: record rewards for plotting purposes -> log to tensorboard
         writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
@@ -338,3 +470,4 @@ if __name__ == "__main__":
 
     envs.close()
     writer.close()
+    record_env.close()
