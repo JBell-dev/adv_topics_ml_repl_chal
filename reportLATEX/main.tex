@@ -1,0 +1,156 @@
+\documentclass[10pt]{article} % For LaTeX2e
+
+% This template and styling file have been adapted from the ML Reproducibility Challenge 2020 and TMLR templates, to ease the submission.
+
+% If you want to show the general instuctions, use the following command:
+\usepackage[instructions]{atml}
+% For the final version, use this one:
+%\usepackage{atml}
+
+% If you want to submit this work to tmlr, use the "tmlr" package rather than the "atml" one. Note: double-check the files needed in TMLR's submission instructions. 
+% \usepackage{tmlr}
+% If accepted, instead use the following line for the camera-ready submission:
+%\usepackage[accepted]{tmlr}
+% To de-anonymize and remove mentions to TMLR (for example for posting to preprint servers), instead use the following:
+%\usepackage[preprint]{tmlr}
+
+% Note that the following lines have been added to atml.sty:
+% \usepackage[hidelinks]{hyperref}
+% \newcommand*{\doi}[1]{\href{http://doi.org/#1}{doi: #1}}
+% If atml.sty is not used, then these lines might need to be added to the respective styling files.
+\input{math_commands.tex}
+
+\usepackage{hyperref}
+\usepackage{url}
+
+\title{ATML Report}
+
+\author{%
+  \name Jonatan Bella \email \href{mailto:jonatan.bella@usi.ch}{jonatan.bella@usi.ch}
+  \AND
+  \name Alessia Berarducci \email \href{mailto:alessia.berarducci@usi.ch}{alessia.berarducci@usi.ch}
+  \AND
+  \name Jonas Knupp \email \href{mailto:jonas.knupp@usi.ch}{jonas.knupp@usi.ch}
+  \AND
+  \name Tobias Erbacher \email \href{mailto:tobias.erbacher@usi.ch}{tobias.erbacher@usi.ch}
+}
+
+\def\groupid{Reinforcement Learning}
+\def\projectid{RLE}
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+In this project we aim to analyze the claims of \cite{rle-paper} in the paper \href{https://arxiv.org/abs/2407.13755}{\textsc{Random Latent Exploration for Deep Reinforcement Learning}} which introduces a new technique to explore the state space and thus yield better overall agent scores. Moreover, we intend to reproduce the results obtained by the authors, expand on the findings and verify that the results are not cherry-picked. \textcolor{red}{<write the main findings of our project>} This report is prepared as part of the course project in \textit{Advanced Topics in Machine Learning} at \textit{Università della Svizzera italiana} in the autumn semester of 2024.
+\end{abstract}
+
+%%%%
+
+\section{Introduction}
+\noindent The paper we investigate deals with the problem of motivating an agent in a high-dimensional state space to explore the environment more exhaustively during training and thereby find non-obvious trajectories that can lead to higher long-term rewards for both discrete and continuous action spaces. The paper compares the new \textit{Random Latent Exploration} (RLE) technique to standard \textit{Proximal Policy Optimization} (PPO, see \cite{ppo-paper}), \textit{NoisyNet} (see \cite{noisynet-paper}) and \textit{Random Network Distillation} (RND, see \cite{rnd-paper}).\\
+
+\noindent The new idea that the authors \cite{rle-paper} present is to augment the reward function by a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F \left(s, z\right)$ where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$ \textcolor{red}{<elaborate on the distribution>}. So if at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi\left(. | s_{t}\right)$ from policy $\pi$, then it will obtain the task reward $r \left(s_{t}, a_{t}\right)$. In RLE, we train a so-called latent-conditioned policy network $\pi\left(. | s, \textbf{z}\right)$ and latent-conditioned value network $V^{\pi} \left(s, \textbf{z}\right)$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
+
+\begin{equation}
+    V^{\pi} \left(s, \textbf{z}\right) \approx \mathbb{E}_{\pi} \left[\sum_{t = 0}^{\infty} \gamma^{t} \left(r\left(s_{t}, a_{t}\right) + F\left(s_{t+1}, \textbf{z}\right) \right) \right]
+    \label{eq:value_func}
+\end{equation}
+
+In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F\left(s_{t+1}, \textbf{z}\right) =  \boldsymbol{\phi}\left(s\right) \cdot \textbf{z}$ where $\boldsymbol{\phi}\left(s\right): \mathcal{S} \rightarrow \mathbb{R}^{d}$ is a feature extraction network. Both $\boldsymbol{\phi}$ and $\textbf{z}$ are $d$-dimensional vectors.
+
+\texttt{A few sentences placing the work in high-level context. Limit it to a few paragraphs at most; your report is on reproducing a piece of work, you don’t have to motivate that work.}
+
+\section{Scope of reproducibility}
+\label{sec:claims}
+
+\texttt{Introduce the specific setting or problem addressed in this work, and list the main claims from the original paper. Think of this as writing out the main contributions of the original paper. Each claim should be relatively concise; some papers may not clearly list their claims, and one must formulate them in terms of the presented experiments.}
+
+\texttt{A claim should be something that can be supported or rejected by your data. An example is, ``Finetuning pre-trained BERT on dataset X will have higher accuracy than an LSTM trained with GloVe embeddings.''}
+\texttt{This is concise and is something that can be supported by experiments.}
+\texttt{An example of a claim that is too vague, and can't be supported by experiments, is ``Contextual embedding models have shown strong performance on a number of tasks. We will run experiments evaluating two types of contextual embedding models on datasets X, Y, and Z."}
+
+\texttt{This section roughly tells a reader what to expect in the rest of the report. Clearly itemize the claims you are testing:}
+\begin{itemize}
+    \item \texttt{Claim 1}
+    \item \texttt{Claim 2}
+    \item \texttt{Claim 3}
+\end{itemize}
+
+\texttt{Each experiment in Section~\ref{sec:results} will support (at least) one of these claims, so a reader of your report should be able to separately understand the \emph{claims} and the \emph{evidence} that supports them.}
+
+\section{Methodology}
+\texttt{Explain your approach - did you use the author's code, or did you aim to re-implement the approach from the description in the paper? Summarize the resources (code, documentation, GPUs) that you used.}
+
+\subsection{Model descriptions}
+\texttt{Include a description of each model or algorithm used. Be sure to list the type of model, the number of parameters, and other relevant info (e.g. if it's pre-trained).}
+
+\subsection{Datasets}
+\texttt{Describe the datasets you used and how you obtained them. For each dataset include 1) relevant statistics such as the number of examples and label distributions, 2) details of train / validation / test splits, 3) an explanation of any preprocessing done, and 4) a link to download the data (if available).}
+
+\subsection{Hyperparameters}
+\texttt{Describe how the hyperparameter values were set and what was the source for their value (e.g. paper, code, or your guess). If there was a hyperparameter search done, be sure to include the range of hyperparameters searched over, the method used to search (e.g. manual search, random search, grid search, etc.), and the best hyperparameters found. Include the number of total experiments (e.g. hyperparameter trials). You can also include all results from that search (not just the best-found results).}
+
+\subsection{Experimental setup and code}
+\texttt{Include a description of how the experiments were set up that's clear enough a reader could replicate the setup.}
+\texttt{Include a description of the specific measure used to evaluate the experiments (e.g. accuracy, precision@K, BLEU score, etc.).}
+\texttt{Provide a link to your code or notebook (if available). Add in this section (or in the following) any reference to cloud-based providers you}
+
+\subsection{Computational requirements}
+\texttt{Include a description of the hardware used, such as the GPU or CPU the experiments were run on. 
+For each model, include a measure of the average runtime (e.g. average time to predict labels for a given validation set with a particular batch size).
+For each experiment, include the total computational requirements (e.g. the total GPU hours spent).}\\
+\texttt{Note: You'll likely have to record this as you run your experiments, so it's better to think about it ahead of time.}
+
+\section{Results}
+\label{sec:results}
+\texttt{Start with a high-level overview of your results. Do your results support the main claims of the original paper? Keep this section as factual and precise as possible, and reserve your judgment and discussion points for the next "Discussion" section.}
+
+
+\subsection{Results reproducing original paper}
+\texttt{For each experiment, say 1) which claim in Section~\ref{sec:claims} it supports, and 2) if it successfully reproduced the associated experiment in the original paper.}
+\texttt{For example, an experiment training and evaluating a model on a dataset may support a claim that that model outperforms some baseline.}
+\texttt{Logically group related results into subsections.}
+
+\subsubsection{Result 1}
+\subsubsection{Result 2}
+
+\subsection{Results beyond original paper}
+\texttt{Often papers don't include enough information to fully specify their experiments, so some additional experimentation may be necessary. For example, it might be the case that batch size was not specified, and so different batch sizes need to be evaluated to reproduce the original results. Include the results of any additional experiments here. Note: this won't be necessary for all reproductions.}
+ 
+\subsubsection{Additional Result 1}
+\subsubsection{Additional Result 2}
+
+\section{Discussion}
+
+\texttt{Give your judgment on if your experimental results support the claims of the paper. Discuss the strengths and weaknesses of your approach - perhaps you didn't have time to run all the experiments, or perhaps you did additional experiments that further strengthened the claims in the paper.}
+
+\subsection{What was easy}
+\texttt{Give your judgment of what was easy to reproduce. Perhaps the author's code is clearly written and easy to run, so it was easy to verify the majority of original claims. Or, the explanation in the paper was really easy to follow and put into code.}
+
+\texttt{Be careful not to give sweeping generalizations. Something that is easy for you might be difficult for others. Put what was easy in context and explain why it was easy (e.g. code had extensive API documentation and a lot of examples that matched experiments in papers).}
+
+\subsection{What was difficult}
+\texttt{List part of the reproduction study that took more time than you anticipated or you felt was difficult.}
+
+\texttt{Be careful to put your discussion in context. For example, don't say "The maths was difficult to follow", say "The math requires advanced knowledge of calculus to follow".}
+
+\subsection{Communication with original authors}
+\texttt{Document the extent of (or lack of) communication with the original authors. To make sure the reproducibility report is a fair assessment of the original research we recommend getting in touch with the original authors. We advise you to contact them through their email displayed in the paper and by asking specific questions.}
+
+\section{Conclusion}
+\texttt{Try to summarize the achievements of your project and its limits, suggesting (when appropriate) possible extensions and future works.}
+
+\section*{Member contributions}
+\texttt{Include a section specifying how you organized the work within the group and clearly describe the contributions of each member. Make sure to properly balance the workload among the members.}
+
+%%%%
+
+\bibliography{main}
+\bibliographystyle{tmlr}
+
+\include{appendix}
+
+\end{document}
