@@ -22,6 +22,9 @@
 
 \usepackage{hyperref}
 \usepackage{url}
+\usepackage{tikz}
+\usepackage{subcaption}
+\usepackage[subpreambles=true]{standalone}
 
 \title{ATML Report}
 
@@ -52,16 +55,44 @@ In this project we aim to analyze the claims of \cite{rle-paper} in the paper \h
 \section{Introduction}
 \noindent The paper we investigate deals with the problem of motivating an agent in a high-dimensional state space to explore the environment more exhaustively during training and thereby find non-obvious trajectories that can lead to higher long-term rewards for both discrete and continuous action spaces. The paper compares the new \textit{Random Latent Exploration} (RLE) technique to standard \textit{Proximal Policy Optimization} (PPO, see \cite{ppo-paper}), \textit{NoisyNet} (see \cite{noisynet-paper}) and \textit{Random Network Distillation} (RND, see \cite{rnd-paper}).\\
 
-\noindent The new idea that the authors \cite{rle-paper} present is to augment the reward function by a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F \left(s, z\right)$ where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$ \textcolor{red}{<elaborate on the distribution>}. So if at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi\left(. | s_{t}\right)$ from policy $\pi$, then it will obtain the task reward $r \left(s_{t}, a_{t}\right)$. In RLE, we train a so-called latent-conditioned policy network $\pi\left(. | s, \textbf{z}\right)$ and latent-conditioned value network $V^{\pi} \left(s, \textbf{z}\right)$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
+\noindent Exploration is one of the major issues of Reinforcement Learning and its techniques can generally be divided into two categories: Noise-based exploration and bonus-based exploration. There are advantages and disadvantages for both of them but we always have to keep in mind that always choosing the highest short-term (local) reward does not necessarily also yield the highest long-term (global) reward, e.g. picture the environment as shown in figure \ref{fig:sample-env-1}. Here, the agent starting in the \textcolor{blue}{blue state} will always choose the small reward of $1$, i.e. going right, then move back to the initial state, then move right, and so on, dithering between these two states, instead of accepting to collect a reward of $0$ by going left in order to be able to collect the much higher reward of $100$ in the following step.\\ 
+
+\begin{figure}[h!]
+  \centering
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{tikz/sample-env-1.tex}
+    \caption{Pure rewards.}
+    \label{fig:sample-env-1}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{tikz/sample-env-2.tex}
+    \caption{Rewards with randomization (example).}
+    \label{fig:sample-env-2}
+  \end{subfigure}
+  
+  \caption{An exemplary environment consisting of four state where transitions can occur between neighboring states. The \textcolor{blue}{blue node} is the initial state and the numbers are the rewards.}
+  \label{fig:sample-env}
+\end{figure}
+
+\noindent The new idea that the authors \cite{rle-paper} present is to augment the reward function by adding a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F \left(s, z\right)$ where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$ \textcolor{red}{<elaborate on the distribution>}. So if at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi\left(. | s_{t}\right)$ from policy $\pi$, then it will obtain the task reward $r \left(s_{t}, a_{t}\right)$. In RLE, we train a so-called latent-conditioned policy network $\pi\left(. | s, \textbf{z}\right)$ and latent-conditioned value network $V^{\pi} \left(s, \textbf{z}\right)$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
 
 \begin{equation}
     V^{\pi} \left(s, \textbf{z}\right) \approx \mathbb{E}_{\pi} \left[\sum_{t = 0}^{\infty} \gamma^{t} \left(r\left(s_{t}, a_{t}\right) + F\left(s_{t+1}, \textbf{z}\right) \right) \right]
     \label{eq:value_func}
 \end{equation}
 
-In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F\left(s_{t+1}, \textbf{z}\right) =  \boldsymbol{\phi}\left(s\right) \cdot \textbf{z}$ where $\boldsymbol{\phi}\left(s\right): \mathcal{S} \rightarrow \mathbb{R}^{d}$ is a feature extraction network. Both $\boldsymbol{\phi}$ and $\textbf{z}$ are $d$-dimensional vectors.
+\noindent In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F\left(s_{t+1}, \textbf{z}\right) =  \boldsymbol{\phi}\left(s\right) \cdot \textbf{z}$ where $\boldsymbol{\phi}\left(s\right): \mathcal{S} \rightarrow \mathbb{R}^{d}$ is a feature extraction network. Both $\boldsymbol{\phi}$ and $\textbf{z}$ are $d$-dimensional vectors. Note that $z$ is resampled only before a new trajectory $(s_{0}, a_{0}, r_{0}, s_{1}, ...)$ is explored, not before each action that the agent takes. To continue the example from above, in figure \ref{fig:sample-env-2} the agent would prioritize to go left as this promises the greater reward. It is not hard to imagine that for higher dimensional environments, every time we start a new trajectory and correspondingly sample a new $z$, the agent will explore a different region of the state space and thus we can discover non-obvious paths to maximize the rewards. For the detailed pseudocode of this algorithm, see \textcolor{red}{<appendix (???)>}.\\
 
-\texttt{A few sentences placing the work in high-level context. Limit it to a few paragraphs at most; your report is on reproducing a piece of work, you don’t have to motivate that work.}
+\noindent Coming back to the 
+
+\noindent \textcolor{red}{<Brief explanation of PPO>}\\
+
+\noindent \textcolor{red}{<Brief explanation of NoisyNet>}\\
+
+\noindent \textcolor{red}{<Brief explanation of RND>}\\
 
 \section{Scope of reproducibility}
 \label{sec:claims}
@@ -77,6 +108,7 @@ In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F\left(s_{
     \item \texttt{Claim 1}
     \item \texttt{Claim 2}
     \item \texttt{Claim 3}
+    \item \texttt{Claim 4}
 \end{itemize}
 
 \texttt{Each experiment in Section~\ref{sec:results} will support (at least) one of these claims, so a reader of your report should be able to separately understand the \emph{claims} and the \emph{evidence} that supports them.}
