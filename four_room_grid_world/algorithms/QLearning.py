@@ -2,12 +2,11 @@ import os.path
 
 import imageio
 import numpy as np
-import gym
+import gymnasium as gym
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-import four_room_grid_world.env.registration  # Do not remove this import
-from four_room_grid_world.env.EnvTransformator import EnvTransformator
+import four_room_grid_world.env_gymnasium.registration  # Do not remove this import
 
 
 class QLearningAgent:
@@ -121,8 +120,7 @@ class QLearningAgent:
 
 
 # Create the environment
-env = gym.make("advtop/FourRoomGridWorld-v0", render_mode="rgb_array", max_episode_steps=2_000_000, size=34)
-env = EnvTransformator(env)  # Wrap the environment to get only the agent's location
+env = gym.make("advtop/FourRoomGridWorld-v0", render_mode="rgb_array", max_episode_steps=100_000, size=20)
 
 # Initialize the Q-learning agent
 agent = QLearningAgent(env)

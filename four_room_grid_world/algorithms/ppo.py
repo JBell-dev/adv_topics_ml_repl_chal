@@ -1,4 +1,4 @@
-# RUN WITH THESE ARGUMENTS: --env_id advtop/FourRoomGridWorld-v0 --total_timesteps 2500000 --learning_rate 0.001 --num_envs 32
+# RUN WITH THESE ARGUMENTS: --seed 0 --env_id advtop/FourRoomGridWorld-v0 --total_timesteps 2500000 --learning_rate 0.001 --num_envs 32
 
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppopy
 import os
@@ -7,83 +7,84 @@ import time
 from dataclasses import dataclass
 
 import gymnasium as gym
+# Add these imports at the top
+import imageio
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import tyro
-from matplotlib import pyplot as plt
-from matplotlib.colors import LogNorm
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
-import four_room_grid_world.env_gymnasium.registration  # Do not remove this import
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
+from four_room_grid_world.util.plot_util import plot_heatmap, plot_trajectories
 
-# Add these imports at the top
-import imageio
-from PIL import Image
-import matplotlib.pyplot as plt
+from four_room_grid_world.env_gymnasium.registration import register  # DO NOT REMOTE THIS IMPORT
+
+ENV_SIZE = 50
 
 def record_episode(env, agent, device, max_steps=200, filename="episode.gif"):
     frames = []
     obs, _ = env.reset()
     obs = torch.Tensor(obs).to(device)
-    
+
     for step in range(max_steps):
         frames.append(env.render())
-        
+
         with torch.no_grad():
             action, _, _, _ = agent.get_action_and_value(obs)
             action = action.cpu().item()
-        
+
         obs, _, terminated, truncated, _ = env.step(action)
         obs = torch.Tensor(obs).to(device)
-        
+
         if terminated or truncated:
             break
-    
-    imageio.mimsave(filename, frames, duration=1000/30)
+
+    imageio.mimsave(filename, frames, duration=1000 / 30)
+
 
 def record_episode_with_probs(env, agent, device, max_steps=200, filename="episode.gif", iteration=0):
     frames = []
     obs, _ = env.reset()
     obs = torch.Tensor(obs).to(device)
-    
+
     # Store action probabilities for plotting
     all_probs = []
     accumulated_reward = 0
-    
+
     for step in range(max_steps):
         frames.append(env.render())
-        
+
         with torch.no_grad():
             # Get action and probabilities
             logits = agent.actor(obs)
             probs = torch.nn.functional.softmax(logits, dim=-1)
             action = torch.distributions.Categorical(logits=logits).sample()
-            
+
             # Store probabilities
             all_probs.append(probs.cpu().numpy())
-            
+
             action = action.cpu().item()
-        
+
         obs, reward, terminated, truncated, _ = env.step(action)
         accumulated_reward += reward
         obs = torch.Tensor(obs).to(device)
-        
+
         if terminated or truncated:
             break
-    
+
     # Save the GIF
-    imageio.mimsave(filename, frames, duration=1000/30)
-    
+    imageio.mimsave(filename, frames, duration=1000 / 30)
+
     # Plot probability histogram
     if len(all_probs) > 0:
         all_probs = np.array(all_probs)
         # Calculate the average probability for each action across all steps
         action_counts = all_probs.sum(axis=0)  # Sum probabilities for each action
-        
+
         plt.figure(figsize=(10, 5))
         num_actions = len(action_counts)
         plt.bar(range(num_actions), action_counts / len(all_probs))
@@ -92,13 +93,14 @@ def record_episode_with_probs(env, agent, device, max_steps=200, filename="episo
         plt.ylabel('Average Probability')
         plt.xticks(range(num_actions))
         plt.grid(True)
-        
+
         # Save the plot
         plot_filename = filename.replace('.gif', '_probs.png')
         plt.savefig(plot_filename)
         plt.close()
-        
+
         print(f"Episode {iteration} - Accumulated Reward: {accumulated_reward:.2f}")
+
 
 @dataclass
 class Args:
@@ -173,10 +175,6 @@ class Args:
     """the number of iterations (computed in runtime)"""
 
 
-# TODO by me
-ENV_SIZE = 50
-
-
 def make_env(env_id, idx, capture_video, run_name):
     """
     Factory function that creates and wraps environments:
@@ -184,6 +182,7 @@ def make_env(env_id, idx, capture_video, run_name):
     - Wraps environment to record episode statistics
     - Configures environment parameters like max steps
     """
+
     def thunk():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=None, size=ENV_SIZE)
@@ -216,6 +215,7 @@ class Agent(nn.Module):
        - Outputs value estimate of the state
        - Architecture: Input -> 64 -> 64 -> 1
     """
+
     def __init__(self, envs):
         super().__init__()
         self.critic = nn.Sequential(
@@ -242,6 +242,32 @@ class Agent(nn.Module):
         if action is None:
             action = probs.sample()
         return action, probs.log_prob(action), probs.entropy(), self.critic(x)
+
+
+def get_trajectories(env, agent, device, max_steps=1000):
+    trajectories = []
+
+    for i in range(5):
+        obs, _ = env.reset()
+        obs_list = [obs]
+        obs = torch.Tensor(obs).to(device)
+
+        for step in range(max_steps):
+            with torch.no_grad():
+                logits = agent.actor(obs)
+                action = torch.distributions.Categorical(logits=logits).sample()
+                action = action.cpu().item()
+
+            obs, reward, terminated, truncated, _ = env.step(action)
+            obs_list.append(obs)
+            obs = torch.Tensor(obs).to(device)
+
+            if terminated or truncated:
+                break
+
+        trajectories.append(obs_list)
+
+    return trajectories
 
 
 if __name__ == "__main__":
@@ -304,7 +330,6 @@ if __name__ == "__main__":
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
 
-    # TODO Added by me: in total the agent is trained for 2_500_000 steps (NOT EPISODES)
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
@@ -330,19 +355,12 @@ if __name__ == "__main__":
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
 
-            if global_step == 500_000 or global_step == 2_400_000:  # TODO Added by me
-                sorted_dict = dict(sorted(infos["visit_counts"].items(), key=lambda item: item[1], reverse=True))
-                print(sorted_dict)
+            if global_step == 500_000 or global_step == 2_400_000:
+                plot_heatmap(infos, global_step, ENV_SIZE)
 
-                states = np.zeros(shape=(ENV_SIZE + 1, ENV_SIZE + 1))
-                for (x, y), count in infos["visit_counts"].items():
-                    states[y, x] = count  # imshow expects row, column
-
-                # Apply a logarithmic color scale
-                plt.imshow(states, cmap='viridis', norm=LogNorm(vmin=1, vmax=states.max() or 1))
-                plt.colorbar()
-                plt.title(f"State visit count at time step {global_step:,}")
-                plt.show()
+            if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:  # TODO Added by me
+                trajectories = get_trajectories(record_env, agent, device, max_steps=200)
+                plot_trajectories(global_step, trajectories, ENV_SIZE, record_env.x_wall_gap_offset, record_env.y_wall_gap_offset)
 
             if "final_info" in infos:
                 for info in infos["final_info"]:
@@ -351,7 +369,7 @@ if __name__ == "__main__":
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
-        #HERE I ADDED THIS TO CHECK WHETHER THE AGENT IS LEARNING
+        # HERE I ADDED THIS TO CHECK WHETHER THE AGENT IS LEARNING
         if iteration % 100 == 0:  # Save GIF and plot every 100 iterations
             gif_path = f"gifs_ppo/episode_{iteration}.gif"
             os.makedirs("gifs_ppo", exist_ok=True)

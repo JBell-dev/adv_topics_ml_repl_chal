@@ -22,11 +22,14 @@ class FourRoomGridWorld(gym.Env):
         self.x_wall_position = size // 2
         self.y_wall_position = size // 2
 
+        self.x_wall_gap_offset = 10
+        self.y_wall_gap_offset = 5
+
         # Define wall hole positions
-        self.hole_1_position = np.array([self.x_wall_position, size // 2 - 5])
-        self.hole_2_position = np.array([self.x_wall_position, size // 2 + 5])
-        self.hole_3_position = np.array([size // 2 - 10, self.y_wall_position])
-        self.hole_4_position = np.array([size // 2 + 10, self.y_wall_position])
+        self.hole_1_position = np.array([self.x_wall_position, size // 2 - self.y_wall_gap_offset])
+        self.hole_2_position = np.array([self.x_wall_position, size // 2 + self.y_wall_gap_offset])
+        self.hole_3_position = np.array([size // 2 - self.x_wall_gap_offset, self.y_wall_position])
+        self.hole_4_position = np.array([size // 2 + self.x_wall_gap_offset, self.y_wall_position])
 
         self.observation_space = spaces.Box(0, size, shape=(2,), dtype=int)
 
@@ -50,11 +53,11 @@ class FourRoomGridWorld(gym.Env):
     def _get_info(self):
         return {"distance": np.linalg.norm(self._agent_location - self._target_location, ord=1)}
 
-    def _position_is_not_in_wall(self, pos):
-        # Check if the position is either not on the wall line or exactly in one of the wall holes
+    def _position_is_in_wall(self, pos):
+        # Check if the position is on the wall line and not in one of the wall holes
         return (
-                pos[0] != self.x_wall_position and pos[1] != self.y_wall_position
-        ) or (
+                pos[0] == self.x_wall_position or pos[1] == self.y_wall_position
+        ) and not (
                 np.array_equal(pos, self.hole_1_position)
                 or np.array_equal(pos, self.hole_2_position)
                 or np.array_equal(pos, self.hole_3_position)
@@ -77,28 +80,27 @@ class FourRoomGridWorld(gym.Env):
         return observation, info
 
     def step(self, action):
-        # Calculate potential new position
         direction = self._action_to_direction[action]
-        new_position = np.clip(self._agent_location + direction, 0, self.size - 1)
+        new_position = self._agent_location + direction
 
-        # Update the agent’s position only if the new position is valid
-        if self._position_is_not_in_wall(new_position):
+        reward = 0
+
+        # Does agent try to go outside the grid?
+        if new_position[0] < 0 or new_position[0] > self.size - 1 or new_position[1] < 0 or new_position[
+            1] > self.size - 1:
+            new_position = np.clip(self._agent_location + direction, 0, self.size - 1)
+            reward = -1  # TODO -1
+
+        if not self._position_is_in_wall(new_position):
             self._agent_location = new_position
+        # If the agent wants to move into a wall, do not move and get -1 reward
+        else:
+            reward = -1  # TODO -1
 
         # Check if the episode has terminated (i.e., agent reached the target)
         terminated = False
         if not self._is_reward_free:  # No goal in reward-free exploration
             terminated = np.array_equal(self._agent_location, self._target_location)
-
-        reward = 0
-
-        if not self._position_is_not_in_wall(new_position):
-            reward = -1  # TODO -1
-
-        new_position = self._agent_location + direction
-        if new_position[0] < 0 or new_position[0] > self.size - 1 or new_position[1] < 0 or new_position[
-            1] > self.size - 1:
-            reward = -1  # TODO -1
 
         if terminated:
             reward = 1
