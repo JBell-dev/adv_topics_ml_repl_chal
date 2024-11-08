@@ -51,7 +51,7 @@ class FourRoomGridWorld(gym.Env):
         return self._agent_location
 
     def _get_info(self):
-        return {"distance": np.linalg.norm(self._agent_location - self._target_location, ord=1)}
+        return {}
 
     def _position_is_in_wall(self, pos):
         # Check if the position is on the wall line and not in one of the wall holes

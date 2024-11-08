@@ -19,10 +19,17 @@ class StateVisitCountWrapper(gym.Wrapper):
 
         # Track visit counts across all environments in the vector
         for i in range(self.num_envs):
-            state = tuple(obs[i])  # Convert observation to a hashable type
+            # One must be very careful because the SyncVectorEnv environment automatically
+            # outputs the start state when the goal is reached
+            # (i.e., the goal state is never actually returned by .step()).
+            # Note that we do not count being in the start at the beginning of an episode as a state visit.
+            if dones[i]:
+                state = (0, 50)  # Goal state
+            else:
+                state = tuple(obs[i])  # Convert observation to a hashable type
+
             self.visit_counts[state] += 1
 
-        # Optionally add visit counts to the `infos` dictionary for each environment
         infos["visit_counts"] = dict(self.visit_counts)
 
         return obs, rewards, dones, truncations, infos

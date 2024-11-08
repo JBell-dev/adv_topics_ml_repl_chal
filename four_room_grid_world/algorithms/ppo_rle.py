@@ -1,4 +1,4 @@
-# RUN WITH THESE ARGUMENTS: --env_id advtop/FourRoomGridWorld-v0 --total_timesteps 2500000 --learning_rate 0.001 --num_envs 32
+# RUN WITH THESE ARGUMENTS: --seed_0 --env_id advtop/FourRoomGridWorld-v0 --total_timesteps 2500000 --learning_rate 0.001 --num_envs 32
 
 #(base) jonatan@Jonatans-MacBook-Pro adv_topics_ml_repl_chal % python four_room_grid_world/algorithms/ppo_rle.py --env_id advtop/FourRoomGridWorld-v0 --total_timesteps 10000000 --learning_rate 0.001 --num_envs 32
 #zsh
@@ -25,6 +25,11 @@ from four_room_grid_world.env_gymnasium.FourRoomGridWorld import FourRoomGridWor
 import imageio
 from PIL import Image
 import matplotlib.pyplot as plt
+
+from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
+from four_room_grid_world.util.plot_util import plot_heatmap
+
+ENV_SIZE = 50
 
 def record_episode(env, agent, device, max_steps=200, filename="episode.gif"):
     frames = []
@@ -211,10 +216,10 @@ def make_env(env_id, idx, capture_video, run_name):
     """
     def thunk():
         if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=None, size=50)
+            env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=None, size=ENV_SIZE)
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
-            env = gym.make(env_id, max_episode_steps=10_000_000, size=50)
+            env = gym.make(env_id, max_episode_steps=None, size=ENV_SIZE)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
 
@@ -281,7 +286,7 @@ class FeatureNetwork(nn.Module):
 
     def update_from_policy_net(self, policy_net):
         """
-        Here we need to update the feature network as a linear combination of the policy one and itself (as they done on teh paper)
+        Here we need to update the feature network as a linear combination of the policy one and itself (as they done in the paper)
         !!!!!!
         here is something really important, to actually combine them, we can only take the second to last layer of the policy network
         since the first layer of the policy network has also the z vector as input. that is not input in the feature network.
@@ -403,6 +408,8 @@ if __name__ == "__main__":
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
+    envs = StateVisitCountWrapper(envs)
+
     # NOW RLE:
     #WE INIT THE THREE / TWO NETWORKS:
     feature_network = FeatureNetwork(envs, feature_size=args.RLE_FEATURE_SIZE, device=device).to(device)
@@ -410,7 +417,7 @@ if __name__ == "__main__":
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # EPISODE MEMORY
-    record_env = gym.make(args.env_id, render_mode="rgb_array", max_episode_steps=None, size=50)
+    record_env = gym.make(args.env_id, render_mode="rgb_array", max_episode_steps=None, size=ENV_SIZE)
 
     # Storage setup for experience collection
     obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
@@ -488,6 +495,9 @@ if __name__ == "__main__":
 
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
 
+            if global_step == 500_000 or global_step == 2_400_000:
+                plot_heatmap(infos, global_step, ENV_SIZE)
+
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info:
@@ -528,7 +538,6 @@ if __name__ == "__main__":
                 delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - values[t]
                 advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
             returns = advantages + values
-
 
 
         # Flatten the batch

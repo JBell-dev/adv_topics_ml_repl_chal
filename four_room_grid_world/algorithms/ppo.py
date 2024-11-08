@@ -306,7 +306,7 @@ if __name__ == "__main__":
     envs = gym.vector.SyncVectorEnv(
         [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
     )
-    envs = StateVisitCountWrapper(envs)  # TODO Added by me
+    envs = StateVisitCountWrapper(envs)
 
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
@@ -346,6 +346,7 @@ if __name__ == "__main__":
             with torch.no_grad():
                 action, logprob, _, value = agent.get_action_and_value(next_obs)
                 values[step] = value.flatten()
+
             actions[step] = action
             logprobs[step] = logprob
 
