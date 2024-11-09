@@ -1,37 +1,20 @@
 # Advanced Topics in Machine Learning Project
-Link to paper https://arxiv.org/pdf/2407.13755
-
-Code from paper https://github.com/Improbable-AI/random-latent-exploration/tree/main.
-
-**The env folder will be deleted soon because it relies on the gym library which is deprecated. Use the env_gymnasium library which relies on gymnasium.**
+This repository contains the code and latex for the replication study for the paper "[Random Latent Exploration for Deep Reinforcement Learning](https://arxiv.org/pdf/2407.13755)". The authors of the RLE paper provide some code on their [GitHub](https://github.com/Improbable-AI/random-latent-exploration/tree/mai) page.
 
 ## Four Rooms Environment 
-The four rooms environment is in a 51x51 grid. There is a horizontal and a vertical wall, dividing the grid world into 4 rooms. The rooms are connected by 4 holes, which are located at +-5 from the centre cell of the grid. Since the two walls occupy a row/column the number of states is 50x50+4. The start state is red, the goal state is green, and the agent's location is a blue circle.
-
-Paper were four room problem was initially proposed (cited in the paper we replicate): https://www.sciencedirect.com/science/article/pii/S0004370299000521
+The four rooms environment is in a 51x51 grid. There is a horizontal and a vertical wall, dividing the grid world into four rooms. The rooms are connected by 4 corridors. The horizontal corridors are located +-10 from the centre cell and the vertical corridors are located +-5 from the centre cell. Since the two walls occupy a row/column the number of states is 50x50+4. In the rendered environment the start state is red, the goal state is green, and the agent's location is a blue circle.
+The four room environment was initially proposed in this [paper](https://www.sciencedirect.com/science/article/pii/S0004370299000521) (referenced in RLE).
 
 ### four_room_grid_world/env
-The EnvTransformator is required because in the FourRoomGridWorld apart from the agent's position the start and goal state is also included in the state. However, our algorithms only require the agent's position. The EnvTransformator is a wrapper for the environment and only returns the agent's position as state. 
+The RLE authors did not provide any code for the four rooms problem. Therefore, we implemented the four room environment ourselves using the Open AI gymnasium library. 
 
 ### four_room_grid_world/algorithms
-The only algorithm that is at least somewhat working is the QLearning algorithm. The other algorithms do not even learn to avoid hitting the wall/grid border forever.
-
-## Algorithms
-- Proximal Policy Optimization (PPO) (from [PPO CleanRL](https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/ppo.py))
-- Random Network Distillation (RND) (from [RND CleanRL](https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/ppo.py), must be adapted from Atari)
-- NoisyNet (from PPO CleanRL and https://github.com/Kaixhin/NoisyNet-A3C/, must be adapted from Atari)
-- RLE (adopt from Isaac Gym RLE)
+Contains the code for PPO, PPO RND, Noisy Net, and PPO RLE.
+Note that the PPO, PPO RND, and Noise Net algorithms were not implemented by us from the ground up. Instead, existing code was used and changed so that the code works with the FourRoom environment. However, PPO RLE was implemented by ourselves starting from the PPO algorithm.
+- [Proximal Policy Optimization (PPO)]() (adopted from [CleanRL](https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/ppo.py))
+- [Random Network Distillation (RND)](https://arxiv.org/pdf/1810.12894) (adopted from Isaac Gym ppo_rnd)
+- [NoisyNet](https://arxiv.org/pdf/1706.10295) (adopted from atari ppo_noisy_net)
+- [RLE](https://arxiv.org/pdf/2407.13755) (adopted from Isaac Gym ppo_rle)
 
 ## Visualization
-- Rollout of multiple trajectories from a policy trained with
-RLE in the middle of the training (1.5 million timesteps), where
-each color denotes a distinct trajectory. 
-- State visitation counts of all the methods after training for 2.5M time steps without any task reward
-
-## TODO
-<<<<<<< HEAD
-- Create a separate package for the environment?
--Need to ask about the combination they do on the paper for the feature network
--improve plotting capabilities
--add the other algos
--isaac still a problem to solve for rle
+The file _util/plot_util.py_ contains functions to create figures like in the RLE paper. The _plot_heatmap_ function plots a heatmap of the state visit counts and the _plot_trajectories_ plots the provided five trajectories in the FourRoom grid world.
