@@ -27,7 +27,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
-from four_room_grid_world.util.plot_util import plot_heatmap
+from four_room_grid_world.util.plot_util import plot_heatmap, create_plot_env, get_trajectories, plot_trajectories
 
 ENV_SIZE = 50
 
@@ -51,7 +51,7 @@ def record_episode(env, agent, device, max_steps=200, filename="episode.gif"):
 
     imageio.mimsave(filename, frames, duration=1000/30)
 
-def record_episode_with_probs(env, agent, device, max_steps=200, filename="episode.gif", iteration=0, feature_network=None):
+def record_iteration_with_probs(env, agent, device, max_steps=200, filename="episode.gif", iteration=0, feature_network=None):
     frames = []
     obs, _ = env.reset()
     obs = torch.Tensor(obs).to(device).unsqueeze(0)
@@ -125,7 +125,7 @@ def record_episode_with_probs(env, agent, device, max_steps=200, filename="episo
         plt.savefig(plot_filename)
         plt.close()
 
-        print(f"Episode {iteration} - Extrinsic Reward: {accumulated_reward:.2f}" +
+        print(f"Iteration {iteration} - Extrinsic Reward: {accumulated_reward:.2f}" +
               (f", Intrinsic Reward: {accumulated_intrinsic_reward:.2f}" if feature_network else ""))
 
 @dataclass
@@ -409,6 +409,7 @@ if __name__ == "__main__":
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
     envs = StateVisitCountWrapper(envs)
+    plot_env = create_plot_env(args.env_id, ENV_SIZE)
 
     # NOW RLE:
     #WE INIT THE THREE / TWO NETWORKS:
@@ -498,6 +499,11 @@ if __name__ == "__main__":
             if global_step == 500_000 or global_step == 2_400_000:
                 plot_heatmap(infos, global_step, ENV_SIZE)
 
+            # Does not work since the agent requires the latent vector as input to the agent (not compatible with other APIs)
+            #if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:
+            #    trajectories = get_trajectories(plot_env, agent, device)
+            #    plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset)
+
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info:
@@ -507,9 +513,9 @@ if __name__ == "__main__":
 
         # this is to save the episode recording periodically as a gif
         if iteration % 100 == 0:
-            gif_path = f"gifs_rle/episode_{iteration}.gif"
+            gif_path = f"gifs_rle/iteration{iteration}.gif"
             os.makedirs("gifs_rle", exist_ok=True)
-            record_episode_with_probs(
+            record_iteration_with_probs(
                 env=record_env,
                 agent=agent,
                 device=device,
@@ -517,7 +523,7 @@ if __name__ == "__main__":
                 iteration=iteration,
                 feature_network=feature_network 
             )
-            print(f"Saved episode recording to {gif_path}")
+            print(f"Saved iteration recording to {gif_path}")
 
         # returns and the advantages as all policy methods
         with torch.no_grad():

@@ -48,12 +48,11 @@ from copy import deepcopy
 from torch.utils.tensorboard import SummaryWriter
 
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
-from four_room_grid_world.util.plot_util import plot_heatmap
-
-ENV_SIZE = 50
+from four_room_grid_world.util.plot_util import plot_heatmap, get_trajectories, plot_trajectories, create_plot_env
 
 import four_room_grid_world.env_gymnasium.registration  # Do not remove this import
 
+ENV_SIZE = 50
 
 # Adopted from Isaac ppo_rnd
 
@@ -196,7 +195,7 @@ class Agent(nn.Module):
             layer_init(nn.Linear(64, 64)),
             nn.Tanh(),
         )
-        self.actor_mean = nn.Sequential(
+        self.actor = nn.Sequential(
             layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64, 64)),
@@ -213,7 +212,7 @@ class Agent(nn.Module):
         return self.critic_ext(hidden), self.critic_int(hidden)
 
     def get_action_and_value(self, x, action=None):
-        logits = self.actor_mean(x)
+        logits = self.actor(x)
         probs = Categorical(logits=logits)
         if action is None:
             action = probs.sample()
@@ -346,6 +345,8 @@ if __name__ == "__main__":
 
     envs = StateVisitCountWrapper(envs)
 
+    plot_env = create_plot_env(args.env_id, ENV_SIZE)
+
     if args.capture_video:
         envs.is_vector_env = True
         print(f"record_video_step_frequency={args.record_video_step_frequency}")
@@ -456,6 +457,10 @@ if __name__ == "__main__":
 
             if global_step == 500_000 or global_step == 2_400_000:
                 plot_heatmap(infos, global_step, ENV_SIZE)
+
+            if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:  # TODO Added by me
+                trajectories = get_trajectories(plot_env, agent, device)
+                plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset)
 
             for idx, d in enumerate(next_done):
                 if d:

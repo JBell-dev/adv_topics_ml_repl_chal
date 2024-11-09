@@ -19,7 +19,7 @@ from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
-from four_room_grid_world.util.plot_util import plot_heatmap, plot_trajectories
+from four_room_grid_world.util.plot_util import plot_heatmap, plot_trajectories, get_trajectories, create_plot_env
 
 from four_room_grid_world.env_gymnasium.registration import register  # DO NOT REMOTE THIS IMPORT
 
@@ -244,32 +244,6 @@ class Agent(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(x)
 
 
-def get_trajectories(env, agent, device, max_steps=1000):
-    trajectories = []
-
-    for i in range(5):
-        obs, _ = env.reset()
-        obs_list = [obs]
-        obs = torch.Tensor(obs).to(device)
-
-        for step in range(max_steps):
-            with torch.no_grad():
-                logits = agent.actor(obs)
-                action = torch.distributions.Categorical(logits=logits).sample()
-                action = action.cpu().item()
-
-            obs, reward, terminated, truncated, _ = env.step(action)
-            obs_list.append(obs)
-            obs = torch.Tensor(obs).to(device)
-
-            if terminated or truncated:
-                break
-
-        trajectories.append(obs_list)
-
-    return trajectories
-
-
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
@@ -314,6 +288,8 @@ if __name__ == "__main__":
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     record_env = gym.make(args.env_id, render_mode="rgb_array", max_episode_steps=None, size=ENV_SIZE)
+    plot_env = create_plot_env(args.env_id, ENV_SIZE)
+
 
     # ALGO Logic: Storage setup -> experience collection
     obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
@@ -360,8 +336,8 @@ if __name__ == "__main__":
                 plot_heatmap(infos, global_step, ENV_SIZE)
 
             if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:  # TODO Added by me
-                trajectories = get_trajectories(record_env, agent, device, max_steps=200)
-                plot_trajectories(global_step, trajectories, ENV_SIZE, record_env.x_wall_gap_offset, record_env.y_wall_gap_offset)
+                trajectories = get_trajectories(plot_env, agent, device)
+                plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset)
 
             if "final_info" in infos:
                 for info in infos["final_info"]:
