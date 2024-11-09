@@ -41,11 +41,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions import Categorical
-from torch.distributions.normal import Normal
-from torch.utils.tensorboard import SummaryWriter
 from collections import deque
 import torch.nn.functional as F
 from copy import deepcopy
+
+from torch.utils.tensorboard import SummaryWriter
 
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
 from four_room_grid_world.util.plot_util import plot_heatmap
@@ -203,8 +203,10 @@ class Agent(nn.Module):
             nn.Tanh(),
             layer_init(nn.Linear(64, envs.single_action_space.n), std=0.01),
         )
-        self.critic_ext = layer_init(nn.Linear(64, 1), std=1.0)  # TODO: not sure why 64, was 256 before (replaced all 256 with 64)
-        self.critic_int = layer_init(nn.Linear(64, 1), std=1.0)  # TODO: not sure why 64, was 256 before (replaced all 256 with 64)
+        self.critic_ext = layer_init(nn.Linear(64, 1),
+                                     std=1.0)  # TODO: not sure why 64, was 256 before (replaced all 256 with 64)
+        self.critic_int = layer_init(nn.Linear(64, 1),
+                                     std=1.0)  # TODO: not sure why 64, was 256 before (replaced all 256 with 64)
 
     def get_value(self, x):
         hidden = self.critic_base(x)
@@ -264,7 +266,6 @@ class RNDModel(nn.Module):
         return predict_feature, target_feature
 
 
-
 class RewardForwardFilter:
     def __init__(self, gamma):
         self.rewems = None
@@ -285,6 +286,7 @@ class RewardForwardFilter:
                 self.rewems[mask] = self.rewems[mask] * self.gamma + rews[mask]
             return deepcopy(self.rewems)
 
+
 def make_env(env_id, idx, capture_video, run_name):
     """
     Factory function that creates and wraps environments:
@@ -292,6 +294,7 @@ def make_env(env_id, idx, capture_video, run_name):
     - Wraps environment to record episode statistics
     - Configures environment parameters like max steps
     """
+
     def thunk():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=None, size=ENV_SIZE)
@@ -303,6 +306,7 @@ def make_env(env_id, idx, capture_video, run_name):
         return env
 
     return thunk
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -319,11 +323,12 @@ if __name__ == "__main__":
             # monitor_gym=True,
             save_code=True,
         )
-    # writer = SummaryWriter(f"runs/{run_name}")
-    # writer.add_text(
-    #     "hyperparameters",
-    #     "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-    # )
+
+    writer = SummaryWriter(f"runs/{run_name}")
+    writer.add_text(
+        "hyperparameters",
+        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+    )
 
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
@@ -387,7 +392,6 @@ if __name__ == "__main__":
     num_done_envs = 512
     avg_returns = deque(maxlen=num_done_envs)
     avg_ep_lens = deque(maxlen=num_done_envs)
-    avg_consecutive_successes = deque(maxlen=num_done_envs)
     avg_true_returns = deque(maxlen=num_done_envs)  # returns from without reward shaping
 
     # TRY NOT TO MODIFY: start the game
@@ -404,7 +408,8 @@ if __name__ == "__main__":
         action = torch.tensor(
             np.array([envs.action_space.sample() for _ in range(args.num_envs)]), dtype=torch.float).to(device)
 
-        next_obs, _, next_done, truncations, _ = envs.step(action.cpu().numpy()[0])  # [0] to remove unnecessary dimension
+        next_obs, _, next_done, truncations, _ = envs.step(
+            action.cpu().numpy()[0])  # [0] to remove unnecessary dimension
         next_obs = torch.Tensor(next_obs).to(device)
         next_done = torch.Tensor(next_done).to(device)
 
@@ -452,12 +457,16 @@ if __name__ == "__main__":
             if global_step == 500_000 or global_step == 2_400_000:
                 plot_heatmap(infos, global_step, ENV_SIZE)
 
-            if "final_info" in infos:
-                for info in infos["final_info"]:
-                    if info and "episode" in info:
-                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                        #writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                        #writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+            for idx, d in enumerate(next_done):
+                if d:
+                    episodic_return = infos["final_info"][idx]["episode"]["r"].item()
+                    episode_length = infos["final_info"][idx]["episode"]["l"].item()
+                    avg_returns.append(infos["final_info"][idx]["episode"]["r"].item())
+                    avg_ep_lens.append(episode_length)
+
+                    print(f"global_step={global_step}, episodic_return={episodic_return}")
+                    writer.add_scalar("charts/episodic_return", episodic_return, global_step)
+                    writer.add_scalar("charts/episodic_length", episode_length, global_step)
 
             rnd_next_obs = (
                 (
@@ -469,20 +478,6 @@ if __name__ == "__main__":
             target_next_feature = rnd_model.target(rnd_next_obs)
             predict_next_feature = rnd_model.predictor(rnd_next_obs)
             curiosity_rewards[step] = ((target_next_feature - predict_next_feature).pow(2).sum(1) / 2).data
-
-            continue  # TODO: Remove continue and properly log values
-            for idx, d in enumerate(next_done):
-                if d:
-                    episodic_return = infos["r"][idx].item()
-                    true_return = infos["ground_truth_r"][idx].item()
-                    avg_returns.append(infos["r"][idx].item())
-                    avg_true_returns.append(infos["ground_truth_r"][idx].item())
-                    avg_ep_lens.append(infos["l"][idx].item())
-                    if "consecutive_successes" in infos:  # ShadowHand and AllegroHand metric
-                        avg_consecutive_successes.append(infos["consecutive_successes"].item())
-                    if 0 <= step <= 2:
-                        print(
-                            f"global_step={global_step}, episodic_return={episodic_return}, true_return={true_return}")
 
         not_dones = 1.0 - dones
         ext_reward_per_env = torch.stack(
@@ -669,12 +664,17 @@ if __name__ == "__main__":
         data["charts/max_true_episode_return"] = np.max(avg_true_returns, initial=0)
         data["charts/min_true_episode_return"] = np.min(avg_true_returns, initial=0)
 
-        data["charts/consecutive_successes"] = np.mean(avg_consecutive_successes)
-        data["charts/max_consecutive_successes"] = np.max(avg_consecutive_successes, initial=0)
-        data["charts/min_consecutive_successes"] = np.min(avg_consecutive_successes, initial=0)
+        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
+        writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
+        writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
+        writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
+        writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
+        writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+        writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
+        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
         if args.track:
             wandb.log(data, step=global_step)
 
-    # envs.close()
-    # writer.close()
+    envs.close()
+    writer.close()
