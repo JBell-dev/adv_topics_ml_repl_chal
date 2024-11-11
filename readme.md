@@ -18,3 +18,8 @@ Note that the PPO, PPO RND, and Noise Net algorithms were not implemented by us 
 
 ## Visualization
 The file _util/plot_util.py_ contains functions to create figures like in the RLE paper. The _plot_heatmap_ function plots a heatmap of the state visit counts and the _plot_trajectories_ plots the provided five trajectories in the FourRoom grid world.
+
+## Good sources
+PPO:
+- https://fse.studenttheses.ub.rug.nl/25709/1/mAI_2021_BickD.pdf (page 16-19)
+- https://ai.stackexchange.com/questions/37608/why-clip-the-ppo-objective-on-only-one-side

@@ -1,7 +1,7 @@
 # RUN WITH THESE ARGUMENTS: --seed_0 --env_id advtop/FourRoomGridWorld-v0 --total_timesteps 2500000 --learning_rate 0.001 --num_envs 32
 
-#(base) jonatan@Jonatans-MacBook-Pro adv_topics_ml_repl_chal % python four_room_grid_world/algorithms/ppo_rle.py --env_id advtop/FourRoomGridWorld-v0 --total_timesteps 10000000 --learning_rate 0.001 --num_envs 32
-#zsh
+# (base) jonatan@Jonatans-MacBook-Pro adv_topics_ml_repl_chal % python four_room_grid_world/algorithms/ppo_rle.py --env_id advtop/FourRoomGridWorld-v0 --total_timesteps 10000000 --learning_rate 0.001 --num_envs 32
+# zsh
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppopy
 import os
 import random
@@ -31,6 +31,7 @@ from four_room_grid_world.util.plot_util import plot_heatmap, create_plot_env, g
 
 ENV_SIZE = 50
 
+
 def record_episode(env, agent, device, max_steps=200, filename="episode.gif"):
     frames = []
     obs, _ = env.reset()
@@ -49,9 +50,11 @@ def record_episode(env, agent, device, max_steps=200, filename="episode.gif"):
         if terminated or truncated:
             break
 
-    imageio.mimsave(filename, frames, duration=1000/30)
+    imageio.mimsave(filename, frames, duration=1000 / 30)
 
-def record_iteration_with_probs(env, agent, device, max_steps=200, filename="episode.gif", iteration=0, feature_network=None):
+
+def record_iteration_with_probs(env, agent, device, max_steps=200, filename="episode.gif", iteration=0,
+                                feature_network=None):
     frames = []
     obs, _ = env.reset()
     obs = torch.Tensor(obs).to(device).unsqueeze(0)
@@ -100,7 +103,7 @@ def record_iteration_with_probs(env, agent, device, max_steps=200, filename="epi
             break
 
     # Save the GIF
-    imageio.mimsave(filename, frames, duration=1000/30)
+    imageio.mimsave(filename, frames, duration=1000 / 30)
 
     # Plot probability histogram
     if len(all_probs) > 0:
@@ -127,6 +130,59 @@ def record_iteration_with_probs(env, agent, device, max_steps=200, filename="epi
 
         print(f"Iteration {iteration} - Extrinsic Reward: {accumulated_reward:.2f}" +
               (f", Intrinsic Reward: {accumulated_intrinsic_reward:.2f}" if feature_network else ""))
+
+
+def plot_reward_function(feature_network, global_step, number_reward_functions=10):
+    reward_functions = np.zeros(shape=(ENV_SIZE + 1, ENV_SIZE + 1, number_reward_functions))
+    for i in range(number_reward_functions):
+        x = np.arange(51)
+        y = np.arange(51)
+        xx, yy = np.meshgrid(x, y)
+        # Combine into a single array with shape (2601, 2)
+        grid_cells = np.vstack([xx.ravel(), yy.ravel()]).T
+
+        z = feature_network.sample_z(1)
+        for x, y in grid_cells:
+            obs = torch.Tensor([[x, y]])  # To consider batch dimension
+            # In imshow first dimension is vertical but in the FourRoom env x is horizontal
+            reward_functions[y, x, i], _ = feature_network.compute_reward(obs, z)
+
+    for i in range(number_reward_functions):
+        plt.imshow(reward_functions[:, :, i], cmap='viridis', vmin=-1, vmax=1)
+        plt.colorbar()
+        plt.title(f"Intrinsic reward function at time step {global_step:,}")
+        plt.show()
+
+
+def get_trajectories_RLE(env, agent, device, feature_network, number_trajectories):
+    trajectories = []
+
+    for i in range(number_trajectories):
+        obs, _ = env.reset()
+        trajectory = [obs]
+        obs = torch.Tensor(obs).to(device).unsqueeze(0)
+
+        z = feature_network.sample_z(batch_size=1)
+
+        while True:
+            with torch.no_grad():
+                combined_input = torch.cat([obs, z], dim=1)
+                logits = agent.actor(combined_input)
+                action_dist = torch.distributions.Categorical(logits=logits)
+                action = action_dist.sample()
+                action = action.cpu().item()
+
+                next_obs, reward, terminated, truncated, _ = env.step(action)
+                trajectory.append(next_obs)
+                obs = torch.Tensor(next_obs).unsqueeze(0).to(device)
+
+            if terminated or truncated:
+                break
+
+        trajectories.append(trajectory)
+
+    return trajectories
+
 
 @dataclass
 class Args:
@@ -161,7 +217,7 @@ class Args:
     """the id of the environment"""
     total_timesteps: int = 500000
     """total timesteps of the experiments"""
-    learning_rate: float = 0.001 #2.5e-4
+    learning_rate: float = 0.001  # 2.5e-4
     """the learning rate of the optimizer"""
     num_envs: int = 4
     """the number of parallel game environments"""
@@ -195,7 +251,7 @@ class Args:
     # RLE specific arguments
     int_coef: float = 0.01
     """coefficient for intrinsic rewards from RLE"""
-    RLE_FEATURE_SIZE: int = 4 
+    RLE_FEATURE_SIZE: int = 4
     """feature size for the RLE"""
 
     # to be filled in runtime
@@ -214,6 +270,7 @@ def make_env(env_id, idx, capture_video, run_name):
     - Wraps environment to record episode statistics
     - Configures environment parameters like max steps
     """
+
     def thunk():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=None, size=ENV_SIZE)
@@ -237,6 +294,7 @@ class FeatureNetwork(nn.Module):
     Feature Network to extract the features from the state
     it learns by linear combination of its params with the policy one
     """
+
     def __init__(self, envs, feature_size=4, tau=0.005, device='cuda'):
         super().__init__()
         self.device = device
@@ -274,15 +332,14 @@ class FeatureNetwork(nn.Module):
         this will output the intrinsic reward as on paper for a given (state,z)
         """
         with torch.no_grad():
-            #we get the unnormalized features and then normalize them
+            # we get the unnormalized features and then normalize them
             raw_features = self.forward(state)
             norm_features = self.normalize_features(raw_features)
 
             # dot product
-            reward = (norm_features * z).sum(dim=1)
+            reward = (norm_features * z).sum(dim=1) / torch.norm(norm_features, dim=1)  # TODO: is this correct ot add divsion by L2 norm?
 
         return reward, raw_features
-
 
     def update_from_policy_net(self, policy_net):
         """
@@ -298,7 +355,7 @@ class FeatureNetwork(nn.Module):
             for feat_param, policy_param in zip(feat_layer.parameters(), policy_layer.parameters()):
                 if feat_param.shape == policy_param.shape:
                     """only lower layers are updated since the upper ones need to control the z latent vector in the policy network"""
-                    #print(f"feat_param: {feat_param.shape}, policy_param: {policy_param.shape}")
+                    # print(f"feat_param: {feat_param.shape}, policy_param: {policy_param.shape}")
                     feat_param.data.copy_(
                         self.tau * policy_param.data + (1.0 - self.tau) * feat_param.data
                     )
@@ -316,11 +373,11 @@ class FeatureNetwork(nn.Module):
         return z
 
 
-
 class Agent(nn.Module):
     """
     Actor-Critic network for the PPO algorithm with the latent vector z as input
     """
+
     def __init__(self, envs):
         super().__init__()
 
@@ -375,6 +432,7 @@ if __name__ == "__main__":
     # Set up logging
     if args.track:
         import wandb
+
         wandb.init(
             project=args.wandb_project_name,
             entity=args.wandb_entity,
@@ -412,9 +470,11 @@ if __name__ == "__main__":
     plot_env = create_plot_env(args.env_id, ENV_SIZE)
 
     # NOW RLE:
-    #WE INIT THE THREE / TWO NETWORKS:
+    # WE INIT THE THREE / TWO NETWORKS:
     feature_network = FeatureNetwork(envs, feature_size=args.RLE_FEATURE_SIZE, device=device).to(device)
     agent = Agent(envs).to(device)
+    # TODO: So the value network is optimized to help reduce the policy loss?
+    # I.e., the value value network is not udpated independently (eg using MSE between predicted and actual value)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # EPISODE MEMORY
@@ -432,20 +492,20 @@ if __name__ == "__main__":
     latent_vectors = feature_network.sample_z(args.num_envs)
     steps_since_z_reset = torch.zeros(args.num_envs, device=device)
 
-    z_reset_frequency = 1280  # reset freq hyperparameter, i added this to control ourselves if we need to explore .
+    z_reset_frequency = 128  # reset freq hyperparameter, I added this to control ourselves if we need to explore .
 
     # Start training
     global_step = 0
     start_time = time.time()
-    next_obs, _ = envs.reset(seed=args.seed) #seed the first env
-    next_obs = torch.Tensor(next_obs).to(device) #to tensor and to device
-    next_done = torch.zeros(args.num_envs).to(device) #zeros for the done vector 
-    #remember that the done vector is a boolean vector that indicates if the episode is done for each environment
+    next_obs, _ = envs.reset(seed=args.seed)  # seed the first env
+    next_obs = torch.Tensor(next_obs).to(device)  # to tensor and to device
+    next_done = torch.zeros(args.num_envs).to(device)  # zeros for the done vector
+    # remember that the done vector is a boolean vector that indicates if the episode is done for each environment
 
     for iteration in range(1, args.num_iterations + 1):
-        #num_iterations = total_timesteps / num_envs  * num_steps
-        #num_iterations: represents the total number of training updates
-        #storage of features so we use to update it.
+        # num_iterations = total_timesteps / num_envs  * num_steps
+        # num_iterations: represents the total number of training updates
+        # storage of features so we use to update it.
         episode_features = []
         # annealing the learning rate if instructed to do so
         if args.anneal_lr:
@@ -454,8 +514,8 @@ if __name__ == "__main__":
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
-            #global step is the total number of steps that have been taken in all environments and iterations
-            #that means that the total number of episodes total_timesteps / avg_episode_steps.
+            # global step is the total number of steps that have been taken in all environments and iterations
+            # that means that the total number of episodes total_timesteps / avg_episode_steps.
             global_step += args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
@@ -498,18 +558,20 @@ if __name__ == "__main__":
 
             if global_step == 500_000 or global_step == 2_400_000:
                 plot_heatmap(infos, global_step, ENV_SIZE)
+                plot_reward_function(feature_network, global_step, 10)
 
-            # Does not work since the agent requires the latent vector as input to the agent (not compatible with other APIs)
-            #if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:
-            #    trajectories = get_trajectories(plot_env, agent, device)
-            #    plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset)
+            if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:
+                trajectories = get_trajectories_RLE(plot_env, agent, device, feature_network, 5)
+                plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset,
+                                  plot_env.y_wall_gap_offset)
 
-            if "final_info" in infos:
-                for info in infos["final_info"]:
-                    if info and "episode" in info:
-                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+            for idx, d in enumerate(next_done):
+                if d:
+                    episodic_return = infos["final_info"][idx]["episode"]["r"].item()
+                    episode_length = infos["final_info"][idx]["episode"]["l"].item()
+                    print(f"global_step={global_step}, episodic_return={episodic_return}")
+                    writer.add_scalar("charts/episodic_return", episodic_return, global_step)
+                    writer.add_scalar("charts/episodic_length", episode_length, global_step)
 
         # this is to save the episode recording periodically as a gif
         if iteration % 100 == 0:
@@ -521,7 +583,7 @@ if __name__ == "__main__":
                 device=device,
                 filename=gif_path,
                 iteration=iteration,
-                feature_network=feature_network 
+                feature_network=feature_network
             )
             print(f"Saved iteration recording to {gif_path}")
 
@@ -529,6 +591,9 @@ if __name__ == "__main__":
         with torch.no_grad():
             episode_features = torch.cat(episode_features, dim=0)
             feature_network.update_stats(episode_features)
+            # TODO: Why are we using the policy network and no the value network
+            # to update freature network's parameters?
+            # See https://github.com/jonupp/adv_topics_ml_repl_chal/blob/66dabf651a9956f1e03fc4125d189b853ff84888/ATARI%20games/ppo_rle.py#L858
             feature_network.update_from_policy_net(agent.actor)
 
             next_value = agent.get_value(next_obs, latent_vectors).reshape(1, -1)
@@ -544,7 +609,6 @@ if __name__ == "__main__":
                 delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - values[t]
                 advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
             returns = advantages + values
-
 
         # Flatten the batch
         b_obs = obs.reshape((-1,) + envs.single_observation_space.shape)

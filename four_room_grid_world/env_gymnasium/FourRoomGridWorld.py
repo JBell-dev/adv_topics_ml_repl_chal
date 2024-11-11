@@ -36,10 +36,10 @@ class FourRoomGridWorld(gym.Env):
         self.action_space = spaces.Discrete(4)
 
         self._action_to_direction = {
-            0: np.array([1, 0]),
-            1: np.array([0, 1]),
-            2: np.array([-1, 0]),
-            3: np.array([0, -1]),
+            0: np.array([1, 0]),   # Right
+            1: np.array([0, 1]),   # Up
+            2: np.array([-1, 0]),  # Left
+            3: np.array([0, -1]),  # Down
         }
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]

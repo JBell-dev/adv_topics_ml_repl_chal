@@ -50,6 +50,8 @@ def get_trajectories(env, agent, device):
 
 
 def plot_trajectories(global_step, trajectories, env_size, x_wall_gap_offset, y_wall_gap_offset):
+    assert len(trajectories) == 5, "Currently only supports plotting five trajectories"
+
     # Define colors and markers for different trajectories
     colors = ['blue', 'orange', 'green', 'purple', 'red']
     markers = ['o', 's', '^', 'D', 'P']
