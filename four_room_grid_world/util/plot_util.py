@@ -93,3 +93,4 @@ def plot_trajectories(global_step, trajectories, env_size, x_wall_gap_offset, y_
     plt.title(f"Five trajectories at time step {global_step:,}")
     plt.legend()
     plt.show()
+    plt.savefig(f"trajectories_{global_step}.png")

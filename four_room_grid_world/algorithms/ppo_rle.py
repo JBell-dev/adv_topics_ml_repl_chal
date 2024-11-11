@@ -278,6 +278,7 @@ def make_env(env_id, idx, capture_video, run_name):
         else:
             env = gym.make(env_id, max_episode_steps=None, size=ENV_SIZE)
         env = gym.wrappers.RecordEpisodeStatistics(env)
+        env = StateVisitCountWrapper(env)
         return env
 
     return thunk
@@ -466,8 +467,10 @@ if __name__ == "__main__":
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
-    envs = StateVisitCountWrapper(envs)
     plot_env = create_plot_env(args.env_id, ENV_SIZE)
+    # Unwrap to get the base environment
+    while hasattr(plot_env, 'env'):
+        plot_env = plot_env.env
 
     # NOW RLE:
     # WE INIT THE THREE / TWO NETWORKS:
@@ -557,7 +560,7 @@ if __name__ == "__main__":
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
 
             if global_step == 500_000 or global_step == 2_400_000:
-                plot_heatmap(infos, global_step, ENV_SIZE)
+                #plot_heatmap(infos, global_step, ENV_SIZE)
                 plot_reward_function(feature_network, global_step, 10)
 
             if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:
@@ -696,3 +699,5 @@ if __name__ == "__main__":
     envs.close()
     writer.close()
     record_env.close()
+
+    

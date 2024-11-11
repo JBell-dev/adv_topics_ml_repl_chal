@@ -593,7 +593,7 @@ if __name__ == "__main__":
     goals = torch.zeros((args.num_steps, args.num_envs, rle_feature_size)).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
 
-    rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    rewards = torch.zeros((args.num_steps, args.num_envs)).to(device) 
     rle_rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
 
     prev_rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -723,6 +723,7 @@ if __name__ == "__main__":
         not_dones = (1.0 - dones).cpu().data.numpy()
         rewards_cpu = rewards.cpu().data.numpy()
         rle_rewards_cpu = rle_rewards.cpu().data.numpy()
+        raw_rewards = rewards.clone() #added for debugging 
         if args.normalize_ext_rewards:
             ext_reward_per_env = np.array(
                 [ext_discounted_reward.update(rewards_cpu[i], not_dones[i]) for i in range(args.num_steps)]
@@ -965,12 +966,17 @@ if __name__ == "__main__":
         data["losses/all_loss"] = loss.item()
         data["charts/SPS"] = int(global_step / (time.time() - start_time))
 
-        data["rewards/rewards_mean"] = rewards.mean().item()
+        data["rewards/rewards_mean"] = rewards.mean().item() #avg over the rewards in the 128 steps for the 32 envs 
         data["rewards/rewards_max"] = rewards.max().item()
         data["rewards/rewards_min"] = rewards.min().item()
         data["rewards/intrinsic_rewards_mean"] = rle_rewards.mean().item()
         data["rewards/intrinsic_rewards_max"] = rle_rewards.max().item()
         data["rewards/intrinsic_rewards_min"] = rle_rewards.min().item()
+
+        # Log raw game rewards before normalization TO DEBUG
+        data["rewards/raw_game_rewards_mean"] = raw_rewards.mean().item()
+        data["rewards/raw_game_rewards_max"] = raw_rewards.max().item()
+        data["rewards/raw_game_rewards_min"] = raw_rewards.min().item()
 
         # Log the number of envs with positive extrinsic rewards (rewards has shape (num_steps, num_envs))
         data["rewards/num_envs_with_pos_rews"] = torch.sum(rewards.sum(dim=0) > 0).item()
