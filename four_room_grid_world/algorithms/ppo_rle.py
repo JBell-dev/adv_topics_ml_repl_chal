@@ -14,7 +14,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import tyro
-from gym.wrappers.normalize import RunningMeanStd
+from gymnasium.wrappers.normalize import RunningMeanStd  # Changed to gymnasium
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
@@ -27,7 +27,8 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
-from four_room_grid_world.util.plot_util import plot_heatmap, create_plot_env, get_trajectories, plot_trajectories
+from four_room_grid_world.util.plot_util import plot_heatmap, create_plot_env, get_trajectories, plot_trajectories, \
+    add_room_layout_to_plot
 
 ENV_SIZE = 50
 
@@ -132,26 +133,36 @@ def record_iteration_with_probs(env, agent, device, max_steps=200, filename="epi
               (f", Intrinsic Reward: {accumulated_intrinsic_reward:.2f}" if feature_network else ""))
 
 
-def plot_reward_function(feature_network, global_step, number_reward_functions=10):
-    reward_functions = np.zeros(shape=(ENV_SIZE + 1, ENV_SIZE + 1, number_reward_functions))
+def plot_reward_function(feature_network, x_wall_gap_offset, y_wall_gap_offset, global_step, save_dir, number_reward_functions=10):
+    assert number_reward_functions == 10, "Can only plot exactly 10 reward functions"
+
+    reward_functions = np.zeros((ENV_SIZE + 1, ENV_SIZE + 1, number_reward_functions))
+
     for i in range(number_reward_functions):
-        x = np.arange(51)
-        y = np.arange(51)
+        x = np.arange(ENV_SIZE + 1)
+        y = np.arange(ENV_SIZE + 1)
         xx, yy = np.meshgrid(x, y)
-        # Combine into a single array with shape (2601, 2)
         grid_cells = np.vstack([xx.ravel(), yy.ravel()]).T
 
         z = feature_network.sample_z(1)
         for x, y in grid_cells:
-            obs = torch.Tensor([[x, y]])  # To consider batch dimension
-            # In imshow first dimension is vertical but in the FourRoom env x is horizontal
+            obs = torch.Tensor([[x, y]])  # Include batch dimension
             reward_functions[y, x, i], _ = feature_network.compute_reward(obs, z)
 
-    for i in range(number_reward_functions):
-        plt.imshow(reward_functions[:, :, i], cmap='viridis', vmin=-1, vmax=1)
-        plt.colorbar()
-        plt.title(f"Intrinsic reward function at time step {global_step:,}")
-        plt.show()
+    # Plotting the 10 reward functions in a grid (2 rows x 5 columns)
+    fig, axes = plt.subplots(2, 5, figsize=(15, 6))
+    for i, ax in enumerate(axes.flat):
+        im = ax.imshow(reward_functions[:, :, i], cmap='viridis', vmin=-1, vmax=1)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        add_room_layout_to_plot(ax, ENV_SIZE, x_wall_gap_offset, y_wall_gap_offset)
+
+    cbar = fig.colorbar(im, ax=axes.ravel().tolist())
+    cbar.set_label('Reward')
+
+    plt.suptitle(f"Intrinsic Reward Functions at Step {global_step:,}")
+    print(f"Saved intrinsic reward functions plot {save_dir}/{global_step}_reward_functions.png")
+    plt.savefig(f"{save_dir}/{global_step}_reward_functions.png")
 
 
 def get_trajectories_RLE(env, agent, device, feature_network, number_trajectories):
@@ -249,7 +260,7 @@ class Args:
     """the target KL divergence threshold"""
 
     # RLE specific arguments
-    int_coef: float = 0.01
+    int_coef: float = 0.1
     """coefficient for intrinsic rewards from RLE"""
     RLE_FEATURE_SIZE: int = 4
     """feature size for the RLE"""
@@ -466,11 +477,12 @@ if __name__ == "__main__":
         [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
+    envs = StateVisitCountWrapper(envs)
 
     plot_env = create_plot_env(args.env_id, ENV_SIZE)
     # Unwrap to get the base environment
-    while hasattr(plot_env, 'env'):
-        plot_env = plot_env.env
+    #while hasattr(plot_env, 'env'):
+    #    plot_env = plot_env.env
 
     # NOW RLE:
     # WE INIT THE THREE / TWO NETWORKS:
@@ -560,13 +572,13 @@ if __name__ == "__main__":
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
 
             if global_step == 500_000 or global_step == 2_400_000:
-                #plot_heatmap(infos, global_step, ENV_SIZE)
-                plot_reward_function(feature_network, global_step, 10)
+                plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
+                plot_reward_function(feature_network, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset, global_step, f"runs/{run_name}", 10)
 
             if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:
                 trajectories = get_trajectories_RLE(plot_env, agent, device, feature_network, 5)
                 plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset,
-                                  plot_env.y_wall_gap_offset)
+                                  plot_env.y_wall_gap_offset, f"runs/{run_name}")
 
             for idx, d in enumerate(next_done):
                 if d:

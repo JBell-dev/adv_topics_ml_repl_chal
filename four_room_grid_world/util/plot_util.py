@@ -4,10 +4,13 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 import gymnasium as gym
 
-def plot_heatmap(infos, global_step, env_size):
+
+def plot_heatmap(infos, global_step, env_size, save_dir):
     # Uncomment only for debugging
     # sorted_dict = dict(sorted(infos["visit_counts"].items(), key=lambda item: item[1], reverse=True))
     # print(sorted_dict)
+
+    plt.clf()  # Otherwise sometimes the trajectories are plotted here
 
     states = np.zeros(shape=(env_size + 1, env_size + 1))
     for (x, y), count in infos["visit_counts"].items():
@@ -16,7 +19,8 @@ def plot_heatmap(infos, global_step, env_size):
     plt.imshow(states, cmap='viridis', norm=LogNorm(vmin=1, vmax=states.max() or 1))
     plt.colorbar()
     plt.title(f"State visit count at time step {global_step:,}")
-    plt.show()
+    print(f"Saved state visit heatmap plot {save_dir}/{global_step}_state_visit_heatmap.png")
+    plt.savefig(f"{save_dir}/{global_step}_state_visit_heatmap.png")
 
 
 def create_plot_env(env_id, env_size):
@@ -49,7 +53,31 @@ def get_trajectories(env, agent, device):
     return trajectories
 
 
-def plot_trajectories(global_step, trajectories, env_size, x_wall_gap_offset, y_wall_gap_offset):
+def add_room_layout_to_plot(p, env_size, x_wall_gap_offset, y_wall_gap_offset):
+    centre = env_size // 2
+
+    # Fill between for the horizontal lines (left, middle, right)
+    p.fill_between([0 - 1 / 2, centre - x_wall_gap_offset - 1 / 2], centre + 1 / 2, centre - 1 / 2, color='black',
+                     lw=0)  # Left segment
+    p.fill_between([centre - x_wall_gap_offset + 1 / 2, centre + x_wall_gap_offset - 1 / 2], centre + 1 / 2,
+                     centre - 1 / 2,
+                     color='black', lw=0)  # Middle segment
+    p.fill_between([centre + x_wall_gap_offset + 1 / 2, env_size + 1 / 2], centre + 1 / 2, centre - 1 / 2,
+                     color='black',
+                     lw=0)  # Right segment
+
+    # Fill between for the vertical lines (upper, middle, lower)
+    p.fill_betweenx([0 - 1 / 2, centre - y_wall_gap_offset - 1 / 2], centre + 1 / 2, centre - 1 / 2, color='black',
+                      lw=0)  # Upper segment
+    p.fill_betweenx([centre - y_wall_gap_offset + 1 / 2, centre + y_wall_gap_offset - 1 / 2], centre + 1 / 2,
+                      centre - 1 / 2,
+                      color='black', lw=0)  # Middle segment
+    p.fill_betweenx([centre + y_wall_gap_offset + 1 / 2, env_size + 1 / 2], centre + 1 / 2, centre - 1 / 2,
+                      color='black',
+                      lw=0)  # Lower segment
+
+
+def plot_trajectories(global_step, trajectories, env_size, x_wall_gap_offset, y_wall_gap_offset, save_dir):
     assert len(trajectories) == 5, "Currently only supports plotting five trajectories"
 
     # Define colors and markers for different trajectories
@@ -63,27 +91,7 @@ def plot_trajectories(global_step, trajectories, env_size, x_wall_gap_offset, y_
         x, y = zip(*trajectory)  # Separate x and y coordinates
         plt.scatter(x, y, c=colors[i], marker=markers[i], label=f'Trajectory {i + 1}', s=20)
 
-    centre = env_size // 2
-
-    # Fill between for the horizontal lines (left, middle, right)
-    plt.fill_between([0 - 1 / 2, centre - x_wall_gap_offset - 1 / 2], centre + 1 / 2, centre - 1 / 2, color='black',
-                     lw=0)  # Left segment
-    plt.fill_between([centre - x_wall_gap_offset + 1 / 2, centre + x_wall_gap_offset - 1 / 2], centre + 1 / 2,
-                     centre - 1 / 2,
-                     color='black', lw=0)  # Middle segment
-    plt.fill_between([centre + x_wall_gap_offset + 1 / 2, env_size + 1 / 2], centre + 1 / 2, centre - 1 / 2,
-                     color='black',
-                     lw=0)  # Right segment
-
-    # Fill between for the vertical lines (upper, middle, lower)
-    plt.fill_betweenx([0 - 1 / 2, centre - y_wall_gap_offset - 1 / 2], centre + 1 / 2, centre - 1 / 2, color='black',
-                      lw=1)  # Upper segment
-    plt.fill_betweenx([centre - y_wall_gap_offset + 1 / 2, centre + y_wall_gap_offset - 1 / 2], centre + 1 / 2,
-                      centre - 1 / 2,
-                      color='black', lw=0)  # Middle segment
-    plt.fill_betweenx([centre + y_wall_gap_offset + 1 / 2, env_size + 1 / 2], centre + 1 / 2, centre - 1 / 2,
-                      color='black',
-                      lw=0)  # Lower segment
+    add_room_layout_to_plot(plt, env_size, x_wall_gap_offset, y_wall_gap_offset)
 
     # Adjust plot settings
     plt.xlim(0 - 1 / 2, env_size + 1 - 1 + 1 / 2)
@@ -92,5 +100,5 @@ def plot_trajectories(global_step, trajectories, env_size, x_wall_gap_offset, y_
     plt.ylabel("Y Position")
     plt.title(f"Five trajectories at time step {global_step:,}")
     plt.legend()
-    plt.show()
-    plt.savefig(f"trajectories_{global_step}.png")
+    print(f"Saved trajectory plot {save_dir}/{global_step}_trajectories.png")
+    plt.savefig(f"{save_dir}/{global_step}_trajectories.png")

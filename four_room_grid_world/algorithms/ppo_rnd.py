@@ -456,11 +456,11 @@ if __name__ == "__main__":
             rewards[step] = next_rewards
 
             if global_step == 500_000 or global_step == 2_400_000:
-                plot_heatmap(infos, global_step, ENV_SIZE)
+                plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
 
             if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:  # TODO Added by me
                 trajectories = get_trajectories(plot_env, agent, device)
-                plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset)
+                plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset, f"runs/{run_name}")
 
             for idx, d in enumerate(next_done):
                 if d:
