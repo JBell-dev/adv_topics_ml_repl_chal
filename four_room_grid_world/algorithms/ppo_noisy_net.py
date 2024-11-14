@@ -1,6 +1,4 @@
 # Adopted from ppo_noisy_net atari
-# --seed 0 --env-id advtop/FourRoomGridWorld-v0 --total-timesteps 2500000 --learning-rate 0.001 --num-envs 32 --num-steps 128
-
 import argparse
 import os
 import random
@@ -20,6 +18,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
 from four_room_grid_world.util.plot_util import plot_heatmap, get_trajectories, plot_trajectories, create_plot_env
+
 from four_room_grid_world.env_gymnasium.registration import register  # DO NOT REMOTE THIS IMPORT
 
 
@@ -31,7 +30,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp-name", type=str, default=os.path.basename(__file__).rstrip(".py"),
                         help="the name of this experiment")
-    parser.add_argument("--seed", type=int, default=1,
+    parser.add_argument("--seed", type=int, default=0,
                         help="seed of the experiment")
     parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
                         help="if toggled, `torch.backends.cudnn.deterministic=False`")
@@ -51,13 +50,13 @@ def parse_args():
                         help="ID of GPU to use")
 
     # Algorithm specific arguments
-    parser.add_argument("--env-id", type=str, default="Alien-v5",
+    parser.add_argument("--env-id", type=str, default="advtop/FourRoomGridWorld-v0",
                         help="the id of the environment")
-    parser.add_argument("--total-timesteps", type=int, default=40000000,
+    parser.add_argument("--total-timesteps", type=int, default=2_500_000,
                         help="total timesteps of the experiments")
-    parser.add_argument("--learning-rate", type=float, default=1e-4,
+    parser.add_argument("--learning-rate", type=float, default=0.001,
                         help="the learning rate of the optimizer")
-    parser.add_argument("--num-envs", type=int, default=128,
+    parser.add_argument("--num-envs", type=int, default=32,
                         help="the number of parallel game environments")
     parser.add_argument("--num-steps", type=int, default=128,
                         help="the number of steps to run in each environment per policy rollout")

@@ -1,34 +1,27 @@
-# RUN WITH THESE ARGUMENTS: --seed_0 --env_id advtop/FourRoomGridWorld-v0 --total_timesteps 2500000 --learning_rate 0.001 --num_envs 32
-
-# (base) jonatan@Jonatans-MacBook-Pro adv_topics_ml_repl_chal % python four_room_grid_world/algorithms/ppo_rle.py --env_id advtop/FourRoomGridWorld-v0 --total_timesteps 10000000 --learning_rate 0.001 --num_envs 32
-# zsh
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppopy
 import os
 import random
 import time
 from dataclasses import dataclass
 
+import imageio
+import matplotlib.pyplot as plt
 import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import tyro
-from gymnasium.wrappers.normalize import RunningMeanStd  # Changed to gymnasium
+from gymnasium.wrappers.normalize import RunningMeanStd
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
-
-import four_room_grid_world.env_gymnasium.registration  # Do not remove this import
-from four_room_grid_world.env_gymnasium.FourRoomGridWorld import FourRoomGridWorld
-
-# Add these imports at the top
-import imageio
-from PIL import Image
-import matplotlib.pyplot as plt
 
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
 from four_room_grid_world.util.plot_util import plot_heatmap, create_plot_env, get_trajectories, plot_trajectories, \
     add_room_layout_to_plot
+
+import four_room_grid_world.env_gymnasium.registration  # Do not remove this import
+from four_room_grid_world.env_gymnasium.FourRoomGridWorld import FourRoomGridWorld
 
 ENV_SIZE = 50
 
@@ -197,18 +190,9 @@ def get_trajectories_RLE(env, agent, device, feature_network, number_trajectorie
 
 @dataclass
 class Args:
-    """
-    Configuration class that defines all hyperparameters and settings:
-    - exp_name: Experiment name for logging
-    - env_id: The environment to train on
-    - total_timesteps: Total number of environment steps to train for
-    - learning_rate: Learning rate for the optimizer
-    - num_envs: Number of parallel environments
-    ... and many other PPO-specific parameters
-    """
     exp_name: str = os.path.basename(__file__)[: -len(".py")]
     """the name of this experiment"""
-    seed: int = 1
+    seed: int = 0
     """seed of the experiment"""
     torch_deterministic: bool = True
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
@@ -224,13 +208,13 @@ class Args:
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
     # Algorithm specific arguments
-    env_id: str = "CartPole-v1"
+    env_id: str = "advtop/FourRoomGridWorld-v0"
     """the id of the environment"""
-    total_timesteps: int = 500000
+    total_timesteps: int = 2_500_000
     """total timesteps of the experiments"""
     learning_rate: float = 0.001  # 2.5e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 4
+    num_envs: int = 32
     """the number of parallel game environments"""
     num_steps: int = 128
     """the number of steps to run in each environment per policy rollout"""

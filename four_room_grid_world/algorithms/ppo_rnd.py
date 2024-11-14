@@ -26,8 +26,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-# --seed 0 --env-id advtop/FourRoomGridWorld-v0 --total-timesteps 2500000 --learning-rate 0.001 --num-envs 32 --int-coef 1.0 --num-steps 128 --update-proportion 0.75
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_action_isaacgympy
 import argparse
 import os
@@ -61,7 +59,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp-name", type=str, default=os.path.basename(__file__).rstrip(".py"),
                         help="the name of this experiment")
-    parser.add_argument("--seed", type=int, default=1,
+    parser.add_argument("--seed", type=int, default=0,
                         help="seed of the experiment")
     parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
                         help="if toggled, `torch.backends.cudnn.deterministic=False`")
@@ -79,15 +77,15 @@ def parse_args():
                         help="ID of GPU to use")
 
     # Algorithm specific arguments
-    parser.add_argument("--env-id", type=str, default="Ant",
+    parser.add_argument("--env-id", type=str, default="advtop/FourRoomGridWorld-v0",
                         help="the id of the environment")
-    parser.add_argument("--total-timesteps", type=int, default=30000000,
+    parser.add_argument("--total-timesteps", type=int, default=2_500_000,
                         help="total timesteps of the experiments")
-    parser.add_argument("--learning-rate", type=float, default=0.0026,
+    parser.add_argument("--learning-rate", type=float, default=0.001,
                         help="the learning rate of the optimizer")
-    parser.add_argument("--num-envs", type=int, default=4096,
+    parser.add_argument("--num-envs", type=int, default=32,
                         help="the number of parallel game environments")
-    parser.add_argument("--num-steps", type=int, default=16,
+    parser.add_argument("--num-steps", type=int, default=128,
                         help="the number of steps to run in each environment per policy rollout")
     parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
                         help="Toggle learning rate annealing for policy and value networks")
@@ -95,7 +93,7 @@ def parse_args():
                         help="the discount factor gamma")
     parser.add_argument("--gae-lambda", type=float, default=0.95,
                         help="the lambda for the general advantage estimation")
-    parser.add_argument("--num-minibatches", type=int, default=2,
+    parser.add_argument("--num-minibatches", type=int, default=4,
                         help="the number of mini-batches")
     parser.add_argument("--update-epochs", type=int, default=4,
                         help="the K epochs to update the policy")
@@ -103,13 +101,13 @@ def parse_args():
                         help="Toggles advantages normalization")
     parser.add_argument("--clip-coef", type=float, default=0.2,
                         help="the surrogate clipping coefficient")
-    parser.add_argument("--clip-vloss", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+    parser.add_argument("--clip-vloss", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
                         help="Toggles whether or not to use a clipped loss for the value function, as per the paper.")
-    parser.add_argument("--ent-coef", type=float, default=0.0,
+    parser.add_argument("--ent-coef", type=float, default=0.01,
                         help="coefficient of the entropy")
-    parser.add_argument("--vf-coef", type=float, default=2,
+    parser.add_argument("--vf-coef", type=float, default=0.5,
                         help="coefficient of the value function")
-    parser.add_argument("--max-grad-norm", type=float, default=1,
+    parser.add_argument("--max-grad-norm", type=float, default=0.5,
                         help="the maximum norm for the gradient clipping")
     parser.add_argument("--target-kl", type=float, default=None,
                         help="the target KL divergence threshold")
@@ -120,9 +118,9 @@ def parse_args():
                         help="the frequency at which to record the videos")
 
     # RND arguments
-    parser.add_argument("--update-proportion", type=float, default=0.0625,
+    parser.add_argument("--update-proportion", type=float, default=0.75,
                         help="proportion of exp used for predictor update")
-    parser.add_argument("--int-coef", type=float, default=0.5,
+    parser.add_argument("--int-coef", type=float, default=1.0,
                         help="coefficient of extrinsic reward")
     parser.add_argument("--ext-coef", type=float, default=1.0,
                         help="coefficient of intrinsic reward")
@@ -203,9 +201,9 @@ class Agent(nn.Module):
             layer_init(nn.Linear(64, envs.single_action_space.n), std=0.01),
         )
         self.critic_ext = layer_init(nn.Linear(64, 1),
-                                     std=1.0)  # TODO: not sure why 64, was 256 before (replaced all 256 with 64)
+                                     std=1.0)
         self.critic_int = layer_init(nn.Linear(64, 1),
-                                     std=1.0)  # TODO: not sure why 64, was 256 before (replaced all 256 with 64)
+                                     std=1.0)
 
     def get_value(self, x):
         hidden = self.critic_base(x)
@@ -248,8 +246,6 @@ class RNDModel(nn.Module):
         # Target network
         self.target = nn.Sequential(
             layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), self.target_width)),
-            nn.ReLU(),
-            layer_init(nn.Linear(self.target_width, self.target_width)),
             nn.ReLU(),
             layer_init(nn.Linear(self.target_width, self.output_size)),
         )

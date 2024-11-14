@@ -1,5 +1,3 @@
-# RUN WITH THESE ARGUMENTS: --seed 0 --env_id advtop/FourRoomGridWorld-v0 --total_timesteps 2500000 --learning_rate 0.001 --num_envs 32
-
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppopy
 import os
 import random
@@ -7,7 +5,6 @@ import time
 from dataclasses import dataclass
 
 import gymnasium as gym
-# Add these imports at the top
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
@@ -104,18 +101,9 @@ def record_episode_with_probs(env, agent, device, max_steps=200, filename="episo
 
 @dataclass
 class Args:
-    """
-    Configuration class that defines all hyperparameters and settings:
-    - exp_name: Experiment name for logging
-    - env_id: The environment to train on
-    - total_timesteps: Total number of environment steps to train for
-    - learning_rate: Learning rate for the optimizer
-    - num_envs: Number of parallel environments
-    ... and many other PPO-specific parameters
-    """
     exp_name: str = os.path.basename(__file__)[: -len(".py")]
     """the name of this experiment"""
-    seed: int = 1
+    seed: int = 0
     """seed of the experiment"""
     torch_deterministic: bool = True
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
@@ -131,13 +119,13 @@ class Args:
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
     # Algorithm specific arguments
-    env_id: str = "CartPole-v1"
+    env_id: str = "advtop/FourRoomGridWorld-v0"
     """the id of the environment"""
-    total_timesteps: int = 500000
+    total_timesteps: int = 2_500_000
     """total timesteps of the experiments"""
-    learning_rate: float = 2.5e-4
+    learning_rate: float = 0.001
     """the learning rate of the optimizer"""
-    num_envs: int = 4
+    num_envs: int = 32
     """the number of parallel game environments"""
     num_steps: int = 128
     """the number of steps to run in each environment per policy rollout"""
