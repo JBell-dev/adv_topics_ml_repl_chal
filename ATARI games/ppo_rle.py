@@ -720,7 +720,11 @@ if __name__ == "__main__":
             next_ep_done = info["terminated"] | info["TimeLimit.truncated"]
             rle_network.step(next_done, next_ep_done)
 
+
+        #here they do the weird normalization of them. 
         not_dones = (1.0 - dones).cpu().data.numpy()
+        rewards_for_plot = rewards.clone()
+        
         rewards_cpu = rewards.cpu().data.numpy()
         rle_rewards_cpu = rle_rewards.cpu().data.numpy()
         raw_rewards = rewards.clone() #added for debugging 
@@ -977,6 +981,9 @@ if __name__ == "__main__":
         data["rewards/raw_game_rewards_mean"] = raw_rewards.mean().item()
         data["rewards/raw_game_rewards_max"] = raw_rewards.max().item()
         data["rewards/raw_game_rewards_min"] = raw_rewards.min().item()
+
+        data["rewards/rewards_for_plot"] = rewards_for_plot.mean().item()
+        
 
         # Log the number of envs with positive extrinsic rewards (rewards has shape (num_steps, num_envs))
         data["rewards/num_envs_with_pos_rews"] = torch.sum(rewards.sum(dim=0) > 0).item()
