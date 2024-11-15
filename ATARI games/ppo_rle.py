@@ -390,8 +390,7 @@ class RewardForwardFilter:
             else:
                 mask = np.where(not_done == 1.0)
                 self.rewems[mask] = self.rewems[mask] * self.gamma + rews[mask]
-            #return deepcopy(self.rewems)
-            return self.rewems.clone()
+            return deepcopy(self.rewems)
 
 
 class VideoRecorder(object):
@@ -984,7 +983,7 @@ if __name__ == "__main__":
         data["rewards/raw_game_rewards_min"] = raw_rewards.min().item()
 
         data["rewards/rewards_for_plot"] = rewards_for_plot.mean().item()
-
+        
 
         # Log the number of envs with positive extrinsic rewards (rewards has shape (num_steps, num_envs))
         data["rewards/num_envs_with_pos_rews"] = torch.sum(rewards.sum(dim=0) > 0).item()

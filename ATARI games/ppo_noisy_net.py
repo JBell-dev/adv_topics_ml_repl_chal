@@ -269,8 +269,8 @@ class RewardForwardFilter:
             else:
                 mask = np.where(not_done == 1.0)
                 self.rewems[mask] = self.rewems[mask] * self.gamma + rews[mask]
-            #return deepcopy(self.rewems)
-            return self.rewems.clone()
+            return deepcopy(self.rewems)
+
 
 if __name__ == "__main__":
     args = parse_args()
