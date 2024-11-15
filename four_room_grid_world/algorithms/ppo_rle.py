@@ -268,10 +268,10 @@ def make_env(env_id, idx, capture_video, run_name):
 
     def thunk():
         if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=None, size=ENV_SIZE)
+            env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=1_000, size=ENV_SIZE)
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
-            env = gym.make(env_id, max_episode_steps=None, size=ENV_SIZE)
+            env = gym.make(env_id, max_episode_steps=1_000, size=ENV_SIZE)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = StateVisitCountWrapper(env)
         return env
@@ -337,7 +337,7 @@ class FeatureNetwork(nn.Module):
 
         return reward, raw_features
 
-    def update_from_policy_net(self, policy_net):
+    def update_from_value_net(self, value_net):
         """
         Here we need to update the feature network as a linear combination of the policy one and itself (as they done in the paper)
         !!!!!!
@@ -345,7 +345,7 @@ class FeatureNetwork(nn.Module):
         since the first layer of the policy network has also the z vector as input. that is not input in the feature network.
         """
         feature_layers = [layer for layer in self.shared_layers if isinstance(layer, nn.Linear)]
-        policy_layers = [layer for layer in policy_net if isinstance(layer, nn.Linear)][:len(feature_layers)]
+        policy_layers = [layer for layer in value_net if isinstance(layer, nn.Linear)][:len(feature_layers)]
 
         for feat_layer, policy_layer in zip(feature_layers, policy_layers):
             for feat_param, policy_param in zip(feat_layer.parameters(), policy_layer.parameters()):
@@ -590,10 +590,7 @@ if __name__ == "__main__":
         with torch.no_grad():
             episode_features = torch.cat(episode_features, dim=0)
             feature_network.update_stats(episode_features)
-            # TODO: Why are we using the policy network and no the value network
-            # to update freature network's parameters?
-            # See https://github.com/jonupp/adv_topics_ml_repl_chal/blob/66dabf651a9956f1e03fc4125d189b853ff84888/ATARI%20games/ppo_rle.py#L858
-            feature_network.update_from_policy_net(agent.actor)
+            feature_network.update_from_value_net(agent.critic)
 
             next_value = agent.get_value(next_obs, latent_vectors).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)

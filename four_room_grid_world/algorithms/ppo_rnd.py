@@ -292,10 +292,10 @@ def make_env(env_id, idx, capture_video, run_name):
 
     def thunk():
         if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=None, size=ENV_SIZE)
+            env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=1_000, size=ENV_SIZE)
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
-            env = gym.make(env_id, max_episode_steps=None, size=ENV_SIZE)
+            env = gym.make(env_id, max_episode_steps=1_000, size=ENV_SIZE)
 
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
