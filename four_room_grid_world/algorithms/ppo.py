@@ -1,5 +1,6 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppopy
 import os
+import pickle
 import random
 import time
 from dataclasses import dataclass
@@ -115,8 +116,6 @@ class Args:
     """the wandb's project name"""
     wandb_entity: str = None
     """the entity (team) of wandb's project"""
-    capture_video: bool = False
-    """whether to capture videos of the agent performances (check out `videos` folder)"""
 
     # Algorithm specific arguments
     env_id: str = "advtop/FourRoomGridWorld-v0"
@@ -163,20 +162,9 @@ class Args:
     """the number of iterations (computed in runtime)"""
 
 
-def make_env(env_id, idx, capture_video, run_name):
-    """
-    Factory function that creates and wraps environments:
-    - Sets up video recording if enabled
-    - Wraps environment to record episode statistics
-    - Configures environment parameters like max steps
-    """
-
+def make_env(env_id, idx, run_name):
     def thunk():
-        if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=1_000, size=ENV_SIZE)
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        else:
-            env = gym.make(env_id, max_episode_steps=1_000, size=ENV_SIZE)
+        env = gym.make(env_id, max_episode_steps=1_000, size=ENV_SIZE)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
 
@@ -266,7 +254,7 @@ if __name__ == "__main__":
 
     # env setup
     envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
+        [make_env(args.env_id, i, run_name) for i in range(args.num_envs)],
     )
     envs = StateVisitCountWrapper(envs)
 
@@ -323,9 +311,13 @@ if __name__ == "__main__":
             if global_step == 500_000 or global_step == 2_400_000:
                 plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
 
-            if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:  # TODO Added by me
+            if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:
                 trajectories = get_trajectories(plot_env, agent, device)
                 plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset, f"runs/{run_name}")
+
+            if global_step == 2_400_000:
+                with open(f"runs/{run_name}/ppo_visit_counts.pkl", "wb") as file:
+                    pickle.dump(infos["visit_counts"], file)
 
             if "final_info" in infos:
                 for info in infos["final_info"]:

@@ -1,6 +1,7 @@
 # Adopted from ppo_noisy_net atari
 import argparse
 import os
+import pickle
 import random
 import time
 from collections import deque
@@ -42,10 +43,6 @@ def parse_args():
                         help="the wandb's project name")
     parser.add_argument("--wandb-entity", type=str, default=None,
                         help="the entity (team) of wandb's project")
-    parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-                        help="whether to capture videos of the agent performances (log it on wandb)")
-    parser.add_argument("--capture-video-interval", type=int, default=10,
-                        help="How many training updates to wait before capturing video")
     parser.add_argument("--gpu-id", type=int, default=0,
                         help="ID of GPU to use")
 
@@ -90,13 +87,6 @@ def parse_args():
                         const=True,
                         help="if toggled, extrinsic rewards will be normalized")
 
-    # Evaluation specific arguments
-    parser.add_argument("--eval-interval", type=int, default=0,
-                        help="number of epochs between evaluations (0 to skip)")
-    parser.add_argument("--num-eval-envs", type=int, default=32,
-                        help="the number of evaluation environments")
-    parser.add_argument("--num-eval-episodes", type=int, default=32,
-                        help="the number of episodes to evaluate with")
 
     args = parser.parse_args()
     args.batch_size = int(args.num_envs * args.num_steps)
@@ -228,20 +218,9 @@ class RewardForwardFilter:
             return deepcopy(self.rewems)
 
 
-def make_env(env_id, idx, capture_video, run_name):
-    """
-    Factory function that creates and wraps environments:
-    - Sets up video recording if enabled
-    - Wraps environment to record episode statistics
-    - Configures environment parameters like max steps
-    """
-
+def make_env(env_id, idx, run_name):
     def thunk():
-        if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array", max_episode_steps=1_000, size=ENV_SIZE)
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        else:
-            env = gym.make(env_id, max_episode_steps=1_000, size=ENV_SIZE)
+        env = gym.make(env_id, max_episode_steps=1_000, size=ENV_SIZE)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
 
@@ -279,7 +258,7 @@ if __name__ == "__main__":
 
     # env setup
     envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
+        [make_env(args.env_id, i, run_name) for i in range(args.num_envs)],
     )
     envs.num_envs = args.num_envs
 
@@ -341,7 +320,9 @@ if __name__ == "__main__":
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, done, truncations, infos = envs.step(action.cpu().numpy())
             rewards[step] = torch.tensor(reward).to(device).view(-1)
-            next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
+            next_obs = torch.Tensor(next_obs).to(device)
+            next_done = np.logical_or(done, truncations)
+            next_done = torch.Tensor(next_done).to(device)
 
             if global_step == 500_000 or global_step == 2_400_000:
                 plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
@@ -349,6 +330,10 @@ if __name__ == "__main__":
             if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:  # TODO Added by me
                 trajectories = get_trajectories(plot_env, agent, device)
                 plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset, f"runs/{run_name}")
+
+            if global_step == 2_400_000:
+                with open(f"runs/{run_name}/ppo_noisy_net_visit_counts.pkl", "wb") as file:
+                    pickle.dump(infos["visit_counts"], file)
 
             for idx, d in enumerate(next_done):
                 if d:
@@ -453,60 +438,6 @@ if __name__ == "__main__":
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
         it_end_time = time.time()
-
-        if args.eval_interval != 0 and update % args.eval_interval == 0:
-            print(f"Evaluating at step {update}...")
-            # Evaluate the agent by taking actions from the deterministic policy with goal vector = 0
-            eval_start_time = time.time()
-            eval_scores = []
-            eval_ep_lens = []
-            # Create eval envs
-            eval_envs = gym.vector.SyncVectorEnv(
-                [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_eval_envs)],
-            )
-            eval_envs.num_envs = args.num_eval_envs
-            eval_envs.single_action_space = eval_envs.action_space
-            eval_envs.single_observation_space = eval_envs.observation_space
-
-            # Evaluate the agent
-            eval_obs = torch.Tensor(eval_envs.reset()).to(device)
-            eval_done = torch.zeros(args.num_eval_envs).to(device)
-
-            # Rollout the environments until the number of completed episodes is equal to the number of evaluation environments
-            while len(eval_scores) < args.num_eval_episodes:
-                # Sample actions from the policy
-                with torch.no_grad():
-                    eval_action, _, _, _ = agent.get_action_and_value(
-                        eval_obs, deterministic=True
-                    )
-                eval_obs, eval_reward, eval_done, truncations, eval_info = eval_envs.step(eval_action.cpu().numpy())
-                eval_reward = torch.tensor(eval_reward).to(device).view(-1)
-                eval_obs, eval_done = torch.Tensor(eval_obs).to(device), torch.Tensor(eval_done).to(device)
-
-                for idx, d in enumerate(eval_done):
-                    if eval_info["terminated"][idx] or eval_info["TimeLimit.truncated"][idx]:
-                        eval_scores.append(eval_info["r"][idx])
-                        eval_ep_lens.append(eval_info["elapsed_step"][idx])
-
-            eval_envs.close()
-            eval_end_time = time.time()
-
-            print(f"Evaluation finished in {eval_end_time - eval_start_time} seconds")
-            print(f"Step {update}: game score: {np.mean(eval_scores)}")
-
-            eval_data = {}
-            eval_data["eval/score"] = np.mean(eval_scores)
-            eval_data["eval/min_score"] = np.min(eval_scores)
-            eval_data["eval/max_score"] = np.max(eval_scores)
-            eval_data["eval/ep_len"] = np.mean(eval_ep_lens)
-            eval_data["eval/min_ep_len"] = np.min(eval_ep_lens)
-            eval_data["eval/max_ep_len"] = np.max(eval_ep_lens)
-            eval_data["eval/num_episodes"] = len(eval_scores)
-            eval_data["eval/time"] = eval_end_time - eval_start_time
-
-            if args.track:
-                wandb.log(eval_data, step=global_step)
-                print("LOGGED")
 
         print("SPS:", int(global_step / (time.time() - start_time)))
 

@@ -11,7 +11,7 @@ class FourRoomGridWorld(gym.Env):
     """
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, size=50, is_reward_free=False):
+    def __init__(self, render_mode=None, size=50, is_reward_free=True):
         self._is_reward_free = is_reward_free
 
         assert size % 2 == 0  # Ensure wall can be in the middle

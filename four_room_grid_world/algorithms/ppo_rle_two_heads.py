@@ -1,4 +1,4 @@
-# docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppopy
+# Created from ppo_rle
 import os
 import random
 import time
@@ -126,7 +126,8 @@ def record_iteration_with_probs(env, agent, device, max_steps=200, filename="epi
               (f", Intrinsic Reward: {accumulated_intrinsic_reward:.2f}" if feature_network else ""))
 
 
-def plot_reward_function(feature_network, x_wall_gap_offset, y_wall_gap_offset, global_step, save_dir, number_reward_functions=10):
+def plot_reward_function(feature_network, x_wall_gap_offset, y_wall_gap_offset, global_step, save_dir,
+                         number_reward_functions=10):
     assert number_reward_functions == 10, "Can only plot exactly 10 reward functions"
 
     reward_functions = np.zeros((ENV_SIZE + 1, ENV_SIZE + 1, number_reward_functions))
@@ -238,6 +239,8 @@ class Args:
     """coefficient of the entropy"""
     vf_coef: float = 0.5
     """coefficient of the value function"""
+    int_vf_coef: float = 0.5  # TODO: added by me
+    """coefficient of the value function"""
     max_grad_norm: float = 0.5
     """the maximum norm for the gradient clipping"""
     target_kl: float = None
@@ -245,6 +248,8 @@ class Args:
 
     # RLE specific arguments
     int_coef: float = 0.1
+    """coefficient for intrinsic rewards from RLE"""
+    ext_coef: float = 1  # TODO: added by me
     """coefficient for intrinsic rewards from RLE"""
     RLE_FEATURE_SIZE: int = 4
     """feature size for the RLE"""
@@ -335,7 +340,8 @@ class FeatureNetwork(nn.Module):
             norm_features = self.normalize_features(raw_features)
 
             # dot product
-            reward = (norm_features * z).sum(dim=1) / torch.norm(norm_features, dim=1)  # TODO: is this correct ot add divsion by L2 norm?
+            reward = (norm_features * z).sum(dim=1) / torch.norm(norm_features,
+                                                                 dim=1)  # TODO: is this correct ot add divsion by L2 norm?
 
         return reward, raw_features
 
@@ -383,13 +389,15 @@ class Agent(nn.Module):
         state_dims = np.array(envs.single_observation_space.shape).prod()
 
         # Critic network (state + z -> value)
-        self.critic = nn.Sequential(
+        self.critic_base = nn.Sequential(
             layer_init(nn.Linear(state_dims + args.RLE_FEATURE_SIZE, 64)),
             nn.ReLU(),
             layer_init(nn.Linear(64, 64)),
             nn.ReLU(),
-            layer_init(nn.Linear(64, 1), std=1.0),
         )
+
+        self.critic_ext = layer_init(nn.Linear(64, 1))
+        self.critic_int = layer_init(nn.Linear(64, 1))
 
         # Actor network (state + z -> action distribution)
         self.actor = nn.Sequential(
@@ -401,12 +409,14 @@ class Agent(nn.Module):
         )
 
     def get_value(self, x, z):
-        """state + latent vector -> value"""
+        """state + latent vector -> extrinsic value, intrinsic value"""
         combined_input = torch.cat([x, z], dim=1)
-        return self.critic(combined_input)
+        hidden = self.critic_base(combined_input)
+
+        return self.critic_ext(hidden), self.critic_int(hidden)
 
     def get_action_and_value(self, x, z, action=None):
-        """state + latent vector -> action and value
+        """state + latent vector -> action, extrinsic value, and intrinsic value
         which returns:
             action, logits, entropy, value -> i based on their code to compute the entropy 
         """
@@ -417,7 +427,9 @@ class Agent(nn.Module):
         if action is None:
             action = probs.sample()
 
-        return action, probs.log_prob(action), probs.entropy(), self.critic(combined_input)
+        hidden = self.critic_base(combined_input)
+
+        return action, probs.log_prob(action), probs.entropy(), self.critic_ext(hidden), self.critic_int(hidden)
 
 
 if __name__ == "__main__":
@@ -466,16 +478,11 @@ if __name__ == "__main__":
     envs = StateVisitCountWrapper(envs)
 
     plot_env = create_plot_env(args.env_id, ENV_SIZE)
-    # Unwrap to get the base environment
-    #while hasattr(plot_env, 'env'):
-    #    plot_env = plot_env.env
 
     # NOW RLE:
     # WE INIT THE THREE / TWO NETWORKS:
     feature_network = FeatureNetwork(envs, feature_size=args.RLE_FEATURE_SIZE, device=device).to(device)
     agent = Agent(envs).to(device)
-    # TODO: So the value network is optimized to help reduce the policy loss?
-    # I.e., the value value network is not udpated independently (eg using MSE between predicted and actual value)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # EPISODE MEMORY
@@ -486,8 +493,11 @@ if __name__ == "__main__":
     actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    rle_rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
-    values = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    # values = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    ext_values = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    int_values = torch.zeros((args.num_steps, args.num_envs)).to(device)
 
     # Initialize latent vectors - one per environment
     latent_vectors = feature_network.sample_z(args.num_envs)
@@ -502,6 +512,8 @@ if __name__ == "__main__":
     next_obs = torch.Tensor(next_obs).to(device)  # to tensor and to device
     next_done = torch.zeros(args.num_envs).to(device)  # zeros for the done vector
     # remember that the done vector is a boolean vector that indicates if the episode is done for each environment
+
+    reset_zs = torch.zeros((args.num_steps, args.num_envs)).to(device)
 
     for iteration in range(1, args.num_iterations + 1):
         # num_iterations = total_timesteps / num_envs  * num_steps
@@ -523,8 +535,10 @@ if __name__ == "__main__":
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(next_obs, latent_vectors)
-                values[step] = value.flatten()
+                action, logprob, _, value_ext, value_int = agent.get_action_and_value(next_obs, latent_vectors)
+                ext_values[step] = value_ext.flatten()
+                int_values[step] = value_int.flatten()
+                # values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
 
@@ -540,8 +554,9 @@ if __name__ == "__main__":
             episode_features.append(features)
 
             # combine the extrinsic and intrinsic rewards
-            combined_reward = torch.tensor(reward).to(device).view(-1) + args.int_coef * intrinsic_reward
-            rewards[step] = combined_reward
+            #combined_reward = torch.tensor(reward).to(device).view(-1) + args.int_coef * intrinsic_reward
+            rewards[step] = torch.tensor(reward).to(device).view(-1)  # TODO: where args.int_coeff
+            rle_rewards[step] = intrinsic_reward
 
             # update the feature statistics
             feature_network.update_stats(features)
@@ -549,6 +564,9 @@ if __name__ == "__main__":
             # update the latent vectors if needed
             steps_since_z_reset += 1
             reset_z = (steps_since_z_reset >= z_reset_frequency) | torch.tensor(next_done, device=device)
+
+            reset_zs[step] = reset_z
+
             if reset_z.any():
                 # when a new sample z is needed
                 new_z = feature_network.sample_z(reset_z.sum())
@@ -559,7 +577,8 @@ if __name__ == "__main__":
 
             if global_step == 500_000 or global_step == 2_400_000:
                 plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
-                plot_reward_function(feature_network, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset, global_step, f"runs/{run_name}", 10)
+                plot_reward_function(feature_network, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset,
+                                     global_step, f"runs/{run_name}", 10)
 
             if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:
                 trajectories = get_trajectories_RLE(plot_env, agent, device, feature_network, 5)
@@ -592,29 +611,59 @@ if __name__ == "__main__":
         with torch.no_grad():
             episode_features = torch.cat(episode_features, dim=0)
             feature_network.update_stats(episode_features)
-            feature_network.update_from_value_net(agent.critic)
+            feature_network.update_from_value_net(agent.critic_base)
 
-            next_value = agent.get_value(next_obs, latent_vectors).reshape(1, -1)
-            advantages = torch.zeros_like(rewards).to(device)
-            lastgaelam = 0
+            next_value_ext, next_value_int = agent.get_value(next_obs, latent_vectors)
+            next_value_ext = next_value_ext.reshape(1, -1)
+            next_value_int = next_value_int.reshape(1, -1)
+            next_value = next_value_ext + next_value_int
+            #advantages = torch.zeros_like(rewards).to(device)
+            #lastgaelam = 0
+            ext_advantages = torch.zeros_like(rewards, device=device)
+            int_advantages = torch.zeros_like(rle_rewards, device=device)
+            ext_lastgaelam = 0
+            int_lastgaelam = 0
             for t in reversed(range(args.num_steps)):
                 if t == args.num_steps - 1:
-                    nextnonterminal = 1.0 - next_done
-                    nextvalues = next_value
+                    #nextnonterminal = 1.0 - next_done
+                    ext_nextnonterminal = 1.0 - next_done
+                    int_nextnonterminal = 1.0 - reset_z.float() # TODO: Should be the following instead of next_done: rle_network.switch_goals_mask
+                    ext_nextvalues = next_value_ext
+                    int_nextvalues = next_value_int
                 else:
                     nextnonterminal = 1.0 - dones[t + 1]
-                    nextvalues = values[t + 1]
-                delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - values[t]
-                advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
-            returns = advantages + values
+                    int_nextnonterminal = 1.0 - reset_zs[t + 1]
+                    #nextvalues = ext_values[t + 1] + int_values[t + 1]
+                    ext_nextvalues = ext_values[t + 1]
+                    int_nextvalues = int_values[t + 1]
+                #delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - (ext_values[t] + int_values[t])
+                #advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
+                ext_delta = rewards[t] + args.gamma * ext_nextvalues * ext_nextnonterminal - ext_values[t]
+                int_delta = rle_rewards[t] + args.gamma * int_nextvalues * int_nextnonterminal - int_values[t]
+                ext_advantages[t] = ext_lastgaelam = (
+                    ext_delta + args.gamma * args.gae_lambda * ext_nextnonterminal * ext_lastgaelam
+                )
+                int_advantages[t] = int_lastgaelam = (
+                    int_delta + args.gamma * args.gae_lambda * int_nextnonterminal * int_lastgaelam
+                )
+            #returns = advantages + ext_values[t] + int_values[t]
+            ext_returns = ext_advantages + ext_values
+            int_returns = int_advantages + int_values
 
         # Flatten the batch
         b_obs = obs.reshape((-1,) + envs.single_observation_space.shape)
         b_logprobs = logprobs.reshape(-1)
         b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
-        b_advantages = advantages.reshape(-1)
-        b_returns = returns.reshape(-1)
-        b_values = values.reshape(-1)
+        # b_advantages = advantages.reshape(-1)
+        # b_returns = returns.reshape(-1)
+        b_ext_advantages = ext_advantages.reshape(-1)
+        b_int_advantages = int_advantages.reshape(-1)
+        b_ext_returns = ext_returns.reshape(-1)
+        b_int_returns = int_returns.reshape(-1)
+        b_ext_values = ext_values.reshape(-1)
+        b_int_values = int_values.reshape(-1)
+        b_advantages = b_int_advantages * args.int_coef + b_ext_advantages * args.ext_coef
+        b_values = ext_values.reshape(-1) + int_values.reshape(-1)
         b_latents = latent_vectors.repeat_interleave(args.num_steps, dim=0)
 
         # Optimize policy
@@ -625,7 +674,7 @@ if __name__ == "__main__":
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(
+                _, newlogprob, entropy, new_ext_values, new_int_values = agent.get_action_and_value(
                     b_obs[mb_inds],
                     b_latents[mb_inds],
                     b_actions.long()[mb_inds]
@@ -644,19 +693,36 @@ if __name__ == "__main__":
                 pg_loss = torch.max(pg_loss1, pg_loss2).mean()
 
                 # Value loss
-                newvalue = newvalue.view(-1)
+                #newvalue = newvalue.view(-1)
+                #if args.clip_vloss:
+                #    v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
+                #    v_clipped = b_values[mb_inds] + torch.clamp(
+                #        newvalue - b_values[mb_inds],
+                #        -args.clip_coef,
+                #        args.clip_coef,
+                #    )
+                #    v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
+                #    v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
+                #    v_loss = 0.5 * v_loss_max.mean()
+                #else:
+                #    v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
+                # Value loss
+                new_ext_values, new_int_values = new_ext_values.view(-1), new_int_values.view(-1)
                 if args.clip_vloss:
-                    v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
-                    v_clipped = b_values[mb_inds] + torch.clamp(
-                        newvalue - b_values[mb_inds],
+                    ext_v_loss_unclipped = (new_ext_values - b_ext_returns[mb_inds]) ** 2
+                    ext_v_clipped = b_ext_values[mb_inds] + torch.clamp(
+                        new_ext_values - b_ext_values[mb_inds],
                         -args.clip_coef,
                         args.clip_coef,
                     )
-                    v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
-                    v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
-                    v_loss = 0.5 * v_loss_max.mean()
+                    ext_v_loss_clipped = (ext_v_clipped - b_ext_returns[mb_inds]) ** 2
+                    ext_v_loss_max = torch.max(ext_v_loss_unclipped, ext_v_loss_clipped)
+                    ext_v_loss = 0.5 * ext_v_loss_max.mean()
                 else:
-                    v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
+                    ext_v_loss = 0.5 * ((new_ext_values - b_ext_returns[mb_inds]) ** 2).mean()
+
+                int_v_loss = 0.5 * ((new_int_values - b_int_returns[mb_inds]) ** 2).mean()
+                v_loss = ext_v_loss * args.vf_coef + int_v_loss * args.int_vf_coef
 
                 entropy_loss = entropy.mean()
                 loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
@@ -674,10 +740,10 @@ if __name__ == "__main__":
             if args.target_kl is not None and approx_kl > args.target_kl:
                 break
 
-        # Log metrics
-        y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
-        var_y = np.var(y_true)
-        explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
+        # Log metrics TODO: Uncomment
+        #y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
+        #var_y = np.var(y_true)
+        #explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
         writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
@@ -685,7 +751,7 @@ if __name__ == "__main__":
         writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-        writer.add_scalar("losses/explained_variance", explained_var, global_step)
+        #writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
         writer.add_scalar("rle/intrinsic_reward_mean", intrinsic_reward.mean().item(), global_step)
@@ -694,5 +760,3 @@ if __name__ == "__main__":
     envs.close()
     writer.close()
     record_env.close()
-
-    
