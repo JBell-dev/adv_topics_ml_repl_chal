@@ -397,6 +397,10 @@ if __name__ == "__main__":
                     avg_ep_lens.append(info["l"][idx])
 
         not_dones = (1.0 - dones).cpu().data.numpy()
+
+        rewards_for_plot = rewards.clone()
+
+
         rewards_cpu = rewards.cpu().data.numpy()
         if args.normalize_ext_rewards:
             reward_per_env = np.array(
@@ -574,6 +578,8 @@ if __name__ == "__main__":
 
         # Log the number of envs with positive extrinsic rewards (rewards has shape (num_steps, num_envs))
         data["rewards/num_envs_with_pos_rews"] = torch.sum(rewards.sum(dim=0) > 0).item()
+
+        data["rewards/rewards_for_plot"] = rewards_for_plot.mean().item()
 
         # Log advantages and intrinsic advantages
         data["returns/advantages"] = b_advantages.mean().item()

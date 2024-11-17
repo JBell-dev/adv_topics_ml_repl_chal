@@ -4,10 +4,6 @@
 
 
 
-from google.colab import drive
-drive.mount('/content/drive')
-
-
 import argparse
 import os
 import random
@@ -28,6 +24,29 @@ import torch.optim as optim
 from gym.wrappers.normalize import RunningMeanStd
 from torch.distributions.categorical import Categorical
 from copy import deepcopy
+import logging
+import sys
+import os
+from datetime import datetime
+
+# Create log directory if it doesn't exist
+log_dir = "/content/drive/MyDrive/rle/logs"
+os.makedirs(log_dir, exist_ok=True)
+
+# Setup logging with created directory
+log_filename = os.path.join(log_dir, f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_filename),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
+# Test logging
+logging.info("Logging initialized successfully")
+
 
 if os.environ.get("WANDB_MODE", "online") == "offline":
     from wandb_osh.hooks import TriggerWandbSyncHook
@@ -145,6 +164,68 @@ def parse_args():
     # fmt: on
     return args
 
+
+def random_VMF(mu, kappa, size=None):
+    """
+    Von Mises-Fisher distribution sampler
+    
+    Parameters:
+    - mu: mean direction (will be normalized to unit vector)
+    - kappa: concentration parameter
+        κ=0: uniform on sphere (maximum exploration)
+        κ>0: concentrated around mu (more exploitation)
+    - size: number of samples or batch shape
+    
+    Returns:
+    - Samples from VMF distribution on unit sphere
+
+    BASED ON PAPER
+    """
+    # Parse input parameters
+    n = 1 if size is None else np.product(size)
+    shape = () if size is None else tuple(np.ravel(size))
+    
+    # Ensure mu is unit vector
+    mu = np.asarray(mu)
+    mu = mu / np.linalg.norm(mu)
+    (d,) = mu.shape  # dimension
+    
+    # For κ=0, return uniform sphere sampling
+    if kappa == 0:
+        z = np.random.normal(0, 1, (n, d))
+        return (z / np.linalg.norm(z, axis=1, keepdims=True)).reshape((*shape, d))
+    
+    # Step 1: Get samples perpendicular to mu
+    z = np.random.normal(0, 1, (n, d))
+    z /= np.linalg.norm(z, axis=1, keepdims=True)
+    z = z - (z @ mu[:, None]) * mu[None, :]  # Make perpendicular to mu
+    z /= np.linalg.norm(z, axis=1, keepdims=True)  # Normalize again
+    
+    # Step 2: Sample angles using rejection sampling
+    cos = _random_VMF_cos(d, kappa, n)
+    sin = np.sqrt(1 - cos**2)
+    
+    # Step 3: Combine to get points on sphere
+    x = z * sin[:, None] + cos[:, None] * mu[None, :]
+    return x.reshape((*shape, d))
+
+def _random_VMF_cos(d: int, kappa: float, n: int):
+    """Generate cosine samples using Wood's rejection sampling method"""
+    b = (d - 1) / (2 * kappa + (4 * kappa**2 + (d - 1)**2)**0.5)
+    x0 = (1 - b) / (1 + b)
+    c = kappa * x0 + (d - 1) * np.log(1 - x0**2)
+    
+    found = 0
+    out = []
+    while found < n:
+        m = min(n, int((n - found) * 1.5))
+        z = np.random.beta((d - 1)/2, (d - 1)/2, size=m)
+        t = (1 - (1 + b) * z) / (1 - (1 - b) * z)
+        test = kappa * t + (d - 1) * np.log(1 - x0 * t) - c
+        accept = test >= -np.random.exponential(size=m)
+        out.append(t[accept])
+        found += len(out[-1])
+    return np.concatenate(out)[:n]
 
 class RecordEpisodeStatistics(gym.Wrapper):
     def __init__(self, env, deque_size=100):
@@ -277,16 +358,14 @@ class Agent(nn.Module):
 
 
 class RLEModel(nn.Module):
-    def __init__(self, input_size, feature_size, output_size, num_actions, num_envs, z_layer_init, device):
+    def __init__(self, input_shape, feature_size, output_size, num_actions, num_envs, z_layer_init, device):
         super().__init__()
-
-        self.input_size = input_size
+        self.input_size = input_shape
         self.output_size = output_size
         self.device = device
-
         self.feature_size = feature_size
-
-        # rle network phi(s) with similar architecture to value network
+        self.num_envs = num_envs  
+        
         self.rle_net = nn.Sequential(
             layer_init(nn.Conv2d(in_channels=4, out_channels=32, kernel_size=8, stride=4)),
             nn.ReLU(),
@@ -302,75 +381,211 @@ class RLEModel(nn.Module):
         )
         self.last_layer = z_layer_init(nn.Linear(448, self.feature_size))
 
-        # Input to the last layer is the feature of the current state, shape = (num_envs, feature_size)
-        self.current_ep = 0
-        self.num_envs = num_envs
+        # VMF sampling parameters
+        self.base_kappa = 20.0 #will be the max tolerable kappa to keep exploration 
+        self.current_kappa = 0.0
+        self.kappa_momentum = 0.99  #smoothing parameter for linear comb 
+        self.min_kappa = 0.0
+        self.max_kappa = self.base_kappa
+        
+        # Success tracking
+        self.min_samples_for_exploitation = 10 #min require to start computing k updates
+        self.success_threshold_percentile = 50 #to take only the ones over 50 percentile of return in out set 
+        self.success_memory = deque(maxlen=100)
+        self.returns_memory = deque(maxlen=100)
+        
+        # Track running statistics for better kappa management
+        self.running_avg_return = 0
+        self.running_std_return = 0
+        self.return_momentum = 0.99  
+        
+        # Track episode count for adaptive success rate
+        self.episode_count = 0
+        
+        # Initialize goals using VMF sampling
         self.goals = self.sample_goals()
-
-        # num steps left for this goal per environment: switch_steps
-        # resets whenever it is 0 or a life ends
-        # initially randomize num_steps_left for each environment
+        
+        # Track steps for goal switching
         self.num_steps_left = torch.randint(1, args.switch_steps, (num_envs,)).to(device)
-
         self.switch_goals_mask = torch.zeros(num_envs).to(device)
-
-        # Maintain statistics for the rle network to be used for normalization
+        
+        # Feature normalization (same as original)
         self.rle_rms = RunningMeanStd(shape=(1, self.feature_size))
         self.rle_feat_mean = torch.tensor(self.rle_rms.mean, device=self.device).float()
         self.rle_feat_std = torch.sqrt(torch.tensor(self.rle_rms.var, device=self.device)).float()
+        self.min_std = 1e-8  
+        
+        # min warm up required episodes before more condifence into k, read the updating of k 
+        self.warmup_episodes = 1000  
+    def get_current_direction(self):
+        """Compute current mean direction based on successful experiences"""
+        if len(self.success_memory) < self.min_samples_for_exploitation:
+            mu = torch.zeros(self.feature_size, device=self.device)
+            mu[0] = 1.0
+            return mu
+        
+        returns = torch.tensor(list(self.returns_memory), device=self.device)
+        z_vectors = torch.stack([z.to(self.device) for z in self.success_memory])
+        
+        # weighted conv of the best to generate the center of our concentration in the vmf
+        weights = torch.softmax((returns - returns.mean()) / returns.std(), dim=0) 
+        #weights = torch.softmax(returns / returns.std(), dim=0)
+        
+        # Weighted average of successful directions
+        mu = (weights.unsqueeze(1) * z_vectors).sum(0)
+        mu = mu / mu.norm()
+        
+        logging.info(f"Computing direction - Returns shape: {returns.shape}, Z vectors shape: {z_vectors.shape}")
+        logging.info(f"Mean direction stats - mean: {mu.mean().item():.4f}, std: {mu.std().item():.4f}")
+        
+        return mu
 
     def sample_goals(self, num_envs=None):
+        """Sample goals using VMF distribution"""
         if num_envs is None:
             num_envs = self.num_envs
-        goals = torch.randn((num_envs, self.feature_size), device=self.device).float()
-        # normalize the goals
-        goals = goals / torch.norm(goals, dim=1, keepdim=True)
-        return goals
+            
+        # Get current mean direction
+        mu = self.get_current_direction() 
+        
+        logging.info(f"Sampling goals - Current mu mean: {mu.mean().item()}, std: {mu.std().item()}")
+        
+        # Sample from VMF
+        samples = random_VMF(
+            mu=mu.cpu().numpy(),  # Convert to CPU for numpy
+            kappa=self.current_kappa,
+            size=num_envs
+        )
+        
+        # Convert back to tensor on correct device
+        samples_tensor = torch.from_numpy(samples).float().to(self.device)
+        logging.info(f"Sampled goals stats - mean: {samples_tensor.mean().item()}, std: {samples_tensor.std().item()}")
+        return samples_tensor
 
-    def step(self, next_done: torch.Tensor, next_ep_done: torch.Tensor):
+    def update_sampling_history(self, env_idx, episode_return):
+        """Update success history with smooth kappa adaptation"""
+        z = self.goals[env_idx]
+        self.episode_count += 1
+        
+        logging.info(f"Update sampling history - Episode return: {episode_return}")
+        logging.info(f"Current memory size: {len(self.success_memory)}")
+        logging.info(f"Current kappa: {self.current_kappa}")
+        
+        # Update running statistics with min std protection
+        if self.episode_count == 1:
+            self.running_avg_return = episode_return
+            self.running_std_return = max(episode_return / 10, self.min_std)  # i use 10 as a random number since first sample will not have an idea of how could std look like
+            #in any case, if its too little then there is this given min std that take its place
+        else:
+            delta = episode_return - self.running_avg_return #how far current return goes from the mean. 
+            #running avg of returns and std of it. 
+            self.running_avg_return = self.running_avg_return * self.return_momentum + episode_return * (1 - self.return_momentum) #typical exponential moving average with more weight to historical values and less to new. 
+            #the idea for this is to keep the avg more stable sicne if not the updates can get too stong. similarly to gradient optimization problems.
+            self.running_std_return = max(
+                self.running_std_return * self.return_momentum + abs(delta) * (1 - self.return_momentum),
+                self.min_std
+            )
+        
+        # "bootstrap" phase
+        if len(self.success_memory) < self.min_samples_for_exploitation: #runs until we get enough sample before exploitation 
+            logging.info(f"Storing initial episode (bootstrap phase)")
+            self.success_memory.append(z.detach().cpu())
+            self.returns_memory.append(float(episode_return))
+            logging.info(f"Added z vector to bootstrap. New memory size: {len(self.success_memory)}")
+            return
+        
+        # Compute dynamic threshold
+        if len(self.returns_memory) > 0:
+            threshold = np.percentile(list(self.returns_memory), self.success_threshold_percentile)
+            logging.info(f"Success threshold: {threshold}")
+            
+            if episode_return > threshold:
+                self.success_memory.append(z.detach().cpu())
+                self.returns_memory.append(float(episode_return))
+                
+                # different components for kappa update
+                quality_factor = min(max(0.0, (episode_return - self.running_avg_return)) / (self.running_std_return + 1e-8), 2.0) #if the new z provided a good jump in return
+                memory_factor = len(self.success_memory) / self.success_memory.maxlen #more samples, more confident
+                consistency_factor = min(self.episode_count / 1000, 1.0)  # warmup phase
+                
+                #constrained to not too much exploitation.
+                target_kappa = self.base_kappa * quality_factor * memory_factor * consistency_factor
+                target_kappa = min(max(target_kappa, self.min_kappa), self.max_kappa)
+                
+                # smooth updating.
+                self.current_kappa = (self.kappa_momentum * self.current_kappa + 
+                                    (1 - self.kappa_momentum) * target_kappa)
+                
+                logging.info(f"Added new z vector. New memory size: {len(self.success_memory)}")
+                logging.info(f"Quality factor: {quality_factor:.3f}")
+                logging.info(f"Memory factor: {memory_factor:.3f}")
+                logging.info(f"Consistency factor: {consistency_factor:.3f}")
+                logging.info(f"Target kappa: {target_kappa:.3f}")
+                logging.info(f"New kappa: {self.current_kappa:.3f}")
+                logging.info(f"Running avg return: {self.running_avg_return:.1f}")
+                logging.info(f"Running std return: {self.running_std_return:.1f}")
+            else:
+                logging.info(f"Episode return {episode_return} below threshold {threshold}, not storing")
+
+
+    def step(self, next_done: torch.Tensor, next_ep_done: torch.Tensor, returns=None):
         """
-        next_done: termination indicator
+        Handle goal switching and update success history
         """
-        # switch_goals_mask = 0 if the goal is not updated, 1 if the goal is updated
-        # switch_goals_mask is a tensor of shape (num_envs,)
-        # sample new goals for the environments that need to update their goals
-        self.switch_goals_mask = torch.zeros(args.num_envs).to(device)
+        self.switch_goals_mask = torch.zeros(args.num_envs).to(self.device)
         self.switch_goals_mask[next_done.bool()] = 1.0
         self.num_steps_left -= 1
         self.switch_goals_mask[self.num_steps_left == 0] = 1.0
-
-        # update the goals
+        
+        # Update sampling history for completed episodes
+        for env_idx, (done, info_done) in enumerate(zip(next_done, next_ep_done)):
+            if info_done and returns is not None:  # Episode actually completed
+                episode_return = returns[env_idx]
+                self.update_sampling_history(env_idx, episode_return)
+        
+        # Sample new goals using VMF
         new_goals = self.sample_goals()
         self.goals = self.goals * (1 - self.switch_goals_mask.unsqueeze(1)) + new_goals * self.switch_goals_mask.unsqueeze(1)
-
-        # update the num_steps_left
+        
+        # Reset steps for switched goals
         self.num_steps_left[self.switch_goals_mask.bool()] = args.switch_steps
-
+        
         return self.switch_goals_mask
 
     def compute_rle_feat(self, obs, goals=None):
+        """Compute RLE features and rewards (same as original)"""
         if goals is None:
             goals = self.goals
+            
         with torch.no_grad():
             raw_rle_feat = self.last_layer(self.rle_net(obs))
             rle_feat = (raw_rle_feat - self.rle_feat_mean) / (self.rle_feat_std + 1e-5)
             reward = (rle_feat * goals).sum(axis=1) / torch.norm(rle_feat, dim=1)
-
+        
         return reward, raw_rle_feat, rle_feat
 
+    def compute_reward(self, obs, next_obs, goals=None):
+        """Compute rewards (same as original)"""
+        return self.compute_rle_feat(next_obs, goals=goals)
+
     def update_rms(self, b_rle_feats):
-        # Update the rle rms
+        """Update feature normalization statistics (same as original)"""
         self.rle_rms.update(b_rle_feats)
-        # Update the mean and std tensors
         self.rle_feat_mean = torch.tensor(self.rle_rms.mean, device=self.device).float()
         self.rle_feat_std = torch.sqrt(torch.tensor(self.rle_rms.var, device=self.device)).float()
 
-    def compute_reward(self, obs, next_obs, goals=None):
-        return self.compute_rle_feat(next_obs, goals=goals)
-
-    def forward(self, obs, next_obs):
-        pass
-
+    def log_memory_state(self, global_step):
+        if len(self.success_memory) > 0:
+            z_vectors = torch.stack(list(self.success_memory))
+            returns = torch.tensor(list(self.returns_memory))
+            
+            logging.info(f"\nMemory State at step {global_step}:")
+            logging.info(f"Memory size: {len(self.success_memory)}/{self.success_memory.maxlen}")
+            logging.info(f"Mean return: {returns.mean().item():.2f}")
+            logging.info(f"Max return: {returns.max().item():.2f}")
+            logging.info(f"Z vectors mean: {z_vectors.mean().item():.4f}")
+            logging.info(f"Z vectors std: {z_vectors.std().item():.4f}")
+            logging.info(f"Current kappa: {self.current_kappa:.4f}")
 
 class RewardForwardFilter:
     def __init__(self, gamma):
@@ -678,12 +893,12 @@ if __name__ == "__main__":
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, done, info = envs.step(action.cpu().numpy())
 
-            rewards[step] = torch.tensor(reward).to(device).view(-1)
+            rewards[step] = torch.tensor(reward).to(device).view(-1).clone() 
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
             next_obss[step] = next_obs
             rle_next_obs = next_obs.clone().float()
             rle_reward, raw_next_rle_feat, next_rle_feat = rle_network.compute_reward(rle_obs, rle_next_obs)
-            rle_rewards[step] = rle_reward.data
+            rle_rewards[step] = rle_reward.data.clone() 
             raw_rle_feats[step] = raw_next_rle_feat
             rle_feats[step] = next_rle_feat
 
@@ -699,14 +914,38 @@ if __name__ == "__main__":
 
             # update prev rewards
             if step < args.num_steps - 1:
-                prev_rewards[step + 1] = rle_rewards[step] * args.int_coef
+                prev_rewards[step + 1] = rle_rewards[step].clone() * args.int_coef 
 
             for idx, d in enumerate(done):
                 if info["terminated"][idx] or info["TimeLimit.truncated"][idx]:
+                    episode_return = info["r"][idx]
                     avg_returns.append(info["r"][idx])
                     avg_ep_lens.append(info["l"][idx])
+
+                    # Log memory state every 10 episodes
+                    if len(avg_returns) % 10 == 0:
+                        logging.info("\n=== Memory State ===")
+                        logging.info(f"Memory size: {len(rle_network.success_memory)}")
+                        if len(rle_network.success_memory) > 0:
+                            returns = torch.tensor(list(rle_network.returns_memory))
+                            logging.info(f"Returns stats - mean: {returns.mean():.2f}, min: {returns.min():.2f}, max: {returns.max():.2f}")
+                            logging.info(f"Current kappa: {rle_network.current_kappa:.4f}")
+                            logging.info(f"Success rate: {len(rle_network.success_memory) / rle_network.success_memory.maxlen:.4f}")
+                        logging.info("==================\n")
+
+                    # Update VMF sampling statistics
+                    rle_network.update_sampling_history(idx, episode_return)
+                    
+                    # Log memory state every N episodes
+                    if global_step % 10000 == 0:  # Adjust frequency as needed
+                        rle_network.log_memory_state(global_step)
+
                     if args.track:
-                        wandb.log({"charts/episode_return": info["r"][idx]}, step=global_step)
+                        wandb.log({
+                            "charts/episode_return": episode_return,
+                            "charts/vmf_kappa": rle_network.current_kappa,  # Log current concentration parameter
+                            "charts/success_rate": len(rle_network.success_memory) / rle_network.success_memory.maxlen
+                        }, step=global_step)
 
                     if args.capture_video and idx == 0:
                         if video_record_conditioner(info["r"][idx], global_step):
@@ -718,7 +957,7 @@ if __name__ == "__main__":
                         trigger_sync()
 
             next_ep_done = info["terminated"] | info["TimeLimit.truncated"]
-            rle_network.step(next_done, next_ep_done)
+            rle_network.step(next_done, next_ep_done, returns=info["r"])
 
 
         #here they do the weird normalization of them. 
@@ -951,6 +1190,16 @@ if __name__ == "__main__":
             eval_data["eval/num_episodes"] = len(eval_scores)
             eval_data["eval/time"] = eval_end_time - eval_start_time
 
+
+            # Add VMF-specific metrics to logging
+            data.update({
+                "vmf/kappa": rle_network.current_kappa,
+                "vmf/success_rate": len(rle_network.success_memory) / rle_network.success_memory.maxlen,
+                "vmf/memory_size": len(rle_network.success_memory),
+                "vmf/avg_success_return": np.mean(list(rle_network.returns_memory)) if rle_network.returns_memory else 0,
+            })
+
+
             if args.track:
                 wandb.log(eval_data, step=global_step)
                 trigger_sync()
@@ -1010,6 +1259,22 @@ if __name__ == "__main__":
             if args.track:
                 data["charts/returns_hist"] = wandb.Histogram(avg_returns)
 
+                # Every N updates, log the distribution of successful directions
+        if update % 100 == 0 and len(rle_network.success_memory) > 0:
+            successful_directions = torch.stack(list(rle_network.success_memory))
+            if args.track:
+                # Log distribution of successful directions
+                for dim in range(rle_network.feature_size):
+                    wandb.log({
+                        f"vmf/direction_dim_{dim}_hist": wandb.Histogram(successful_directions[:, dim].cpu().numpy())
+                    }, step=global_step)
+                
+                # Log mean direction
+                mean_direction = rle_network.get_current_direction().cpu().numpy()
+                wandb.log({
+                    "vmf/mean_direction": wandb.Histogram(mean_direction)
+                }, step=global_step)
+
         if args.track:
             wandb.log(data, step=global_step)
             trigger_sync()
@@ -1020,7 +1285,7 @@ if __name__ == "__main__":
 
 
 # Define the path in Google Drive
-save_path = "/content/drive/My Drive/colab_saved_models/saved_rle_networks"
+save_path = "/content/drive/MyDrive/rle/saved_models"
 
 # Create the directory if it doesn't exist
 if not os.path.exists(save_path):
@@ -1032,6 +1297,7 @@ torch.save(rle_network.state_dict(), save_file)
 
 # Confirmation message
 print(f"Saved into {save_file}")
+
 
 
 

@@ -1,6 +1,5 @@
 
 # Corrected Code1: PPO with RLE Exploration Method
-
 # This file implements the PPO algorithm with RLE as the exploration method
 # The RLE intrinsic reward is based on features from the value function
 # The policy network is a CNN
