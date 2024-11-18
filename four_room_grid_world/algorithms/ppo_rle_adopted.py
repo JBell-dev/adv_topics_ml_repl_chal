@@ -8,12 +8,10 @@ import time
 from collections import deque
 from distutils.util import strtobool
 import matplotlib.pyplot as plt
-import seaborn as sns
 import functools
 
 import gymnasium as gym
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -203,7 +201,7 @@ class Agent(nn.Module):
         self.critic_int = layer_init(nn.Linear(64, 1), std=0.01)
 
     def get_action_and_value(self, x, reward, goal, action=None, deterministic=False):
-        obs_hidden = self.network(x)  # TODO: replaced x/255.0 by x
+        obs_hidden = self.network(x)
 
         # goal is the goal vector
         # it is a tensor of shape (num_envs, feature_size)
@@ -279,6 +277,7 @@ class RLEModel(nn.Module):
         if num_envs is None:
             num_envs = self.num_envs
         goals = torch.randn((num_envs, self.feature_size), device=self.device).float()
+
         # normalize the goals
         goals = goals / torch.norm(goals, dim=1, keepdim=True)
         return goals
@@ -406,135 +405,6 @@ class RewardForwardFilter:
             return deepcopy(self.rewems)
 
 
-class VideoRecorder(object):
-
-    def __init__(self,
-                 max_buffer_size: int = 27000 * 5,  # Avoid out-of-memory (OOM) issues. Flush video when the buffer exceeds this size
-                 local_dir: str = "./results",
-                 use_wandb: bool = False) -> None:
-        self.use_wandb = use_wandb
-        self.local_dir = local_dir
-        self.max_buffer_size = max_buffer_size
-        self.frame_buffer = deque(maxlen=max_buffer_size)
-        self.rewards = deque(maxlen=max_buffer_size)
-        self.int_rewards = deque(maxlen=max_buffer_size)
-        self.episode_count = 0
-        self.fig = plt.figure()  # create a figure object for plotting rle statistics
-
-    def record(self, frames: np.ndarray, rewards: float, int_reward_info: dict, global_step: int):
-        self.frame_buffer.append(np.expand_dims(frames, axis=0).astype(np.uint8))  # Expand dim for concatenation later
-        self.rewards.append(rewards)
-        self.int_rewards.append(int_reward_info["int_rewards"])
-
-    def reset(self):
-        self.frame_buffer.clear()  # Reset the buffer
-        self.rewards.clear()
-        self.int_rewards.clear()
-        self.episode_count += 1
-
-    def flush(self, global_step: int, caption: str = ""):
-        if len(self.frame_buffer) <= 0:  # If frame buffer is empty, do nothing
-            return
-        if len(caption) <= 0:
-            caption = f"episode-{self.episode_count}-score-{np.stack(self.rewards).sum()}"
-
-        video_array = np.concatenate(self.frame_buffer, axis=0)
-        video_array = video_array[:, None, ...]  # Add channel axis
-
-        save_path = os.path.join(self.local_dir, str(self.episode_count), str(caption))
-        print(f"Log frames and rewards at {save_path}")
-        if args.use_local_dir:
-            os.makedirs(save_path, exist_ok=True)
-            np.save(os.path.join(save_path, "frames.npy"), video_array)
-            np.save(os.path.join(save_path, "rewards.npy"), np.stack(self.rewards))
-            np.save(os.path.join(save_path, "int_rewards.npy"), np.stack(self.int_rewards))
-
-        if self.use_wandb:
-            wandb.log({"media/video": wandb.Video(video_array, fps=30, caption=str(caption))}, step=global_step)
-            # Log task rewards
-            task_lineplot = sns.lineplot(np.stack(self.rewards))
-            log_data = wandb.Image(self.fig)
-            wandb.log({"media/task_rewards": log_data}, step=global_step)
-            plt.clf()
-
-            # Log intrinsic rewards
-            int_reward_lineplot = sns.lineplot(np.stack(self.int_rewards))
-            log_data = wandb.Image(self.fig)
-            wandb.log({"media/int_reward": log_data}, step=global_step)
-            plt.clf()
-
-        self.reset()
-
-
-class VideoRecordScoreCondition:
-
-    score_thresholds = [
-        0,
-        100,
-        200,
-        300,
-        400,
-        500,
-        600,
-        700,
-        800,
-        900,
-        1000,
-        1100,
-        1200,
-        1300,
-        1400,
-        1500,
-        1600,
-        1700,
-        1800,
-        2500,
-        3000,
-        5000,
-        6000,
-        7000,
-        8000,
-        9000,
-        10000,
-        20000,
-        30000,
-        40000,
-        50000,
-        60000,
-        70000,
-        80000,
-        90000,
-        100000,
-        np.inf,
-    ]
-
-    def __init__(self) -> None:
-        self.has_recorded = pd.DataFrame({"value": [False] * (len(self.score_thresholds) - 1)},
-            index=pd.IntervalIndex.from_breaks(self.score_thresholds, closed='left'))
-
-        print("Record score intervals: ", self.score_thresholds)
-
-    def __call__(self, score: float, global_step: int):
-        if not self.has_recorded.iloc[self.has_recorded.index.get_loc(score)]["value"]:
-            print(f"Record the first video with score {score}")
-            self.has_recorded.iloc[self.has_recorded.index.get_loc(score)] = True
-            return True
-        return False
-
-
-class VideoStepConditioner:
-
-    def __init__(self, global_step_interval: int) -> None:
-        self.global_step_interval = global_step_interval
-        self.last_global_step = 0
-
-    def __call__(self, score: float, global_step: int):
-        if global_step - self.last_global_step >= self.global_step_interval:
-            self.last_global_step = global_step
-            return True
-        return False
-
-
 if __name__ == "__main__":
     fig = plt.figure()  # create a figure object for plotting rle statistics
     args = parse_args()
@@ -630,8 +500,6 @@ if __name__ == "__main__":
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
-
-    video_filenames = set()
 
     next_raw_rle_feat = []
 
@@ -732,7 +600,6 @@ if __name__ == "__main__":
                     if args.track:
                         wandb.log({"charts/episode_return": infos["final_info"][idx]["episode"]["r"].item()}, step=global_step)
 
-            # next_ep_done = info["terminated"] | info["TimeLimit.truncated"] TODO: removed since not used
             rle_network.step(next_done)
 
         not_dones = (1.0 - dones).cpu().data.numpy()

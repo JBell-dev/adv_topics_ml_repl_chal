@@ -4,17 +4,18 @@ from matplotlib.colors import LogNorm
 
 import pickle
 
-# Please provide here the visit count dictionary of each algorithm that is saved at the end of the training
-with open("ppo_rle_visit_counts.pkl", "rb") as file:
+# Please provide here the visit count dictionary of each algorithm that is saved at the end of the training.
+# The z prefixed files are from runs with zero negative reward on illegal actions.
+with open("z_seed9876_ppo_rle_visit_counts.pkl", "rb") as file:
     state_visit_counts_ppo_rle = pickle.load(file)
 
-with open("ppo_visit_counts.pkl", "rb") as file:
+with open("z_seed9876_ppo_visit_counts.pkl", "rb") as file:
     state_visit_counts_ppo = pickle.load(file)
 
-with open("ppo_rnd_visit_counts.pkl", "rb") as file:
+with open("z_seed9876_ppo_rnd_visit_counts.pkl", "rb") as file:
     state_visit_counts_ppo_rnd = pickle.load(file)
 
-with open("ppo_noisy_net_visit_counts.pkl", "rb") as file:
+with open("z_seed9876_ppo_noisy_net_visit_counts.pkl", "rb") as file:
     state_visit_counts_ppo_noisy_net = pickle.load(file)
 
 

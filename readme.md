@@ -25,8 +25,15 @@ PPO:
 - https://ai.stackexchange.com/questions/37608/why-clip-the-ppo-objective-on-only-one-side
 [GAE](https://arxiv.org/pdf/1506.02438)
 
-## Clarifications for RLE Atari and GridWorld
+## Clarifications in General and for RLE Atari and GridWorld
 This section contains clarifications about the RLE Atari implementation. Especially, with respect to things not mentioned in the RLE paper.
+
+### What are the authors comparing RLE to?
+- **Proximal Policy Optimization**: PPO uses action noise exploration. This is, we get the logits over the actions from the policy network. Then the logits are fed into a softmax (aka Boltzmann distribution) to obtain a distribution over the actions. The next action is then sampled from this distribution.
+- **Noisy Net**: Example from the family of noise-based exploration
+- **Random Network Distillation**: Example from the family of bonus-based exploration
+
+Note: Since all algorithms are built on top of PPO, all of them also use action noise exploration.
 
 ### Where is normalization applied?
 - The state features are standardized [*](https://github.com/jonupp/adv_topics_ml_repl_chal/blob/09115467f32bbf14f2df165faee1e369bfdd20a1/ATARI%20games/ppo_rle.py#L356C13-L356C21)
@@ -42,6 +49,7 @@ This section contains clarifications about the RLE Atari implementation. Especia
 
 ### Which aspects are not (directly) described in the paper but can be seen in the code?
 - GAE
+- In Atari the rewards are clipped
 - Reward normalization
 - Splitting value network's head (in contrast, the paper indicates that we want to maximize the sum of the intrinsic and extrinsic rewards directly)
 - For GridWorld some hyperparameters are missing (Feature Network Update Rate tau, Latent Vector Resample Frequency, Intrinsic Discount Rate)
