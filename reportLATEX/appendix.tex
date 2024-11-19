@@ -1,6 +1,162 @@
 \appendix
-\section{Appendix}
-You may include other additional sections here. Here we provide suggestions and instructions for the layout and styling of the report.
+\section{Pseudocode --- Random Latent Exploration}
+
+\noindent For the RLE algorithm, the detailed pseudocode according to \cite{rle-paper} is as follows:
+
+\hypertarget{algo-rle}{
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{rlllll}
+    \hline\hline
+    \textbf{RLE:} & \multicolumn{5}{l}{Detailed Pseudocode}\\
+    \hline
+    1: & \multicolumn{5}{l}{\textbf{Input:} Latent distribution $\left(P_{\textbf{z}}\right)$, number of parallel workers $\left(N\right)$, number of steps per update}\\
+    & \multicolumn{5}{l}{$\left(T\right)$, number of steps per sampling $\left(S\right)$, and feature network update rate $\left(\tau\right)$.}\\
+    2: & \multicolumn{5}{l}{Randomly initialize a feature network $\left(\phi\right)$ with the same backbone architecture as the policy }\\
+    & \multicolumn{5}{l}{and value networks.}\\
+    3: & \multicolumn{5}{l}{Initialize running mean $\boldsymbol{\mu} = \textbf{0}$ and standard deviation $\boldsymbol{\sigma} = \textbf{1}$ estimates of $\boldsymbol{\phi} \left(s\right)$ over the state}\\
+    & \multicolumn{5}{l}{space.}\\
+    4: & \multicolumn{5}{l}{Sample an initial latent vector $\textbf{z} \sim P_{\textbf{z}}$ for each parallel worker.}\\
+    5: & \multicolumn{5}{l}{\textbf{Repeat (\textsuperscript{1})}}\\
+    6: & | & \multicolumn{4}{l}{Sample initial state $s_{0}$.}\\
+    7: & | & \multicolumn{4}{l}{\textbf{For} $t = 0, ..., T$ \textbf{do (\textsuperscript{2})}}\\
+    8: & | & | & \multicolumn{3}{l}{Take action $a_{t} \sim \boldsymbol{\pi}(. | s_{t}, \textbf{z})$ and transition to $s_{t+1}$.}\\
+    9: & | & | & \multicolumn{3}{l}{Compute feature $\textbf{f}(s_{t+1}) = \frac{\boldsymbol{\phi}(s_{t+1}) - \boldsymbol{\mu}}{\boldsymbol{\sigma}}$.}\\
+    10: & | & | & \multicolumn{3}{l}{Compute random reward $F(s_{t+1}, \textbf{z}) = \frac{\textbf{f}(s_{t+1})}{\| f(s_{t+1}) \|} \cdot \textbf{z}$.}\\
+    11: & | & | & \multicolumn{3}{l}{Receive reward $r_{t} = R(s_{t}, a_{t}) + F(s_{t+1}, \textbf{z})$.}\\
+    12: & | & | & \multicolumn{3}{l}{\textbf{For} $i = 0, 1, ..., N-1$ \textbf{do (\textsuperscript{3})}}\\
+    13: & | & | & | & \multicolumn{2}{l}{\textbf{If} worker $i$ terminated \textbf{or} $S$ timesteps passed without resampling, \textbf{then (\textsuperscript{4})}}\\
+    14: & | & | & | & | & Resample sample $\textbf{z} \sim P_{\textbf{z}}$ for worker $i$.\\
+    15: & | & | & | & \multicolumn{2}{l}{\textbf{(\textsuperscript{4})}}\\
+    16: & | & | & \multicolumn{3}{l}{\textbf{(\textsuperscript{3})}}\\
+    17: & | & \multicolumn{4}{l}{\textbf{(\textsuperscript{2})}}\\
+    18: & | & \multicolumn{4}{l}{Update policy network $\boldsymbol{\pi}$ and value network $V_{\boldsymbol{\pi}}$ with the collected trajectory}\\
+    & | & \multicolumn{4}{l}{$(\textbf{z}, s_{0}, a_{0}, r_{0}, s_{1}, ..., s_{T})$.}\\
+    19: & | & \multicolumn{4}{l}{Update feature network $\boldsymbol{\phi}$ using the value network's parameters $\boldsymbol{\phi} \leftarrow \tau \cdot V^{\boldsymbol{\pi}} + (1 - \tau) \cdot \boldsymbol{\phi}$.}\\
+    20: & | & \multicolumn{4}{l}{Update $\boldsymbol{\mu}$ and $\boldsymbol{\sigma}$ using the batch of collected experience.}\\
+    21: & \multicolumn{5}{l}{\textbf{(\textsuperscript{1}) until convergence}}\\
+    \hline\hline
+  \end{tabular}
+\end{table}}
+
+\section{Pseudocode --- Proximal Policy Optimization}
+
+\noindent For the PPO algorithm, the detailed pseudocode according to \cite{ppo-paper} is as follows:
+
+\hypertarget{algo-ppo}{
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{rlll}
+    \hline\hline
+    \textbf{PPO:} & \multicolumn{3}{l}{Detailed Pseudocode, Actor-Critic Setup}\\
+    \hline
+    1: & \multicolumn{3}{l}{\textbf{Input:} Number of iterations $\left(I\right)$, number of actors $\left(N\right)$, number of timesteps per iteration}\\
+    & \multicolumn{3}{l}{$\left(T\right)$, number of epochs $(K)$, minibatch size $(M \leq NT)$, learned state-value function implicitly}\\
+    & \multicolumn{3}{l}{in the advantage estimator $(V(s))$, target value $(V_{t}^{\text{targ}})$ implicitly in the objective $L$.}\\
+    2: & \multicolumn{3}{l}{\textbf{For} $i = 1, ..., I$ \textbf{do (\textsuperscript{1})}}\\
+    3: & | & \multicolumn{2}{l}{\textbf{For} $n = 1, ..., N$ \textbf{do (\textsuperscript{2})}}\\
+    4: & | & | & Run policy $\boldsymbol{\pi}_{\theta_{\text{old}}}$ in environment for $T$ timesteps.\\
+    5: & | & | & Compute advantage estimates $\hat{A}_{1}, ..., \hat{A}_{T}$.\\
+    6: & | & \multicolumn{2}{l}{\textbf{(\textsuperscript{2})}}\\
+    7: & | & \multicolumn{2}{l}{Optimize objective $L$ w.r.t. $\theta$, for given $K$ and $M$, using e.g. minibatch SGD or Adam.}\\
+    8: & | & \multicolumn{2}{l}{Update parameters $\theta_{\text{old}} \leftarrow \theta$.}\\
+    9: & \multicolumn{3}{l}{\textbf{(\textsuperscript{1})}}\\
+    \hline\hline
+  \end{tabular}
+\end{table}}
+
+\clearpage
+\section{Pseudocode --- NoisyNet}
+
+\noindent For the NoisyNet + A3C algorithm, the detailed pseudocode according to \cite{noisynet-paper} is as follows:
+
+\hypertarget{algo-noisynet}{
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{rlll}
+    \hline\hline
+    \textbf{NoisyNet:} & \multicolumn{3}{l}{Detailed Pseudocode, for each actor-learner thread}\\
+    \hline
+    1: & \multicolumn{3}{l}{\textbf{Input:} Global shared parameters $(\zeta_{\pi}, \zeta_{V})$, global shared counter $(T)$, and maximal}\\
+    & \multicolumn{3}{l}{time $(T_{\text{max}})$.}\\
+    2: & \multicolumn{3}{l}{\textbf{Input (each thread):} Thread-specific parameters $(\zeta_{\pi}', \zeta_{V}')$, set of random variables $(\varepsilon)$,}\\
+    & \multicolumn{3}{l}{thread-specific counter $(t)$, and roll-out size $(t_{\text{max}})$.}\\
+    3: & \multicolumn{3}{l}{\textbf{Output:} Policy $\pi(\cdot|\zeta_{\pi}, \varepsilon)$ and value function $V(\cdot|\zeta_{V},\varepsilon)$.}\\
+    4: & \multicolumn{3}{l}{$t \leftarrow 1$}\\
+    5: & \multicolumn{3}{l}{\textbf{Repeat (\textsuperscript{1})}}\\
+    6: & | & \multicolumn{2}{l}{Reset cumulative gradients: $d\zeta_{\pi} \leftarrow 0, d\zeta_{V} \leftarrow 0$.}\\
+    7: & | & \multicolumn{2}{l}{Synchronize thread-specific parameters: $\zeta_{\pi}' \leftarrow \zeta_{\pi}, \zeta_{V}' \leftarrow \zeta_{V}$.}\\
+    8: & | & \multicolumn{2}{l}{Set counter $c \leftarrow 0$.}\\
+    9: & | & \multicolumn{2}{l}{Get state $x_{t}$ from environment.}\\
+    10: & | & \multicolumn{2}{l}{Sample noise $\xi \sim \varepsilon$.}\\
+    11: & | & \multicolumn{2}{l}{Create lists for rewards $r \leftarrow [ ]$, actions $a \leftarrow [ ]$ and states $x \leftarrow [ ]$.}\\
+    12: & | & \multicolumn{2}{l}{\textbf{Repeat (\textsuperscript{2})}}\\
+    13: & | & | & Choose action $a_{t} \leftarrow \pi(\cdot|x_{t}, \zeta_{pi}', \zeta_{V}')$.\\
+    14: & | & | & $a[-1] \leftarrow a_{t}$\\
+    15: & | & | & Obtain reward $r_{t}$ and new state $x_{t+1}$.\\
+    16: & | & | & $r[-1] \leftarrow r_{t}$, $x[-1] \leftarrow x_{t}$, $t \leftarrow t + 1$, $T \leftarrow T + 1$, $c \leftarrow c + 1$\\
+    17: & | & \multicolumn{2}{l}{\textbf{(\textsuperscript{2}) until} $x_{t}$ \textbf{is terminal or} $c > t_{\text{max}}$}\\
+    18: & | & \multicolumn{2}{l}{\textbf{If} $x_{t}$ is terminal, \textbf{then (\textsuperscript{3})}}\\
+    19: & | & | & $Q \leftarrow 0$\\
+    20: & | & \multicolumn{2}{l}{\textbf{else}}\\
+    21: & | & | & $Q \leftarrow V\left(x_{t}|\zeta_{V}', \xi\right)$\\
+    22: & | & \multicolumn{2}{l}{\textbf{(\textsuperscript{3})}}\\
+    23: & | & \multicolumn{2}{l}{\textbf{For} $i = c - 1, ..., 0$ \textbf{do (\textsuperscript{4})}}\\
+    24: & | & | & $Q \leftarrow r\left[i\right] + \gamma Q$\\
+    25: & | & | & $d\zeta_{\pi} \leftarrow d\zeta_{\pi} \nabla_{\zeta_{\pi}'} \log{(\pi(a[i]|x[i], \zeta_{\pi}', \xi)) [Q - V(x[i]|\zeta_{V}', \xi)]}$\\
+    26: & | & | & $d\zeta_{V} \leftarrow d\zeta_{V} \nabla_{\zeta_{V}'} \left[Q - V\left(x[i]|\zeta_{V}', \xi\right)\right]^{2}$\\
+    27: & | & \multicolumn{2}{l}{\textbf{(\textsuperscript{4})}}\\
+    28: & | & \multicolumn{2}{l}{Update asynchronously parameter $\zeta_{\pi} \leftarrow \zeta_{\pi} + \alpha_{\pi}d\zeta_{\pi}$.}\\
+    29: & | & \multicolumn{2}{l}{Update asynchronously parameter $\zeta_{V} \leftarrow \zeta_{V} - \alpha_{V}d\zeta_{V}$.}\\
+    30: & \multicolumn{3}{l}{\textbf{(\textsuperscript{1}) until} $T > T_{\text{max}}$}\\
+    \hline\hline
+  \end{tabular}
+\end{table}}
+
+\clearpage
+\section{Pseudocode --- Random Network Distillation}
+
+\noindent For the RND algorithm, the detailed pseudocode according to \cite{rnd-paper} is as follows:
+
+\hypertarget{algo-rnd}{
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{rlll}
+    \hline\hline
+    \textbf{RND:} & \multicolumn{3}{l}{Detailed Pseudocode}\\
+    \hline
+    1: & \multicolumn{3}{l}{\textbf{Input:} Number of rollouts $(N)$, Number of optimization steps $(N_{\text{opt}})$, and length of initial}\\
+    & \multicolumn{3}{l}{steps for initializing observation normalization $(M)$.}\\
+    2: & \multicolumn{3}{l}{$t \leftarrow 0$}\\
+    3: & \multicolumn{3}{l}{Sample state $s_{0} \sim p_{0}(s_{0})$.}\\
+    4: & \multicolumn{3}{l}{\textbf{For} $m = 1, ..., M$ \textbf{do (\textsuperscript{1})}}\\
+    5: & | & \multicolumn{2}{l}{Sample action $a_{t} \sim \mathcal{U}(a_{t})$. \textcolor{red}{Are we sampling uniformly from all available actions at time $t$?}}\\
+    6: & | & \multicolumn{2}{l}{Sample state $s_{t+1} \sim p(s_{t+1}|s_{t}, a_{t})$.}\\
+    7: & | & \multicolumn{2}{l}{Update observation normalization parameters using $s_{t+1}$.}\\
+    8: & | & \multicolumn{2}{l}{$t \leftarrow t + 1$}\\
+    9: & \multicolumn{3}{l}{\textbf{(\textsuperscript{1})}}\\
+    10: & \multicolumn{3}{l}{\textbf{For} $i = 1, ..., N$ \textbf{do (\textsuperscript{2})}}\\
+    11: & | & \multicolumn{2}{l}{\textbf{For} $j = 1, ..., K$ \textbf{do (\textsuperscript{3})}}\\
+    12: & | & | & Sample action $a_{t} \sim \pi(a_{t}|s_{t})$.\\
+    13: & | & | & Sample state $s_{t+1}, e_{t} \sim p(s_{t+1}, e_{t}|s_{t}, a_{t})$.\\
+    14: & | & | & Calculate intrinsic reward $i_{t} = \|\hat{f}(s_{t+1}) - f(s_{t+1})\|^{2}$.\\
+    15: & | & | & Add $s_{t}, s_{t+1}, a_{t}, e_{t}, i_{t}$ to optimization batch $B_{i}$.\\
+    16: & | & | & Update running estimate of reward standard deviation using $i_{t}$.\\
+    17: & | & | & $t \leftarrow t + 1$\\
+    18: & | & \multicolumn{2}{l}{\textbf{(\textsuperscript{3})}}\\
+    19: & | & \multicolumn{2}{l}{Normalize the intrinsic rewards contained in $B_{i}$.}\\
+    20: & | & \multicolumn{2}{l}{Calculate returns $R_{I,i}$ and advantages $A_{I,i}$ for intrinsic reward.}\\
+    21: & | & \multicolumn{2}{l}{Calculate returns $R_{E,i}$ and advantages $A_{E,i}$ for extrinsic reward.}\\
+    22: & | & \multicolumn{2}{l}{Calculate combined advantages $A_{i} = A_{I,i} + A_{E,i}$.}\\
+    23: & | & \multicolumn{2}{l}{Update observation normalization parameters using $B_{i}$.}\\
+    24: & | & \multicolumn{2}{l}{\textbf{For} $j = 1, ..., N_{\text{opt}}$ \textbf{do (\textsuperscript{4})}}\\
+    25: & | & | & Optimize $\theta_{\pi}$ w.r.t. PPO loss on batch $B_{i}, R_{i}, A_{i}$ using Adam.\\
+    26: & | & | & Optimize $\theta_{\hat{f}}$ w.r.t. distillation loss on $B_{i}$ using Adam.\\
+    27: & | & \multicolumn{2}{l}{\textbf{(\textsuperscript{4})}}\\
+    28: & \multicolumn{3}{l}{\textbf{(\textsuperscript{2})}}\\
+    \hline\hline
+  \end{tabular}
+\end{table}}
 
 \section{Citations, figures, and tables}
 
