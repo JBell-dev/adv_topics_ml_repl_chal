@@ -422,11 +422,9 @@ class VideoRecorder(object):
         self.episode_count += 1
 
     def record(self, frames: np.ndarray, rewards: float, int_reward_info: dict, global_step: int):
-        # Convert single channel to RGB by repeating the channel 3 times
-        if frames.ndim == 2:  # If input is (H, W)
-            frames = np.stack([frames] * 3, axis=-1)  # Convert to (H, W, 3)
-        elif frames.ndim == 3 and frames.shape[0] == 1:  # If input is (1, H, W)
-            frames = np.stack([frames[0]] * 3, axis=0)  # Convert to (3, H, W)
+        # frames comes in as (84, 84) grayscale
+        # Keep it as grayscale, just add a channel dimension
+        frames = frames[:, :, np.newaxis]  # Shape becomes (84, 84, 1)
         
         self.frame_buffer.append(np.expand_dims(frames, axis=0).astype(np.uint8))
         self.rewards.append(rewards)
@@ -438,11 +436,8 @@ class VideoRecorder(object):
         if len(caption) <= 0:
             caption = f"episode-{self.episode_count}-score-{np.stack(self.rewards).sum()}"
 
-        video_array = np.concatenate(self.frame_buffer, axis=0)
-        
-        # Ensure video array has 3 channels
-        if video_array.shape[1] == 1:  # If shape is (T, 1, H, W)
-            video_array = np.repeat(video_array, 3, axis=1)  # Convert to (T, 3, H, W)
+        # Concatenate frames along time dimension
+        video_array = np.concatenate(self.frame_buffer, axis=0)  # Shape: (T, 84, 84, 1)
         
         save_path = os.path.join(self.local_dir, str(self.episode_count), str(caption))
         print(f"Log frames and rewards at {save_path}")
@@ -453,15 +448,10 @@ class VideoRecorder(object):
             np.save(os.path.join(save_path, "int_rewards.npy"), np.stack(self.int_rewards))
             print(f"Logged frames and rewards at {save_path}")
 
-        drive_save_path = os.path.join(self.drive_dir, str(self.episode_count), str(caption))
-        os.makedirs(drive_save_path, exist_ok=True)
-        np.save(os.path.join(drive_save_path, "frames.npy"), video_array)
-        np.save(os.path.join(drive_save_path, "rewards.npy"), np.stack(self.rewards))
-        np.save(os.path.join(drive_save_path, "int_rewards.npy"), np.stack(self.int_rewards))
-        print(f"Logged frames and rewards to Drive at {drive_save_path}")
-
         if self.use_wandb:
-            wandb.log({"media/video": wandb.Video(video_array, fps=30, caption=str(caption))}, step=global_step)
+            # For wandb.Video, we need to repeat the single channel to create a grayscale video
+            wandb_video = np.repeat(video_array, 3, axis=3)  # Only convert to RGB for wandb
+            wandb.log({"media/video": wandb.Video(wandb_video, fps=30, caption=str(caption))}, step=global_step)
             
             # Log task rewards plot
             plt.figure(self.task_rewards_fig.number)
@@ -477,17 +467,14 @@ class VideoRecorder(object):
             plt.title("Intrinsic Rewards")
             wandb.log({"media/int_reward": wandb.Image(self.int_rewards_fig)}, step=global_step)
 
-        # Ensure drive directory exists
-        os.makedirs(self.drive_dir, exist_ok=True)
-        
+        # Save to Google Drive
         try:
             drive_save_path = os.path.join(self.drive_dir, str(self.episode_count), str(caption))
             os.makedirs(drive_save_path, exist_ok=True)
             
-            # Save files with error handling
-            np.save(os.path.join(drive_save_path, "frames.npy"), video_array)
-            np.save(os.path.join(drive_save_path, "rewards.npy"), np.stack(self.rewards))
-            np.save(os.path.join(drive_save_path, "int_rewards.npy"), np.stack(self.int_rewards))
+            np.save(os.path.join(drive_save_path, "frames.npy"), video_array)  # Save original grayscale
+            np.save(os.path.join(save_path, "rewards.npy"), np.stack(self.rewards))
+            np.save(os.path.join(save_path, "int_rewards.npy"), np.stack(self.int_rewards))
             print(f"Successfully saved to Drive at {drive_save_path}")
         except Exception as e:
             print(f"Error saving to Drive: {str(e)}")
