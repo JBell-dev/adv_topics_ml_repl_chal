@@ -408,16 +408,22 @@ class VideoRecorder(object):
         self.episode_count = 0
         self.fig = plt.figure()  # create a figure object for plotting rle statistics
 
-    def record(self, frames: np.ndarray, rewards: float, int_reward_info: dict, global_step: int):
-        self.frame_buffer.append(np.expand_dims(frames, axis=0).astype(np.uint8))  # Expand dim for concatenation later
-        self.rewards.append(rewards)
-        self.int_rewards.append(int_reward_info["int_rewards"])
-
     def reset(self):
         self.frame_buffer.clear()  # Reset the buffer
         self.rewards.clear()
         self.int_rewards.clear()
         self.episode_count += 1
+
+    def record(self, frames: np.ndarray, rewards: float, int_reward_info: dict, global_step: int):
+        # Convert single channel to RGB by repeating the channel 3 times
+        if frames.ndim == 2:  # If input is (H, W)
+            frames = np.stack([frames] * 3, axis=-1)  # Convert to (H, W, 3)
+        elif frames.ndim == 3 and frames.shape[0] == 1:  # If input is (1, H, W)
+            frames = np.stack([frames[0]] * 3, axis=0)  # Convert to (3, H, W)
+        
+        self.frame_buffer.append(np.expand_dims(frames, axis=0).astype(np.uint8))
+        self.rewards.append(rewards)
+        self.int_rewards.append(int_reward_info["int_rewards"])
 
     def flush(self, global_step: int, caption: str = ""):
         if len(self.frame_buffer) <= 0:  # If frame buffer is empty, do nothing
@@ -426,8 +432,11 @@ class VideoRecorder(object):
             caption = f"episode-{self.episode_count}-score-{np.stack(self.rewards).sum()}"
 
         video_array = np.concatenate(self.frame_buffer, axis=0)
-        video_array = video_array[:, None, ...]  # Add channel axis
-
+        
+        # Ensure video array has 3 channels
+        if video_array.shape[1] == 1:  # If shape is (T, 1, H, W)
+            video_array = np.repeat(video_array, 3, axis=1)  # Convert to (T, 3, H, W)
+        
         save_path = os.path.join(self.local_dir, str(self.episode_count), str(caption))
         print(f"Log frames and rewards at {save_path}")
         if args.use_local_dir:
@@ -451,6 +460,7 @@ class VideoRecorder(object):
             plt.clf()
 
         self.reset()
+
 
 
 class VideoRecordScoreCondition:
