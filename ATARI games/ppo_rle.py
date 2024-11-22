@@ -401,6 +401,9 @@ class VideoRecorder(object):
                  use_wandb: bool = False) -> None:
         self.use_wandb = use_wandb
         self.local_dir = local_dir
+
+        self.drive_dir = "/content/drive/MyDrive/atari_videos"
+
         self.max_buffer_size = max_buffer_size
         self.frame_buffer = deque(maxlen=max_buffer_size)
         self.rewards = deque(maxlen=max_buffer_size)
@@ -444,6 +447,14 @@ class VideoRecorder(object):
             np.save(os.path.join(save_path, "frames.npy"), video_array)
             np.save(os.path.join(save_path, "rewards.npy"), np.stack(self.rewards))
             np.save(os.path.join(save_path, "int_rewards.npy"), np.stack(self.int_rewards))
+            print(f"Logged frames and rewards at {save_path}")
+
+        drive_save_path = os.path.join(self.drive_dir, str(self.episode_count), str(caption))
+        os.makedirs(drive_save_path, exist_ok=True)
+        np.save(os.path.join(drive_save_path, "frames.npy"), video_array)
+        np.save(os.path.join(drive_save_path, "rewards.npy"), np.stack(self.rewards))
+        np.save(os.path.join(drive_save_path, "int_rewards.npy"), np.stack(self.int_rewards))
+        print(f"Logged frames and rewards to Drive at {drive_save_path}")
 
         if self.use_wandb:
             wandb.log({"media/video": wandb.Video(video_array, fps=30, caption=str(caption))}, step=global_step)
