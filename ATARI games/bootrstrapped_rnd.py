@@ -826,52 +826,52 @@ if __name__ == "__main__":
         if args.track:
             wandb.log(data, step=global_step)
 
-        if args.track and args.capture_video and log_recorded_video:
-            # frames is a list of images of (84,84) - need to expand dims to make the grayscale loggable by wandb
-            video_array = np.expand_dims(np.concatenate([np.expand_dims(frame.cpu().numpy(), axis=0) for frame in frames], axis=0), axis=1)
-            print(f"LOGGED VIDEO... {video_array.shape}")
-            wandb.log({"video/obs": wandb.Video(video_array, fps=30)}, step=global_step)
-            # Log curiosity rewards
-            fig = plt.figure()
-            intrinsic_lineplot = sns.lineplot(recorded_intrinsic_rews)
-            log_data = wandb.Image(fig)
-            wandb.log({"int_rewards_plot/rewards": log_data}, step=global_step)
-            plt.clf()
-            # Compute and log cumulative sum of intrinsic rewards
-            cumulative_sum = np.cumsum(recorded_intrinsic_rews)
-            cumulative_lineplot = sns.lineplot(cumulative_sum)
-            log_data = wandb.Image(fig)
-            wandb.log({"int_rewards_plot/cumulative_rewards": log_data}, step=global_step)
-            plt.clf()
-            # Compute and log discounted cumulative sum of intrinsic rewards (use args.int_gamma)
-            # We want: gamma^0*r_0 + ... + gamma^n*r_n
-            discounted_cumulative_sum = np.cumsum(recorded_intrinsic_rews * args.int_gamma**np.arange(len(recorded_intrinsic_rews)))
-            discounted_cumulative_lineplot = sns.lineplot(discounted_cumulative_sum)
-            log_data = wandb.Image(fig)
-            wandb.log({"int_rewards_plot/discounted_cumulative_rewards": log_data}, step=global_step)
-            plt.clf()
-            # Compute and log return-to-go of intrinsic rewards
-            # Use np.cumsum to do it
-            return_to_go = np.cumsum(recorded_intrinsic_rews[::-1])[::-1]
-            return_to_go_lineplot = sns.lineplot(return_to_go)
-            log_data = wandb.Image(fig)
-            wandb.log({"int_rewards_plot/return_to_go": log_data}, step=global_step)
-            plt.clf()
-            # Compute and log discounted return-to-go of intrinsic rewards (use args.int_gamma)
-            # Use np.cumsum to do it
-            discounted_return_to_go = np.cumsum(recorded_intrinsic_rews[::-1] * args.int_gamma**np.arange(len(recorded_intrinsic_rews))[::-1])[::-1]
-            # The above computes: gamma^n*r_n + ... + gamma^T*r_T
-            # We want: gamma^0*r_n + ... + gamma^(T-n)*r_T
-            # So we divide by gamma^n, where n is the index of the array
-            discounted_return_to_go = discounted_return_to_go / (args.int_gamma**np.arange(len(recorded_intrinsic_rews)))
-            discounted_return_to_go_lineplot = sns.lineplot(discounted_return_to_go)
-            log_data = wandb.Image(fig)
-            wandb.log({"int_rewards_plot/discounted_return_to_go": log_data}, step=global_step)
-            plt.clf()
-            # reset video logging state
-            log_recorded_video = False
-            frames = []
-            recorded_intrinsic_rews = []
+        # if args.track and args.capture_video and log_recorded_video:
+        #     # frames is a list of images of (84,84) - need to expand dims to make the grayscale loggable by wandb
+        #     video_array = np.expand_dims(np.concatenate([np.expand_dims(frame.cpu().numpy(), axis=0) for frame in frames], axis=0), axis=1)
+        #     print(f"LOGGED VIDEO... {video_array.shape}")
+        #     wandb.log({"video/obs": wandb.Video(video_array, fps=30)}, step=global_step)
+        #     # Log curiosity rewards
+        #     fig = plt.figure()
+        #     intrinsic_lineplot = sns.lineplot(recorded_intrinsic_rews)
+        #     log_data = wandb.Image(fig)
+        #     wandb.log({"int_rewards_plot/rewards": log_data}, step=global_step)
+        #     plt.clf()
+        #     # Compute and log cumulative sum of intrinsic rewards
+        #     cumulative_sum = np.cumsum(recorded_intrinsic_rews)
+        #     cumulative_lineplot = sns.lineplot(cumulative_sum)
+        #     log_data = wandb.Image(fig)
+        #     wandb.log({"int_rewards_plot/cumulative_rewards": log_data}, step=global_step)
+        #     plt.clf()
+        #     # Compute and log discounted cumulative sum of intrinsic rewards (use args.int_gamma)
+        #     # We want: gamma^0*r_0 + ... + gamma^n*r_n
+        #     discounted_cumulative_sum = np.cumsum(recorded_intrinsic_rews * args.int_gamma**np.arange(len(recorded_intrinsic_rews)))
+        #     discounted_cumulative_lineplot = sns.lineplot(discounted_cumulative_sum)
+        #     log_data = wandb.Image(fig)
+        #     wandb.log({"int_rewards_plot/discounted_cumulative_rewards": log_data}, step=global_step)
+        #     plt.clf()
+        #     # Compute and log return-to-go of intrinsic rewards
+        #     # Use np.cumsum to do it
+        #     return_to_go = np.cumsum(recorded_intrinsic_rews[::-1])[::-1]
+        #     return_to_go_lineplot = sns.lineplot(return_to_go)
+        #     log_data = wandb.Image(fig)
+        #     wandb.log({"int_rewards_plot/return_to_go": log_data}, step=global_step)
+        #     plt.clf()
+        #     # Compute and log discounted return-to-go of intrinsic rewards (use args.int_gamma)
+        #     # Use np.cumsum to do it
+        #     discounted_return_to_go = np.cumsum(recorded_intrinsic_rews[::-1] * args.int_gamma**np.arange(len(recorded_intrinsic_rews))[::-1])[::-1]
+        #     # The above computes: gamma^n*r_n + ... + gamma^T*r_T
+        #     # We want: gamma^0*r_n + ... + gamma^(T-n)*r_T
+        #     # So we divide by gamma^n, where n is the index of the array
+        #     discounted_return_to_go = discounted_return_to_go / (args.int_gamma**np.arange(len(recorded_intrinsic_rews)))
+        #     discounted_return_to_go_lineplot = sns.lineplot(discounted_return_to_go)
+        #     log_data = wandb.Image(fig)
+        #     wandb.log({"int_rewards_plot/discounted_return_to_go": log_data}, step=global_step)
+        #     plt.clf()
+        #     # reset video logging state
+        #     log_recorded_video = False
+        #     frames = []
+        #     recorded_intrinsic_rews = []
 
     envs.close()
     # writer.close()
