@@ -55,7 +55,7 @@ def parse_args():
         help="the wandb's project name")
     parser.add_argument("--wandb-entity", type=str, default=None,
         help="the entity (team) of wandb's project")
-    parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+    parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="whether to capture videos of the agent performances (log it on wandb)")
     parser.add_argument("--capture-video-interval", type=int, default=10,
         help="How many training updates to wait before capturing video")
@@ -411,6 +411,10 @@ class VideoRecorder(object):
         self.episode_count = 0
         self.fig = plt.figure()  # create a figure object for plotting rle statistics
 
+        # Create figure for each plot type
+        self.task_rewards_fig = plt.figure()
+        self.int_rewards_fig = plt.figure()
+
     def reset(self):
         self.frame_buffer.clear()  # Reset the buffer
         self.rewards.clear()
@@ -458,17 +462,35 @@ class VideoRecorder(object):
 
         if self.use_wandb:
             wandb.log({"media/video": wandb.Video(video_array, fps=30, caption=str(caption))}, step=global_step)
-            # Log task rewards
-            task_lineplot = sns.lineplot(np.stack(self.rewards))
-            log_data = wandb.Image(self.fig)
-            wandb.log({"media/task_rewards": log_data}, step=global_step)
+            
+            # Log task rewards plot
+            plt.figure(self.task_rewards_fig.number)
             plt.clf()
+            sns.lineplot(data=np.stack(self.rewards))
+            plt.title("Task Rewards")
+            wandb.log({"media/task_rewards": wandb.Image(self.task_rewards_fig)}, step=global_step)
 
-            # Log intrinsic rewards
-            int_reward_lineplot = sns.lineplot(np.stack(self.int_rewards))
-            log_data = wandb.Image(self.fig)
-            wandb.log({"media/int_reward": log_data}, step=global_step)
+            # Log intrinsic rewards plot  
+            plt.figure(self.int_rewards_fig.number)
             plt.clf()
+            sns.lineplot(data=np.stack(self.int_rewards))
+            plt.title("Intrinsic Rewards")
+            wandb.log({"media/int_reward": wandb.Image(self.int_rewards_fig)}, step=global_step)
+
+        # Ensure drive directory exists
+        os.makedirs(self.drive_dir, exist_ok=True)
+        
+        try:
+            drive_save_path = os.path.join(self.drive_dir, str(self.episode_count), str(caption))
+            os.makedirs(drive_save_path, exist_ok=True)
+            
+            # Save files with error handling
+            np.save(os.path.join(drive_save_path, "frames.npy"), video_array)
+            np.save(os.path.join(drive_save_path, "rewards.npy"), np.stack(self.rewards))
+            np.save(os.path.join(drive_save_path, "int_rewards.npy"), np.stack(self.int_rewards))
+            print(f"Successfully saved to Drive at {drive_save_path}")
+        except Exception as e:
+            print(f"Error saving to Drive: {str(e)}")
 
         self.reset()
 
