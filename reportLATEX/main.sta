@@ -1,0 +1,8 @@
+\standalonepreambles
+\subpreamble{tikz/sample-env-1.tex}
+\usepackage {tikz}\usepackage {subcaption}\usepackage [subpreambles=true]{standalone}
+\endsubpreamble
+\subpreamble{tikz/sample-env-2.tex}
+\usepackage {tikz}\usepackage {subcaption}\usepackage [subpreambles=true]{standalone}
+\endsubpreamble
+\endstandalonepreambles

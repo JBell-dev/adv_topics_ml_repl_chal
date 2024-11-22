@@ -11,7 +11,7 @@ class FourRoomGridWorld(gym.Env):
     """
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, size=50, is_reward_free=False):
+    def __init__(self, render_mode=None, size=50, is_reward_free=True):
         self._is_reward_free = is_reward_free
 
         assert size % 2 == 0  # Ensure wall can be in the middle
@@ -36,8 +36,8 @@ class FourRoomGridWorld(gym.Env):
         self.action_space = spaces.Discrete(4)
 
         self._action_to_direction = {
-            0: np.array([1, 0]),   # Right
-            1: np.array([0, 1]),   # Up
+            0: np.array([1, 0]),  # Right
+            1: np.array([0, 1]),  # Up
             2: np.array([-1, 0]),  # Left
             3: np.array([0, -1]),  # Down
         }
@@ -89,13 +89,13 @@ class FourRoomGridWorld(gym.Env):
         if new_position[0] < 0 or new_position[0] > self.size - 1 or new_position[1] < 0 or new_position[
             1] > self.size - 1:
             new_position = np.clip(self._agent_location + direction, 0, self.size - 1)
-            reward = -1  # TODO -1
+            reward = 0  # TODO -1
 
         if not self._position_is_in_wall(new_position):
             self._agent_location = new_position
         # If the agent wants to move into a wall, do not move and get -1 reward
         else:
-            reward = -1  # TODO -1
+            reward = 0  # TODO -1
 
         # Check if the episode has terminated (i.e., agent reached the target)
         terminated = False

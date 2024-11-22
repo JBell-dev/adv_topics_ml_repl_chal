@@ -25,6 +25,8 @@
 \usepackage{tikz}
 \usepackage{subcaption}
 \usepackage[subpreambles=true]{standalone}
+\usepackage{multirow}
+\usepackage{multicol}
 
 \title{ATML Report}
 
@@ -53,9 +55,9 @@ In this project we aim to analyze the claims of \cite{rle-paper} in the paper \h
 %%%%
 
 \section{Introduction}
-\noindent The paper we investigate deals with the problem of motivating an agent in a high-dimensional state space to explore the environment more exhaustively during training and thereby find non-obvious trajectories that can lead to higher long-term rewards for both discrete and continuous action spaces. The paper compares the new \textit{Random Latent Exploration} (RLE) technique to standard \textit{Proximal Policy Optimization} (PPO, see \cite{ppo-paper}), \textit{NoisyNet} (see \cite{noisynet-paper}) and \textit{Random Network Distillation} (RND, see \cite{rnd-paper}).\\
+\noindent The paper we investigate deals with the problem of motivating an agent in a high-dimensional state space to explore the environment more exhaustively during training and thereby find non-obvious trajectories that can lead to higher long-term rewards for both discrete and continuous action spaces. The paper compares the new \textit{Random Latent Exploration} (RLE) technique to standard \textit{Proximal Policy Optimization} (PPO, see \cite{ppo-paper}), \textit{NoisyNet} (see \cite{noisynet-paper}) and \textit{Random Network Distillation} (RND, see \cite{rnd-paper}).
 
-\noindent Exploration is one of the major issues of Reinforcement Learning and its techniques can generally be divided into two categories: Noise-based exploration and bonus-based exploration. There are advantages and disadvantages for both of them but we always have to keep in mind that always choosing the highest short-term (local) reward does not necessarily also yield the highest long-term (global) reward, e.g. picture the environment as shown in figure \ref{fig:sample-env-1}. Here, the agent starting in the \textcolor{blue}{blue state} will always choose the small reward of $1$, i.e. going right, then move back to the initial state, then move right, and so on, dithering between these two states, instead of accepting to collect a reward of $0$ by going left in order to be able to collect the much higher reward of $100$ in the following step.\\ 
+\noindent Exploration is one of the major issues of Reinforcement Learning (RL) and its techniques can generally be divided into two categories: Noise-based exploration and bonus-based exploration. There are advantages and disadvantages for both of them but we always have to keep in mind that always choosing the highest short-term (local) reward does not necessarily also yield the highest long-term (global) reward, e.g. picture the environment as shown in figure \ref{fig:sample-env-1}. Here, the agent starting in the \textcolor{blue}{blue state} will always choose the small reward of $1$, i.e. going right, then move back to the initial state, then move right, and so on, dithering between these two states, instead of accepting to collect a reward of $0$ by going left in order to be able to collect the much higher reward of $100$ in the following step.
 
 \begin{figure}[h!]
   \centering
@@ -77,22 +79,76 @@ In this project we aim to analyze the claims of \cite{rle-paper} in the paper \h
   \label{fig:sample-env}
 \end{figure}
 
-\noindent The new idea that the authors \cite{rle-paper} present is to augment the reward function by adding a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F \left(s, z\right)$ where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$ \textcolor{red}{<elaborate on the distribution>}. So if at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi\left(. | s_{t}\right)$ from policy $\pi$, then it will obtain the task reward $r \left(s_{t}, a_{t}\right)$. In RLE, we train a so-called latent-conditioned policy network $\pi\left(. | s, \textbf{z}\right)$ and latent-conditioned value network $V^{\pi} \left(s, \textbf{z}\right)$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
+\subsection{Random Latent Exploration}
+
+\noindent The new idea that the authors \cite{rle-paper} present is to augment the reward function by adding a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F(s, z)$ where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$ \textcolor{red}{<elaborate on the distribution>}. So if at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi(. | s_{t})$ from policy $\pi$, then it will obtain the task reward $r (s_{t}, a_{t})$. In RLE, we train a so-called latent-conditioned policy network $\pi(. | s, \textbf{z})$ and latent-conditioned value network $V^{\pi}(s, \textbf{z})$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
 
 \begin{equation}
-    V^{\pi} \left(s, \textbf{z}\right) \approx \mathbb{E}_{\pi} \left[\sum_{t = 0}^{\infty} \gamma^{t} \left(r\left(s_{t}, a_{t}\right) + F\left(s_{t+1}, \textbf{z}\right) \right) \right]
+    V^{\pi}(s, \textbf{z}) \approx \mathbb{E}_{\pi} \left[\sum_{t = 0}^{\infty} \gamma^{t} \left(r(s_{t}, a_{t}) + F(s_{t+1}, \textbf{z})\right) \right]
     \label{eq:value_func}
 \end{equation}
 
-\noindent In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F\left(s_{t+1}, \textbf{z}\right) =  \boldsymbol{\phi}\left(s\right) \cdot \textbf{z}$ where $\boldsymbol{\phi}\left(s\right): \mathcal{S} \rightarrow \mathbb{R}^{d}$ is a feature extraction network. Both $\boldsymbol{\phi}$ and $\textbf{z}$ are $d$-dimensional vectors. Note that $z$ is resampled only before a new trajectory $(s_{0}, a_{0}, r_{0}, s_{1}, ...)$ is explored, not before each action that the agent takes. To continue the example from above, in figure \ref{fig:sample-env-2} the agent would prioritize to go left as this promises the greater reward. It is not hard to imagine that for higher dimensional environments, every time we start a new trajectory and correspondingly sample a new $z$, the agent will explore a different region of the state space and thus we can discover non-obvious paths to maximize the rewards. For the detailed pseudocode of this algorithm, see \textcolor{red}{<appendix (???)>}.\\
+\noindent In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F(s_{t+1}, \textbf{z}) =  \boldsymbol{\phi}(s) \cdot \textbf{z}$ where $\boldsymbol{\phi}(s): \mathcal{S} \rightarrow \mathbb{R}^{d}$ is a feature extraction network. Both $\boldsymbol{\phi}$ and $\textbf{z}$ are $d$-dimensional vectors. Note that $z$ is resampled only before a new trajectory $(s_{0}, a_{0}, r_{0}, s_{1}, ...)$ is explored, not before each action that the agent takes. To continue the example from above, in figure \ref{fig:sample-env-2} the agent would prioritize to go left as this promises the greater reward. It is not hard to imagine that for higher dimensional environments, every time we start a new trajectory and correspondingly sample a new $z$, the agent will explore a different region of the state space and thus we can discover non-obvious paths to maximize the rewards. For the detailed pseudocode of this algorithm, see \hyperlink{algo-rle}{Appendix A} \textcolor{red}{(check link before submmission)}.
 
-\noindent Coming back to the 
+\subsection{Proximal Policy Optimization}
 
-\noindent \textcolor{red}{<Brief explanation of PPO>}\\
+\noindent The algorithm constituting the foundation of RLE is Proximal Policy Iteration (PPO), described in \cite{ppo-paper}, which can itself be run to solve RL problems. It is an on-line policy gradient method where after running the policy $\boldsymbol{\pi}_{\theta_{\text{old}}}$ in parallel with $N$ actors for $T << E$ timesteps, where $E$ is the length of an episode, we compute the advantage estimator for each time index $t \in [0, T]$:
 
-\noindent \textcolor{red}{<Brief explanation of NoisyNet>}\\
+\begin{equation}
+  \hat{A}_{t} = \delta_{t} + \left(\gamma \lambda\right) \delta_{t+1} + ... + \left(\gamma \lambda\right)^{T-t+1} \delta_{T - 1}
+  \label{eq:ppo-advantage-estimator}
+\end{equation}
 
-\noindent \textcolor{red}{<Brief explanation of RND>}\\
+\noindent where we have $\delta_{t} = r_{t} + \gamma V(s_{t+1}) - V(s_{t})$. Here, $\lambda$ is the Generalized Advantage Estimation (GAE) parameter and $V(s)$ is a learned state-value function. Afterwards, for each $t$ the surrogate objective is computed and the parameters $\theta$ are optimized e.g. with minibatch SGD or Adam (note that we optimize by maximizing the objective). This surrogate objective takes the form:
+
+\begin{equation}
+  L_{t}^{\text{CLIP} + \text{VF} + \text{S}}(\theta) = \hat{\mathbb{E}}_{t} \left[L_{t}^{\text{CLIP}}(\theta) - c_{1} L_{t}^{\text{VF}}(\theta) + c_{2} S[\boldsymbol{\pi}_{\theta}](s_{t})\right]
+  \label{eq:ppo-objective-function}
+\end{equation}
+
+\noindent In \eqref{eq:ppo-objective-function}, we have the VF coefficient $c_{1}$ and the entropy coefficient $c_{2}$, together with the (optional, to enhance exploration) entropy bonus $S[\boldsymbol{\pi}_{\theta}](s_{t})$, which is calculated as the sum of $- p \log{p}$ over each of the action-probabilities $p$ resulting from the policy distribution $\boldsymbol{\pi}_{\theta}$ for a state $s_{t}$, and the objectives:
+
+\begin{align}
+  \label{eq:ppo-clip-objective} L_{t}^{\text{CLIP}}(\theta) &= \hat{\mathbb{E}}_{t}\left[\min\left(r_{t}(\theta) \hat{A}_{t}, \text{clip}\left(r_{t}(\theta), 1 - \epsilon, 1 + \epsilon\right) \hat{A}_{t}\right)\right]\\
+  \label{eq:ppo-vf-objective} L_{t}^{\text{VF}}(\theta) &= \left(V_{\theta}(s_{t}) - V_{t}^{\text{targ}}\right)^{2}
+\end{align}
+
+\noindent In \eqref{eq:ppo-clip-objective} we denote the probability ratio as $r_{t}(\theta) = \frac{\pi_{\theta}\left(a_{t}|s_{t}\right)}{\pi_{\theta_{\text{old}}}(a_{t}|s_{t})}$, where $\pi_{\theta_{\text{old}}}$ is the policy before the update, and the clipping function is:
+
+\begin{equation}
+  \text{clip}\left(r_{t}(\theta), 1 - \epsilon, 1 + \epsilon\right) = \begin{cases}
+    1 - \epsilon, &r_{t}(\theta) < 1 - \epsilon\\
+    r_{t}(\theta), &1 - \epsilon \leq r_{t}(\theta) \leq 1 + \epsilon\\
+    1 + \epsilon, &r_{t}(\theta) > 1 + \epsilon
+  \end{cases}
+  \label{eq:clipping-function}
+\end{equation}
+
+\noindent Moreover in \eqref{eq:ppo-vf-objective}, $V_{t}^{\text{targ}}$ represents some target state-value function that is to be obtained. Note that there exist also other objective functions mentioned in \cite{ppo-paper} that can substitute $L_{t}^{\text{CLIP}}(\theta)$ in \eqref{eq:ppo-objective-function}. In \eqref{eq:clipping-function}, we make use of a hyperparameter $\epsilon \in [0, 1]$ and in combination with the minimizer from \eqref{eq:ppo-clip-objective} we can prevent a single policy update to accidentally ruin the policy forever by sending the algorithm to a gradient region with a worse local extremum. The detailed pseudocode of this algorithm can be found in \hyperlink{algo-ppo}{Appendix B} \textcolor{red}{(check link before submmission)}.
+
+\noindent In the paper that we investigate, the authors \cite{rle-paper} compare the empirical results of the RLE to PPO as the baseline, as well as two other exploration techniques, namely NoisyNet and RND, which will be briefly explained in the following sections.
+
+\subsection{NoisyNet}
+
+\noindent The central idea in a NoisyNet architecture brought forward by \cite{noisynet-paper} is to introduce random noise into the weights learned by the network ($p$ inputs, $q$ outputs), i.e. if we have a neural network whose output can be parametrized by a vector of weights $\boldsymbol{\theta}$ as $\textbf{y} = f_{\boldsymbol{\theta}}(\textbf{x}) = \textbf{w} \cdot \textbf{x} + \textbf{b}$, then we can learn the set of parameter vectors $\zeta = (\boldsymbol{\mu}, \boldsymbol{\Sigma})$ to compute $\textbf{w} = (\boldsymbol{\mu}^{w} + \boldsymbol{\sigma}^{w} \odot \boldsymbol{\varepsilon}^{w}$ and $\textbf{b} = (\boldsymbol{\mu}^{b} + \boldsymbol{\sigma}^{b} \odot \boldsymbol{\varepsilon}^{b})$ with the following dimensionalities: $\boldsymbol{\mu}^{w}$, $\boldsymbol{\sigma}^{w}$, $\boldsymbol{\varepsilon}^{w} \in \mathbb{R}^{q \times p}$ implying $\textbf{w} \in \mathbb{R}^{q \times p}$, and $\boldsymbol{\mu}^{b}$, $\boldsymbol{\sigma}^{b}$, $\boldsymbol{\varepsilon}^{b} \in \mathbb{R}^{q}$ resulting in $\textbf{b} \in \mathbb{R}^{q}$. Note that $\textbf{x} \in \mathbb{R}^{p}$, $\textbf{y} \in \mathbb{R}^{q}$ and $\odot$ denotes element-wise multiplication.
+
+\noindent We optimize the loss $\bar{L}(\zeta) = \mathbb{E}_{\varepsilon}[L(\boldsymbol{\theta})]$, i.e. the expectation of the loss $L(\boldsymbol{\theta})$ over the noise $\varepsilon$ which has a mean of zero and fixed statistics, using gradient descent on the parameters $\zeta$. The noise can be sampled either independently or in a factorized way from a Gaussian. The former method samples the noise $\varepsilon^{w}_{i,j} \in \boldsymbol{\varepsilon}^{w}$ and $\varepsilon^{b}_{j} \in \boldsymbol{\varepsilon}^{b}$ for every input to the network leading to a total of $pq + q$ random samples. Factorized sampling on the other hand greatly reduces computational complexity by factorizing $\varepsilon^{w}_{i,j} = f(\varepsilon_{i}) f(\varepsilon_{j})$ and then $\varepsilon^{b}_{j} = f(\varepsilon_{j})$ thereby lowering the number of required random samples to $p + q$, where $f: \mathbb{R} \rightarrow \mathbb{R}$. In \cite{noisynet-paper} the function $f(x) = \sign(x) \sqrt{|x|}$ is used. After sampling the noise, in theory we compute the gradients $\nabla\bar{L}(\zeta) = \nabla\mathbb{E}_{\varepsilon}[L(\boldsymbol{\theta})] = \mathbb{E}_{\varepsilon}[\nabla_{\boldsymbol{\mu}, \boldsymbol{\Sigma}}L(\boldsymbol{\mu} + \boldsymbol{\Sigma} \odot \boldsymbol{\varepsilon})]$, whereas in practice we approximate $\nabla\bar{L}(\zeta) \approx \nabla_{\boldsymbol{\mu}, \boldsymbol{\Sigma}}L(\boldsymbol{\mu} + \boldsymbol{\Sigma} \odot \boldsymbol{\varepsilon})$ with the Monte Carlo method.
+
+\noindent In the code of \cite{rle-paper}, a NoisyNet is used in conjunction with the A3C-algorithm, in particular the loss is computed from the action-value function is estimated using:
+
+\begin{equation}
+  \hat{Q}_{i} = \sum_{j=i}^{k-1} \gamma^{j-i} r_{t+j} + \gamma^{k-i} V(x_{t+k} | \zeta, \varepsilon_{i})
+\end{equation}
+
+Moreover, for factorized networks, we initialize $\mu_{i,j} \sim \mathcal{U}\left[-\frac{1}{\sqrt{p}}, +\frac{1}{\sqrt{p}}\right]$ and $\sigma_{i,j} = \frac{\sigma_{0}}{\sqrt{p}}$ with $p$ being the number of inputs to the corresponding linear layer, $\mathcal{U}$ is a uniform distribution over the specified interval, and $\sigma_{0}$ is a hyperparameter. The pseudocode for this variant given by \cite{noisynet-paper} can be found in appendix \hyperlink{algo-noisynet}{Appendix C} \textcolor{red}{Check link before submission}.
+
+\textcolor{red}{Are we using independent or factorized sampling in the code? (I'm guessing factorized).}
+
+\subsection{Random Network Distillation}
+
+In Random Network Distillation, as described by \cite{rnd-paper}, we compose the reward which the agent obtains as $r_{t} = e_{t} + i_{t}$ where $e_{t}$ represents a sparse extrinsic (environment's) reward and $i_{t}$ is the intrinsic reward for transitioning, i.e. the exploration bonus emanating from the transition at time step $t$. The latter measures the novelty of a state and should yield a higher value, the less frequently a state has been visited so far. In case of a finite state space we can use $i_{t} = \frac{1}{n_{t}}$ or $i_{t} = \frac{1}{\sqrt{s}}$ where $n_{t}(s)$ denotes the number of times state $s$ has been visited until time step $t$. However, there exist alternatives, e.g. we could use state density based approaches to calculate an exploration bonus, which are described in the paper mentioned above. Moreover, they specify that in the paper the intrinsic reward is the prediction error of a randomly generated problem $i_{t} = \|\hat{f}(x|\theta) - f(x)\|^{2}$ involving a target network $f: \mathcal{O} \rightarrow \mathbb{R}^{k}$ (fixed and randomly initialized, maps an observation $\mathcal{O}$ to an embedding $\mathbb{R}^{k}$) to sample the problem as well as a predictor network $\hat{f}: \mathcal{O} \rightarrow \mathbb{R}^{k}$ which was trained on the agent's data by gradient descent to optimize $i_{t}$ w.r.t. parameters $\theta_{\hat{f}}$.
+
+\noindent Since the overall return can be composed as a sum of returns $R = R_{E} + R_{I}$ we can train two heads $V_{E}$ and $V_{I}$ to estimate the value function $V = V_{E} + V_{I}$ and in extension the advantages. In the end, a policy is trained with standard PPO using the advantage estimators. Note that the intrinsic rewards have to be normalized in order to be useful because otherwise we could not guarantee that they are on a consistent scale, which is done by dividing $i_{t}$ by a running estimate of the standard deviations of the intrinsic return. Furthermore, the observation also has to be normalized as $x \leftarrow \text{clip}(\frac{x - \mu}{\sigma}, -5, 5)$. The normalization parameters can be initialized by letting a random agent briefly move in the environment before beginning the optimization. The pseudocode given by \cite{rnd-paper} can be found in appendix \hyperlink{algo-rnd}{Appendix D} \textcolor{red}{Check link before submission}.
 
 \section{Scope of reproducibility}
 \label{sec:claims}
@@ -120,12 +176,14 @@ In this project we aim to analyze the claims of \cite{rle-paper} in the paper \h
 \texttt{Include a description of each model or algorithm used. Be sure to list the type of model, the number of parameters, and other relevant info (e.g. if it's pre-trained).}
 
 \subsection{Datasets}
-\texttt{Describe the datasets you used and how you obtained them. For each dataset include 1) relevant statistics such as the number of examples and label distributions, 2) details of train / validation / test splits, 3) an explanation of any preprocessing done, and 4) a link to download the data (if available).}
+
+\noindent Since we are dealing with a reinforcement learning task, we did not use any dataset to train our models but rather four different environments which will explain in \hyperlink{experimental-setup}{section 3.4} \textcolor{red}{(check link before submission)}.
 
 \subsection{Hyperparameters}
 \texttt{Describe how the hyperparameter values were set and what was the source for their value (e.g. paper, code, or your guess). If there was a hyperparameter search done, be sure to include the range of hyperparameters searched over, the method used to search (e.g. manual search, random search, grid search, etc.), and the best hyperparameters found. Include the number of total experiments (e.g. hyperparameter trials). You can also include all results from that search (not just the best-found results).}
 
-\subsection{Experimental setup and code}
+\hypertarget{experimental-setup}{\subsection{Experimental setup and code}}
+
 \texttt{Include a description of how the experiments were set up that's clear enough a reader could replicate the setup.}
 \texttt{Include a description of the specific measure used to evaluate the experiments (e.g. accuracy, precision@K, BLEU score, etc.).}
 \texttt{Provide a link to your code or notebook (if available). Add in this section (or in the following) any reference to cloud-based providers you}
