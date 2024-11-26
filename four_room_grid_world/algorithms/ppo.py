@@ -17,7 +17,8 @@ from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
-from four_room_grid_world.util.plot_util import plot_heatmap, plot_trajectories, get_trajectories, create_plot_env
+from four_room_grid_world.util.plot_util import plot_heatmap, plot_trajectories, get_trajectories, create_plot_env, \
+    calculate_states_entropy
 
 from four_room_grid_world.env_gymnasium.registration import register  # DO NOT REMOTE THIS IMPORT
 
@@ -112,10 +113,13 @@ class Args:
     """if toggled, cuda will be enabled by default"""
     track: bool = False
     """if toggled, this experiment will be tracked with Weights and Biases"""
-    wandb_project_name: str = "cleanRL"
+    wandb_project_name: str = "RLE"
     """the wandb's project name"""
     wandb_entity: str = None
     """the entity (team) of wandb's project"""
+    reward_free: str = True
+    """whether to use the version of the four room environment that does not have any rewards"""
+
 
     # Algorithm specific arguments
     env_id: str = "advtop/FourRoomGridWorld-v0"
@@ -232,11 +236,11 @@ if __name__ == "__main__":
         wandb.init(
             project=args.wandb_project_name,
             entity=args.wandb_entity,
-            sync_tensorboard=True,
             config=vars(args),
             name=run_name,
             monitor_gym=True,
             save_code=True,
+            tags=["PPO"],
         )
     writer = SummaryWriter(f"runs/{run_name}")
     writer.add_text(
@@ -309,7 +313,8 @@ if __name__ == "__main__":
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
 
             if global_step == 500_000 or global_step == 2_400_000:
-                plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
+                plt = plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
+                wandb.log({"State Visit Heatmap": wandb.Image(plt.gcf())}, step=global_step)
 
             if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:
                 trajectories = get_trajectories(plot_env, agent, device)
@@ -323,8 +328,14 @@ if __name__ == "__main__":
                 for info in infos["final_info"]:
                     if info and "episode" in info:
                         print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                        if args.track:
+                            wandb.log({"charts/episodic_return": info["episode"]["r"],
+                                       "charts/episodic_length": info["episode"]["l"]},
+                                      step=global_step)
+
+        state_visit_entropy = calculate_states_entropy(infos, global_step, ENV_SIZE)
+        if args.track:
+            wandb.log({"charts/state_visit_entropy": state_visit_entropy}, step=global_step)
 
         # HERE I ADDED THIS TO CHECK WHETHER THE AGENT IS LEARNING
         if iteration % 100 == 0:  # Save GIF and plot every 100 iterations
@@ -432,16 +443,21 @@ if __name__ == "__main__":
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
         # TRY NOT TO MODIFY: record rewards for plotting purposes -> log to tensorboard
-        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
-        writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
-        writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-        writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-        writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
-        writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
-        writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-        writer.add_scalar("losses/explained_variance", explained_var, global_step)
+        if args.track:
+            wandb.log({
+                "charts/learning_rate": optimizer.param_groups[0]["lr"],
+                "losses/value_loss": v_loss.item(),
+                "losses/policy_loss": pg_loss.item(),
+                "losses/entropy": entropy_loss.item(),
+                "losses/old_approx_kl": old_approx_kl.item(),
+                "losses/approx_kl": approx_kl.item(),
+                "losses/clipfrac": np.mean(clipfracs),
+                "losses/explained_variance": explained_var,
+                "charts/SPS": int(global_step / (time.time() - start_time)),
+            }, step=global_step)
+
         print("SPS:", int(global_step / (time.time() - start_time)))
-        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+
 
     envs.close()
     writer.close()

@@ -21,7 +21,9 @@ from copy import deepcopy
 
 from torch.utils.tensorboard import SummaryWriter
 
-from four_room_grid_world.util.plot_util import plot_heatmap, create_plot_env, add_room_layout_to_plot, plot_trajectories
+from four_room_grid_world.algorithms.ppo_rle_distribution import RLEGoalSamplerCreator
+from four_room_grid_world.util.plot_util import plot_heatmap, create_plot_env, add_room_layout_to_plot, \
+    plot_trajectories, calculate_states_entropy
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
 import four_room_grid_world.env_gymnasium.registration  # Do not remove this import
 from four_room_grid_world.env_gymnasium.FourRoomGridWorld import FourRoomGridWorld
@@ -49,12 +51,14 @@ def parse_args():
         help="if toggled, cuda will be enabled by default")
     parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="if toggled, this experiment will be tracked with Weights and Biases")
-    parser.add_argument("--wandb-project-name", type=str, default="random-latent-exploration",
+    parser.add_argument("--wandb-project-name", type=str, default="RLE",
         help="the wandb's project name")
     parser.add_argument("--wandb-entity", type=str, default=None,
         help="the entity (team) of wandb's project")
     parser.add_argument("--gpu-id", type=int, default=0,
         help="ID of GPU to use")
+    parser.add_argument("--tag", type=str, default="PPO_RLE",
+        help="the tag used in wandb")
 
     # Algorithm specific arguments
     parser.add_argument("--env-id", type=str, default="advtop/FourRoomGridWorld-v0",
@@ -117,6 +121,8 @@ def parse_args():
         help="if toggled, save the rle network at the end of training")
     parser.add_argument("--num-iterations-feat-norm-init", type=int, default=1,
         help="number of iterations to initialize the feature normalization parameters")
+    parser.add_argument("--goal-distribution", type=str, default="standard_normal",
+        help="the distribution that is used by the RLENetwork to sample goals (see ppo_rle_distribution.py)")
 
     parser.add_argument("--z-layer-init", type=str, default="ortho_1.41:0.0",
         help="z layer init")  # Options: "sparse_{sparsity}:{std}:{bias}", "ortho_{std}:{bias}"
@@ -236,12 +242,13 @@ class Agent(nn.Module):
 
 
 class RLEModel(nn.Module):
-    def __init__(self, input_size, feature_size, output_size, num_actions, num_envs, z_layer_init, device):
+    def __init__(self, input_size, feature_size, output_size, num_actions, num_envs, z_layer_init, device, goal_sampler):
         super().__init__()
 
         self.input_size = input_size
         self.output_size = output_size
         self.device = device
+        self.goal_sampler = goal_sampler
 
         self.feature_size = feature_size
 
@@ -276,7 +283,8 @@ class RLEModel(nn.Module):
     def sample_goals(self, num_envs=None):
         if num_envs is None:
             num_envs = self.num_envs
-        goals = torch.randn((num_envs, self.feature_size), device=self.device).float()
+        #goals = torch.randn((num_envs, self.feature_size), device=self.device).float()
+        goals = self.goal_sampler.sample(num_envs, self.feature_size, self.device)
 
         # normalize the goals
         goals = goals / torch.norm(goals, dim=1, keepdim=True)
@@ -429,6 +437,7 @@ if __name__ == "__main__":
             name=run_name,
             # monitor_gym=True,
             save_code=True,
+            tags=[args.tag],
         )
 
     # TRY NOT TO MODIFY: seeding
@@ -452,9 +461,11 @@ if __name__ == "__main__":
 
     rle_output_size = args.feature_size  # NOTE: this is not used
     num_actions = envs.single_action_space.n
+
+    goal_sampler = RLEGoalSamplerCreator.create_from_name(args.goal_distribution)
     rle_network = RLEModel(envs.single_observation_space.shape, args.feature_size, rle_output_size, num_actions, args.num_envs,
                            z_layer_init=create_layer_init_from_spec(args.z_layer_init),
-                           device=device).to(device)
+                           device=device, goal_sampler=goal_sampler).to(device)
     rle_feature_size = rle_network.feature_size
 
     agent = Agent(envs, rle_network).to(device)
@@ -577,8 +588,9 @@ if __name__ == "__main__":
                 prev_rewards[step + 1] = rle_rewards[step] * args.int_coef
 
             if global_step == 500_000 or global_step == 2_400_000:
-                plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
                 plot_reward_function(rle_network, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset, global_step, f"runs/{run_name}", 10)
+                plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
+                wandb.log({"State visit heatmap": wandb.Image(plt.gcf())}, global_step)
 
             if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:
                 trajectories = get_trajectories_RLE(plot_env, agent, device, rle_network, 5)
@@ -601,6 +613,10 @@ if __name__ == "__main__":
                         wandb.log({"charts/episode_return": infos["final_info"][idx]["episode"]["r"].item()}, step=global_step)
 
             rle_network.step(next_done)
+
+        state_visit_entropy = calculate_states_entropy(infos, global_step, ENV_SIZE)
+        if args.track:
+            wandb.log({"charts/state_visit_entropy": state_visit_entropy}, step=global_step)
 
         not_dones = (1.0 - dones).cpu().data.numpy()
         rewards_cpu = rewards.cpu().data.numpy()

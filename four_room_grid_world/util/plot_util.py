@@ -21,6 +21,18 @@ def plot_heatmap(infos, global_step, env_size, save_dir):
     plt.title(f"State visit count at time step {global_step:,}")
     print(f"Saved state visit heatmap plot {save_dir}/{global_step}_state_visit_heatmap.png")
     plt.savefig(f"{save_dir}/{global_step}_state_visit_heatmap.png")
+    return plt
+
+
+def calculate_states_entropy(infos, global_step, env_size):
+    states = np.zeros(shape=(env_size + 1, env_size + 1))
+    for (x, y), count in infos["visit_counts"].items():
+        states[y, x] = count / global_step  # y is vertical
+
+    linearized_states = states.flatten()
+    linearized_states = np.clip(linearized_states, 1e-20, 1.0)  # Avoid division by zero
+    entropy = -np.sum(linearized_states * np.log(linearized_states))
+    return entropy
 
 
 def create_plot_env(env_id, env_size):
@@ -58,23 +70,23 @@ def add_room_layout_to_plot(p, env_size, x_wall_gap_offset, y_wall_gap_offset):
 
     # Fill between for the horizontal lines (left, middle, right)
     p.fill_between([0 - 1 / 2, centre - x_wall_gap_offset - 1 / 2], centre + 1 / 2, centre - 1 / 2, color='black',
-                     lw=0)  # Left segment
+                   lw=0)  # Left segment
     p.fill_between([centre - x_wall_gap_offset + 1 / 2, centre + x_wall_gap_offset - 1 / 2], centre + 1 / 2,
-                     centre - 1 / 2,
-                     color='black', lw=0)  # Middle segment
+                   centre - 1 / 2,
+                   color='black', lw=0)  # Middle segment
     p.fill_between([centre + x_wall_gap_offset + 1 / 2, env_size + 1 / 2], centre + 1 / 2, centre - 1 / 2,
-                     color='black',
-                     lw=0)  # Right segment
+                   color='black',
+                   lw=0)  # Right segment
 
     # Fill between for the vertical lines (upper, middle, lower)
     p.fill_betweenx([0 - 1 / 2, centre - y_wall_gap_offset - 1 / 2], centre + 1 / 2, centre - 1 / 2, color='black',
-                      lw=0)  # Upper segment
+                    lw=0)  # Upper segment
     p.fill_betweenx([centre - y_wall_gap_offset + 1 / 2, centre + y_wall_gap_offset - 1 / 2], centre + 1 / 2,
-                      centre - 1 / 2,
-                      color='black', lw=0)  # Middle segment
+                    centre - 1 / 2,
+                    color='black', lw=0)  # Middle segment
     p.fill_betweenx([centre + y_wall_gap_offset + 1 / 2, env_size + 1 / 2], centre + 1 / 2, centre - 1 / 2,
-                      color='black',
-                      lw=0)  # Lower segment
+                    color='black',
+                    lw=0)  # Lower segment
 
 
 def plot_trajectories(global_step, trajectories, env_size, x_wall_gap_offset, y_wall_gap_offset, save_dir):

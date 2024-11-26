@@ -39,16 +39,19 @@ Note: Since all algorithms are built on top of PPO, all of them also use action 
 - The state features are standardized [*](https://github.com/jonupp/adv_topics_ml_repl_chal/blob/09115467f32bbf14f2df165faee1e369bfdd20a1/ATARI%20games/ppo_rle.py#L356C13-L356C21)
 - The intrinsic rewards are normalized by division by the L2 norm of the feature vector [*](https://github.com/jonupp/adv_topics_ml_repl_chal/blob/09115467f32bbf14f2df165faee1e369bfdd20a1/ATARI%20games/ppo_rle.py#L357C54-L357C82)
 - The intrinsic and extrinsic rewards are normalized by division of the "running standard deviation" calculated on the forward filtered rewards. [*](https://github.com/jonupp/adv_topics_ml_repl_chal/blob/09115467f32bbf14f2df165faee1e369bfdd20a1/ATARI%20games/ppo_rle.py#L724)
+- The advantage is normalized
 
 ### What exactly is plotted in the game score plot and related plots?
 - In every iteration the average of the past 128 returns in any environment is plotted at the last global step of the iteration in the "charts/game_score" plot.
 - The "charts/episode_return" contains the actual returns per global step. Every time an episode in any environment ends, the return is stored with the corresponding global step.
 
-### Why is not the difference between estimated value (from NN) and actual value (i.e., rewards from episode) used to train the value NN?
---> GAE
+### With what is the log probability of the action multiplied in the policy gradient?
+All the implementations use generalized advantage estimator (GAE). We have the TD residual of $V$ as $\delta^V_t = r_t + \gamma V(s_{t_1})-V(s_t)$. The GAE is then $\sum_{l=0}^\infty (\gamma \lambda)^l \delta^V_{t+l}$. The parameter $\lambda$ controls the weighting of the future TD-residuals. We have the two special cases: GAE($\gamma, 0$)=$r_t+\gamma V(s_{t+1})-V(s_t)$ (which is the TD residual) and GAE($\gamma, 1$)=$\sum_{l=0}^\infty \gamma^l r_{t_l} - V(s_t)$ (which is the advantage function). The advantage of using GAE is that one can control the trade-off between bias and variance: $\lambda=0$ has low variance but high bias while $\lambda=1$ has high variance but low bias. Note that in the code the GAE is calculated recursively. The derivation of this recursive GAE formula is similar to the derivation of the recursive formula for the discounted rewards.
+
+### How is the value loss calculated?
+For simplicity, we consider a batch of size 1. The most basic loss for the value network would be $0.5(V^{new}(s_t)-G_t)^2$ where $G_t$ is the return. However, in all algorithms they use $0.5(V^{new}(s_t)-(\text{advantage} + V^{old}(s_t)))^2$ where $V^{new}$ is the up-to-date value network and $V^{old}$ is the value network from the data collection phase. Apparently, this reduces variance and stabilizes the training.
 
 ### Which aspects are not (directly) described in the paper but can be seen in the code?
-- GAE
 - In Atari the rewards are clipped
 - Reward normalization
 - Splitting value network's head (in contrast, the paper indicates that we want to maximize the sum of the intrinsic and extrinsic rewards directly)

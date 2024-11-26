@@ -39,6 +39,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from matplotlib import pyplot as plt
 from torch.distributions import Categorical
 from collections import deque
 import torch.nn.functional as F
@@ -47,7 +48,8 @@ from copy import deepcopy
 from torch.utils.tensorboard import SummaryWriter
 
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
-from four_room_grid_world.util.plot_util import plot_heatmap, get_trajectories, plot_trajectories, create_plot_env
+from four_room_grid_world.util.plot_util import plot_heatmap, get_trajectories, plot_trajectories, create_plot_env, \
+    calculate_states_entropy
 
 import four_room_grid_world.env_gymnasium.registration  # Do not remove this import
 
@@ -68,7 +70,7 @@ def parse_args():
                         help="if toggled, cuda will be enabled by default")
     parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
                         help="if toggled, this experiment will be tracked with Weights and Biases")
-    parser.add_argument("--wandb-project-name", type=str, default="random-latent-exploration",
+    parser.add_argument("--wandb-project-name", type=str, default="RLE",
                         help="the wandb's project name")
     parser.add_argument("--wandb-entity", type=str, default=None,
                         help="the entity (team) of wandb's project")
@@ -304,6 +306,7 @@ if __name__ == "__main__":
             name=run_name,
             # monitor_gym=True,
             save_code=True,
+            tags=["PPO_RND"],
         )
 
     writer = SummaryWriter(f"runs/{run_name}")
@@ -431,6 +434,7 @@ if __name__ == "__main__":
 
             if global_step == 500_000 or global_step == 2_400_000:
                 plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
+                wandb.log({"State visit heatmap": wandb.Image(plt.gcf())}, global_step)
 
             if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:  # TODO Added by me
                 trajectories = get_trajectories(plot_env, agent, device)
@@ -461,6 +465,10 @@ if __name__ == "__main__":
             target_next_feature = rnd_model.target(rnd_next_obs)
             predict_next_feature = rnd_model.predictor(rnd_next_obs)
             curiosity_rewards[step] = ((target_next_feature - predict_next_feature).pow(2).sum(1) / 2).data
+
+        state_visit_entropy = calculate_states_entropy(infos, global_step, ENV_SIZE)
+        if args.track:
+            wandb.log({"charts/state_visit_entropy": state_visit_entropy}, step=global_step)
 
         not_dones = 1.0 - dones
         ext_reward_per_env = torch.stack(
