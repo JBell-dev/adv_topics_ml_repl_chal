@@ -1,0 +1,33 @@
+\begin{thebibliography}{4}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Burda et~al.(2019)Burda, Edwards, Storkey, and Klimov]{rnd-paper}
+Yuri Burda, Harrison Edwards, Amos Storkey, and Oleg Klimov.
+\newblock Exploration by random network distillation.
+\newblock \emph{International Conference on Learning Representations}, 2019.
+\newblock URL \url{https://openreview.net/forum?id=H1lJJnR5Ym}.
+
+\bibitem[Fortunato et~al.(2018)Fortunato, Azar, Piot, Menick, Osband, Graves, Mnih, Munos, Hassabis, Pietquin, Blundell, and Legg]{noisynet-paper}
+Meire Fortunato, Mohammad~G. Azar, Bilal Piot, Jacob Menick, Ian Osband, Alex Graves, Vlad Mnih, Remi Munos, Demis Hassabis, Olivier Pietquin, Charles Blundell, and Shane Legg.
+\newblock Noisy networks for exploration.
+\newblock \emph{International Conference on Machine Learning}, 2018.
+\newblock \doi{10.48550/arXiv.1706.10295}.
+
+\bibitem[Mahankali et~al.(2024)Mahankali, Hong, Sekhari, Rakhlin, and Agrawal]{rle-paper}
+Srinath Mahankali, Zhang-Wei Hong, Ayush Sekhari, Alexander Rakhlin, and Pulkit Agrawal.
+\newblock Random latent exploration for deep reinforcement learning.
+\newblock \emph{International Conference on Machine Learning}, 2024.
+\newblock \doi{10.48550/arXiv.2407.13755}.
+\newblock URL \url{https://srinathm1359.github.io/random-latent-exploration/}.
+
+\bibitem[Schulman et~al.(2017)Schulman, Wolski, Dhariwal, Radford, and Klimov]{ppo-paper}
+John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov.
+\newblock Proximal policy optimization algorithms.
+\newblock 2017.
+\newblock \doi{10.48550/arXiv.1707.06347}.
+
+\end{thebibliography}

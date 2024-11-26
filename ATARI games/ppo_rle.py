@@ -55,7 +55,7 @@ def parse_args():
         help="the wandb's project name")
     parser.add_argument("--wandb-entity", type=str, default=None,
         help="the entity (team) of wandb's project")
-    parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+    parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="whether to capture videos of the agent performances (log it on wandb)")
     parser.add_argument("--capture-video-interval", type=int, default=10,
         help="How many training updates to wait before capturing video")
@@ -401,6 +401,9 @@ class VideoRecorder(object):
                  use_wandb: bool = False) -> None:
         self.use_wandb = use_wandb
         self.local_dir = local_dir
+
+        self.drive_dir = "/content/drive/MyDrive/atari_videos"
+
         self.max_buffer_size = max_buffer_size
         self.frame_buffer = deque(maxlen=max_buffer_size)
         self.rewards = deque(maxlen=max_buffer_size)
@@ -408,10 +411,9 @@ class VideoRecorder(object):
         self.episode_count = 0
         self.fig = plt.figure()  # create a figure object for plotting rle statistics
 
-    def record(self, frames: np.ndarray, rewards: float, int_reward_info: dict, global_step: int):
-        self.frame_buffer.append(np.expand_dims(frames, axis=0).astype(np.uint8))  # Expand dim for concatenation later
-        self.rewards.append(rewards)
-        self.int_rewards.append(int_reward_info["int_rewards"])
+        # Create figure for each plot type
+        self.task_rewards_fig = plt.figure()
+        self.int_rewards_fig = plt.figure()
 
     def reset(self):
         self.frame_buffer.clear()  # Reset the buffer
@@ -419,15 +421,24 @@ class VideoRecorder(object):
         self.int_rewards.clear()
         self.episode_count += 1
 
+    def record(self, frames: np.ndarray, rewards: float, int_reward_info: dict, global_step: int):
+        # frames comes in as (84, 84) grayscale
+        # Keep it as grayscale, just add a channel dimension
+        frames = frames[:, :, np.newaxis]  # Shape becomes (84, 84, 1)
+        
+        self.frame_buffer.append(np.expand_dims(frames, axis=0).astype(np.uint8))
+        self.rewards.append(rewards)
+        self.int_rewards.append(int_reward_info["int_rewards"])
+
     def flush(self, global_step: int, caption: str = ""):
         if len(self.frame_buffer) <= 0:  # If frame buffer is empty, do nothing
             return
         if len(caption) <= 0:
             caption = f"episode-{self.episode_count}-score-{np.stack(self.rewards).sum()}"
 
-        video_array = np.concatenate(self.frame_buffer, axis=0)
-        video_array = video_array[:, None, ...]  # Add channel axis
-
+        # Concatenate frames along time dimension
+        video_array = np.concatenate(self.frame_buffer, axis=0)  # Shape: (T, 84, 84, 1)
+        
         save_path = os.path.join(self.local_dir, str(self.episode_count), str(caption))
         print(f"Log frames and rewards at {save_path}")
         if args.use_local_dir:
@@ -435,22 +446,41 @@ class VideoRecorder(object):
             np.save(os.path.join(save_path, "frames.npy"), video_array)
             np.save(os.path.join(save_path, "rewards.npy"), np.stack(self.rewards))
             np.save(os.path.join(save_path, "int_rewards.npy"), np.stack(self.int_rewards))
+            print(f"Logged frames and rewards at {save_path}")
 
         if self.use_wandb:
-            wandb.log({"media/video": wandb.Video(video_array, fps=30, caption=str(caption))}, step=global_step)
-            # Log task rewards
-            task_lineplot = sns.lineplot(np.stack(self.rewards))
-            log_data = wandb.Image(self.fig)
-            wandb.log({"media/task_rewards": log_data}, step=global_step)
+            # For wandb.Video, we need to repeat the single channel to create a grayscale video
+            wandb_video = np.repeat(video_array, 3, axis=3)  # Only convert to RGB for wandb
+            wandb.log({"media/video": wandb.Video(wandb_video, fps=30, caption=str(caption))}, step=global_step)
+            
+            # Log task rewards plot
+            plt.figure(self.task_rewards_fig.number)
             plt.clf()
+            sns.lineplot(data=np.stack(self.rewards))
+            plt.title("Task Rewards")
+            wandb.log({"media/task_rewards": wandb.Image(self.task_rewards_fig)}, step=global_step)
 
-            # Log intrinsic rewards
-            int_reward_lineplot = sns.lineplot(np.stack(self.int_rewards))
-            log_data = wandb.Image(self.fig)
-            wandb.log({"media/int_reward": log_data}, step=global_step)
+            # Log intrinsic rewards plot  
+            plt.figure(self.int_rewards_fig.number)
             plt.clf()
+            sns.lineplot(data=np.stack(self.int_rewards))
+            plt.title("Intrinsic Rewards")
+            wandb.log({"media/int_reward": wandb.Image(self.int_rewards_fig)}, step=global_step)
+
+        # Save to Google Drive
+        try:
+            drive_save_path = os.path.join(self.drive_dir, str(self.episode_count), str(caption))
+            os.makedirs(drive_save_path, exist_ok=True)
+            
+            np.save(os.path.join(drive_save_path, "frames.npy"), video_array)  # Save original grayscale
+            np.save(os.path.join(save_path, "rewards.npy"), np.stack(self.rewards))
+            np.save(os.path.join(save_path, "int_rewards.npy"), np.stack(self.int_rewards))
+            print(f"Successfully saved to Drive at {drive_save_path}")
+        except Exception as e:
+            print(f"Error saving to Drive: {str(e)}")
 
         self.reset()
+
 
 
 class VideoRecordScoreCondition:
