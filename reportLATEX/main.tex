@@ -49,7 +49,7 @@
 \maketitle
 
 \begin{abstract}
-In this project we aim to analyze the claims of \cite{rle-paper} in the paper \href{https://arxiv.org/abs/2407.13755}{\textsc{Random Latent Exploration for Deep Reinforcement Learning}} which introduces a new technique to explore the state space and thus yield better overall agent scores. Moreover, we intend to reproduce the results obtained by the authors, expand on the findings and verify that the results are not cherry-picked. \textcolor{red}{<write the main findings of our project>} This report is prepared as part of the course project in \textit{Advanced Topics in Machine Learning} at \textit{Università della Svizzera italiana} in the autumn semester of 2024.
+In this project we aim to analyze the claims of \cite{rle-paper} in the paper \href{https://arxiv.org/abs/2407.13755}{\textsc{Random Latent Exploration for Deep Reinforcement Learning}}\footnote{Please note that there exists an older version of this paper by \cite{rle-paper-old} marked in the references with "(OLD VERSION)" which was provided by the course instructors. Only where there are significant differences we will refer to the new version.} which introduces a new technique to explore the state space and thus yield better overall agent scores. Moreover, we intend to reproduce the results obtained by the authors, expand on the findings and verify that the results are not cherry-picked. \textcolor{red}{<write the main findings of our project>} This report is prepared as part of the course project in \textit{Advanced Topics in Machine Learning} at \textit{Università della Svizzera italiana} in the autumn semester of 2024.
 \end{abstract}
 
 %%%%
@@ -58,6 +58,8 @@ In this project we aim to analyze the claims of \cite{rle-paper} in the paper \h
 \noindent The paper we investigate deals with the problem of motivating an agent in a high-dimensional state space to explore the environment more exhaustively during training and thereby find non-obvious trajectories that can lead to higher long-term rewards for both discrete and continuous action spaces. The paper compares the new \textit{Random Latent Exploration} (RLE) technique to standard \textit{Proximal Policy Optimization} (PPO, see \cite{ppo-paper}), \textit{NoisyNet} (see \cite{noisynet-paper}) and \textit{Random Network Distillation} (RND, see \cite{rnd-paper}).
 
 \noindent Exploration is one of the major issues of Reinforcement Learning (RL) and its techniques can generally be divided into two categories: Noise-based exploration and bonus-based exploration. There are advantages and disadvantages for both of them but we always have to keep in mind that always choosing the highest short-term (local) reward does not necessarily also yield the highest long-term (global) reward, e.g. picture the environment as shown in figure \ref{fig:sample-env-1}. Here, the agent starting in the \textcolor{blue}{blue state} will always choose the small reward of $1$, i.e. going right, then move back to the initial state, then move right, and so on, dithering between these two states, instead of accepting to collect a reward of $0$ by going left in order to be able to collect the much higher reward of $100$ in the following step.
+
+\noindent \cite{rle-paper} use RND to represent bonus-based exploration, NoisyNet to represent noise-based exploration and standard PPO as the baseline benchmark.
 
 \begin{figure}[h!]
   \centering
@@ -153,21 +155,34 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
 \section{Scope of reproducibility}
 \label{sec:claims}
 
-\texttt{Introduce the specific setting or problem addressed in this work, and list the main claims from the original paper. Think of this as writing out the main contributions of the original paper. Each claim should be relatively concise; some papers may not clearly list their claims, and one must formulate them in terms of the presented experiments.}
+\noindent The main quantifiable claims made by \cite{rle-paper} consist of the following:
 
-\texttt{A claim should be something that can be supported or rejected by your data. An example is, ``Finetuning pre-trained BERT on dataset X will have higher accuracy than an LSTM trained with GloVe embeddings.''}
-\texttt{This is concise and is something that can be supported by experiments.}
-\texttt{An example of a claim that is too vague, and can't be supported by experiments, is ``Contextual embedding models have shown strong performance on a number of tasks. We will run experiments evaluating two types of contextual embedding models on datasets X, Y, and Z."}
+\begin{enumerate}
+    \item In the abstract, \cite{rle-paper} claim "[...] RLE exhibits higher overall scores across all of the tasks than other approaches, including action-noise and randomized value exploration." They refer to the tasks being the \textsc{Atari}, \textsc{IssacGym} and \textsc{FourRoom} environments. The benchmark approaches are standard PPO, NoisyNet and RND.
+    \item The first claim holds for "[...] both discrete and continuous control tasks." \citep{rle-paper}
+    \item Moreover, "[...] introducting randomness to rewards influences the policy to produce diverse behaviors" \citep{rle-paper} which manifests itself in an incentive to explore random (and thus in aggregate lager) parts of the state space.
+    \item For the discrete-action discrete-states \textsc{FourRoom} environment absent of a goal reward, the authors claim that PPO's state visitation centers around the initial room (top right) concluding that action-noise methods cannot conduct deep exploration whereas RLE, NoisyNet and RND well reach across the four rooms and thus perform deep exploration.
+    \item For the more challenging discrete-action continuous-states\footnote{While the input to the action sampler is a discrete $84\times84\times4$ tensor representing the pixels it perceives, in practice \textsc{Atari} games are considered to be continuous-state environments due to the high-dimensional state space and visual complexity of each frame.} \textsc{Atari} environment, the authors claim that, in the majority of games, RLE achieves a higher IQM of the human-normalized score with a probability of $67\%$, $72\%$ and $71\%$, compared to PPO, NoisyNet and RND, respectively.\footnote{The authors mention that for the \textsc{Montezuma's Revenge} game RLE underperforms likely due to RLE not factoring in bonus-based exploration.}
+    \item In the continuous-action continuous-states \textsc{IsaacGym} environment\footnote{Please note that the \textsc{IsaacGym} environment is deprecated and we're using \textsc{Isaac Lab} \textcolor{red}{(check this)} instead, however we will refer to it as \textsc{IsaacGym} for continuity.}, the authors claim that, with a probability of around $83\%$ for PPO, ca. $66\%$ for NoisyNet and roughly $65\%$ for RND, RLE improves performance in all of their selected \textsc{IsaacGym} tasks.
+\end{enumerate}
 
-\texttt{This section roughly tells a reader what to expect in the rest of the report. Clearly itemize the claims you are testing:}
+\noindent Our findings regarding these claims will be presented in \hyperlink{sec4}{section 4} \textcolor{red}{Check link before submission}. Moreover, \cite{rle-paper} performed ablation studies and claim to have found:
+
 \begin{itemize}
-    \item \texttt{Claim 1}
-    \item \texttt{Claim 2}
-    \item \texttt{Claim 3}
-    \item \texttt{Claim 4}
+  \item RLE performance improves over PPO irrespective of the distribution used to sample the 8-dim random latent vector.
+  \item RLE performance does not significantly improve over PPO as a dependence of the dimensionality of the random latent vector.
+  \item RLE performance deteriorates if the policy and value networks are not conditioned on the random latent vector.
+  \item RLE performance improves slightly if we use a slow-moving estimate of the value network's learned CNN features (i.e. we update the feature network) vs. no-update.
+  \item RLE performance is insensitive to the feature extractor architecture.
+  \item RLE perforamnce deteriorates if the random reward function is simply white noise (N(0,1)) and thus uncorrelated to the states.
 \end{itemize}
 
-\texttt{Each experiment in Section~\ref{sec:results} will support (at least) one of these claims, so a reader of your report should be able to separately understand the \emph{claims} and the \emph{evidence} that supports them.}
+\noindent Unfortunately due to time constraints we are not able to test all of these claims, instead we will focus on the main ones. Finally, the authors also conclude that:
+
+\begin{itemize}
+  \item Contrary to Posterior Sampling where the sampling distribution eventually converges to the true model, $P_{z}$ remains fixed in RLE the random rewards will act as regularization in the later stage of training.
+  \item RLE benefits from parallelization as z is independent from every other round and can be trained on identical copies of the environment thus reducing the overall running time of the training.
+\end{itemize}
 
 \section{Methodology}
 \texttt{Explain your approach - did you use the author's code, or did you aim to re-implement the approach from the description in the paper? Summarize the resources (code, documentation, GPUs) that you used.}
@@ -184,18 +199,58 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
 
 \hypertarget{experimental-setup}{\subsection{Experimental setup and code}}
 
+\noindent The code for our implementations can be found in GitHub\footnote{\href{https://github.com/jonupp/adv_topics_ml_repl_chal}{https://github.com/jonupp/adv\_topics\_ml\_repl\_chal} \textcolor{red}{Change github}}.
+
+\noindent \textsc{Atari} represents "discrete action space deep RL benchmark". The human normalized scores are computed according to \textcolor{red}{formula: Agent57: Outperforming the Atari Human Benchmark} and the human scores are taking from
+
+\noindent \textcolor{red}{Do we need to explain the environments as well?}
+
+\noindent There are three types of environments in use on which we run our RL algorithms which are depicted in figure \ref{fig:environmnents}. More precisely, figure \ref{fig:sample-env-fourroom} shows the \textsc{FourRoom} environment where we have $50\times50 + 4$ states which are divided into four rooms of size $25\times25$ and $4$ holes in the walls located at positions $10$ horizontally and $5$ vertically, starting the count at $1$ from the inner corners. Exploring the state space, beginning from the initial state marked in \textcolor{red}{red}, becomes a deep exploration task due to the holes being only $1$ "pixel" wide. However, if we want to incentivize the agent to find a reward, then we can put it at the goal position marked in \textcolor{green}{green}. At every step, the agent can move one step vertically or horizontally, but if it would run into a wall it chooses to remain in place.
+
+\noindent Moreover we have an example of the \textsc{Atari} environments in figure \ref{fig:sample-env-atari}, namely the \textsc{Alien-v5} game. In this environment, the agent perceives the $4$ most recent $84\times84$ grayscale frames. In the \textsc{IsaacGym} environment on the other hand, \textcolor{red}{<finish the environment description later>}.
+
+\begin{figure}
+  \centering
+  \begin{subfigure}[b]{0.32\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{tikz/fourroom-env.tex}
+    \caption{The \textsc{FourRoom} environment is a grid world, limited by walls, with the initial state is on the \textcolor{red}{top right} and the goal state where the agent receives a reward (optional) is on the \textcolor{green}{bottom left}.}
+    \label{fig:sample-env-fourroom}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/atari.png}
+    \caption{The \textsc{Alien-v5} environment is an example of the \textsc{Atari} games consisting of a maze filled with 'eggs' to destroy while being hunted by aliens. A flamethrower or occasional power-up may be used to scare the aliens.}
+    \label{fig:sample-env-atari}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/isaac.png}
+    \caption{The \textsc{CartPole} environment is an example of the \textsc{IsaacGym} environment.\\\textcolor{red}{What does the agent actually perceive?}\\}
+    \label{fig:sample-env-isaac}
+  \end{subfigure}
+  \caption{Examples of the environments in use.}
+  \label{fig:environmnents}
+\end{figure}
+
 \texttt{Include a description of how the experiments were set up that's clear enough a reader could replicate the setup.}
 \texttt{Include a description of the specific measure used to evaluate the experiments (e.g. accuracy, precision@K, BLEU score, etc.).}
 \texttt{Provide a link to your code or notebook (if available). Add in this section (or in the following) any reference to cloud-based providers you}
 
 \subsection{Computational requirements}
+
+\noindent To run the code we experimented with the CPU, T4 GPU and TPU v2-8 in Google Colab, integrated with Weights \& Biases (wandb) for easier runtime visualization of the scores and other measures.
+
+\noindent We would like to note, however, that \cite{rle-paper} had available the HPC resources of the MIT Supercloud and the Lincoln Laboratory Supercomputing Center. Within the framework of this course, we did not have the equivalent computing power to replicate all experiments in their original form and had to restrain ourselves to a mere few of them.
+
 \texttt{Include a description of the hardware used, such as the GPU or CPU the experiments were run on. 
 For each model, include a measure of the average runtime (e.g. average time to predict labels for a given validation set with a particular batch size).
 For each experiment, include the total computational requirements (e.g. the total GPU hours spent).}\\
 \texttt{Note: You'll likely have to record this as you run your experiments, so it's better to think about it ahead of time.}
 
-\section{Results}
-\label{sec:results}
+\hypertarget{sec4}{\section{Results}}
 \texttt{Start with a high-level overview of your results. Do your results support the main claims of the original paper? Keep this section as factual and precise as possible, and reserve your judgment and discussion points for the next "Discussion" section.}
 
 
