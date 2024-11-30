@@ -20,10 +20,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
 from four_room_grid_world.util.plot_util import plot_heatmap, get_trajectories, plot_trajectories, create_plot_env, \
-    calculate_states_entropy
+    calculate_states_entropy, is_last_step_in_last_epoch, visit_count_dict_to_list
 
 from four_room_grid_world.env_gymnasium.registration import register  # DO NOT REMOTE THIS IMPORT
-
 
 ENV_SIZE = 50
 
@@ -88,7 +87,12 @@ def parse_args():
     parser.add_argument("--normalize-ext-rewards", type=lambda x: bool(strtobool(x)), default=True, nargs="?",
                         const=True,
                         help="if toggled, extrinsic rewards will be normalized")
-
+    parser.add_argument("--reward-free", type=str, default="True",
+                        help="whether to use the version of the four room environment that does not have any rewards")
+    parser.add_argument("--tags", nargs="*", type=str, default=["PPO_NOISY_NET"],
+                        help="a list of tags for wanddb")
+    parser.add_argument("--max-episode-steps", type=int, default=1_000,
+                        help="maximum number of steps per episode")
 
     args = parser.parse_args()
     args.batch_size = int(args.num_envs * args.num_steps)
@@ -222,7 +226,7 @@ class RewardForwardFilter:
 
 def make_env(env_id, idx, run_name):
     def thunk():
-        env = gym.make(env_id, max_episode_steps=1_000, size=ENV_SIZE)
+        env = gym.make(env_id, max_episode_steps=args.max_episode_steps, size=ENV_SIZE, is_reward_free=args.reward_free)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
 
@@ -231,6 +235,19 @@ def make_env(env_id, idx, run_name):
 
 if __name__ == "__main__":
     args = parse_args()
+
+    if args.reward_free == "True":
+        args.reward_free = True
+    elif args.reward_free == "False":
+        args.reward_free = False
+    else:
+        raise RuntimeError("Invalid reward-free parameter")
+
+    if args.reward_free:
+        args.tags.append("REWARD_FREE")
+    else:
+        args.tags.append("NOT_REWARD_FREE")
+
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:
         import wandb
@@ -243,7 +260,7 @@ if __name__ == "__main__":
             name=run_name,
             # monitor_gym=True,
             save_code=True,
-            tags=["PPO_NOISY_NET"]
+            tags=args.tags
         )
     writer = SummaryWriter(f"runs/{run_name}")
     writer.add_text(
@@ -327,17 +344,21 @@ if __name__ == "__main__":
             next_done = np.logical_or(done, truncations)
             next_done = torch.Tensor(next_done).to(device)
 
-            if global_step == 500_000 or global_step == 2_400_000:
+            if global_step == 500_000 or is_last_step_in_last_epoch(update, num_updates, step, args.num_steps):
                 plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
-                wandb.log({"State visit heatmap": wandb.Image(plt.gcf())}, global_step)
+                if args.track:
+                    wandb.log({"State visit heatmap": wandb.Image(plt.gcf())}, global_step)
 
-            if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:  # TODO Added by me
+            if global_step == 500_000 or global_step == 1_500_000 or is_last_step_in_last_epoch(update, num_updates, step, args.num_steps):
                 trajectories = get_trajectories(plot_env, agent, device)
-                plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset, f"runs/{run_name}")
+                plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset,
+                                  plot_env.y_wall_gap_offset, f"runs/{run_name}")
+                if args.track:
+                    wandb.log({"trajectories": wandb.Image(plt.gcf())}, global_step)
 
-            if global_step == 2_400_000:
-                with open(f"runs/{run_name}/ppo_noisy_net_visit_counts.pkl", "wb") as file:
-                    pickle.dump(infos["visit_counts"], file)
+            if is_last_step_in_last_epoch(update, num_updates, step, args.num_steps):
+                if args.track:
+                    wandb.log({"visit_counts": visit_count_dict_to_list(infos["visit_counts"], ENV_SIZE)})
 
             for idx, d in enumerate(next_done):
                 if d:
@@ -349,6 +370,11 @@ if __name__ == "__main__":
                     print(f"global_step={global_step}, episodic_return={episodic_return}")
                     writer.add_scalar("charts/episodic_return", episodic_return, global_step)
                     writer.add_scalar("charts/episodic_length", episode_length, global_step)
+
+                    if args.track:
+                        wandb.log({"charts/episodic_return": episodic_return,
+                                   "charts/episodic_length": episode_length},
+                                  step=global_step)
 
         state_visit_entropy = calculate_states_entropy(infos, global_step, ENV_SIZE)
         if args.track:

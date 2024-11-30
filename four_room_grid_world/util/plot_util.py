@@ -5,7 +5,7 @@ from matplotlib.colors import LogNorm
 import gymnasium as gym
 
 
-def plot_heatmap(infos, global_step, env_size, save_dir):
+def plot_heatmap(infos, global_step, env_size, save_dir=None):
     # Uncomment only for debugging
     # sorted_dict = dict(sorted(infos["visit_counts"].items(), key=lambda item: item[1], reverse=True))
     # print(sorted_dict)
@@ -19,9 +19,13 @@ def plot_heatmap(infos, global_step, env_size, save_dir):
     plt.imshow(states, cmap='viridis', norm=LogNorm(vmin=1, vmax=states.max() or 1))
     plt.colorbar()
     plt.title(f"State visit count at time step {global_step:,}")
-    print(f"Saved state visit heatmap plot {save_dir}/{global_step}_state_visit_heatmap.png")
-    plt.savefig(f"{save_dir}/{global_step}_state_visit_heatmap.png")
+
     return plt
+
+
+def is_last_step_in_last_epoch(epoch, number_epochs, step, number_steps):
+    # Number steps is zero-indexed
+    return epoch == number_epochs and step == number_steps - 1
 
 
 def calculate_states_entropy(infos, global_step, env_size):
@@ -112,5 +116,11 @@ def plot_trajectories(global_step, trajectories, env_size, x_wall_gap_offset, y_
     plt.ylabel("Y Position")
     plt.title(f"Five trajectories at time step {global_step:,}")
     plt.legend()
-    print(f"Saved trajectory plot {save_dir}/{global_step}_trajectories.png")
-    plt.savefig(f"{save_dir}/{global_step}_trajectories.png")
+
+
+def visit_count_dict_to_list(visit_count_dict, env_size):
+    visit_array = np.zeros((env_size + 1, env_size + 1), dtype=int)
+    for (x, y), count in visit_count_dict.items():
+        visit_array[x, y] = count
+
+    return visit_array.tolist()

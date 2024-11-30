@@ -23,7 +23,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from four_room_grid_world.algorithms.ppo_rle_distribution import RLEGoalSamplerCreator
 from four_room_grid_world.util.plot_util import plot_heatmap, create_plot_env, add_room_layout_to_plot, \
-    plot_trajectories, calculate_states_entropy
+    plot_trajectories, calculate_states_entropy, is_last_step_in_last_epoch, visit_count_dict_to_list
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
 import four_room_grid_world.env_gymnasium.registration  # Do not remove this import
 from four_room_grid_world.env_gymnasium.FourRoomGridWorld import FourRoomGridWorld
@@ -32,104 +32,115 @@ ENV_SIZE = 50
 
 if os.environ.get("WANDB_MODE", "online") == "offline":
     from wandb_osh.hooks import TriggerWandbSyncHook
+
     trigger_sync = TriggerWandbSyncHook()
 else:
     def dummy():
         pass
+
+
     trigger_sync = dummy
+
 
 def parse_args():
     # fmt: off
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp-name", type=str, default=os.path.basename(__file__).rstrip(".py"),
-        help="the name of this experiment")
+                        help="the name of this experiment")
     parser.add_argument("--seed", type=int, default=0,
-        help="seed of the experiment")
+                        help="seed of the experiment")
     parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="if toggled, `torch.backends.cudnn.deterministic=False`")
+                        help="if toggled, `torch.backends.cudnn.deterministic=False`")
     parser.add_argument("--cuda", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="if toggled, cuda will be enabled by default")
+                        help="if toggled, cuda will be enabled by default")
     parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-        help="if toggled, this experiment will be tracked with Weights and Biases")
+                        help="if toggled, this experiment will be tracked with Weights and Biases")
     parser.add_argument("--wandb-project-name", type=str, default="RLE",
-        help="the wandb's project name")
+                        help="the wandb's project name")
     parser.add_argument("--wandb-entity", type=str, default=None,
-        help="the entity (team) of wandb's project")
+                        help="the entity (team) of wandb's project")
     parser.add_argument("--gpu-id", type=int, default=0,
-        help="ID of GPU to use")
+                        help="ID of GPU to use")
     parser.add_argument("--tag", type=str, default="PPO_RLE",
-        help="the tag used in wandb")
+                        help="the tag used in wandb")
 
     # Algorithm specific arguments
     parser.add_argument("--env-id", type=str, default="advtop/FourRoomGridWorld-v0",
-        help="the id of the environment")
+                        help="the id of the environment")
     parser.add_argument("--total-timesteps", type=int, default=2_500_000,
-        help="total timesteps of the experiments")
+                        help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=0.001,
-        help="the learning rate of the optimizer")
+                        help="the learning rate of the optimizer")
     parser.add_argument("--num-envs", type=int, default=32,
-        help="the number of parallel game environments")
+                        help="the number of parallel game environments")
     parser.add_argument("--num-steps", type=int, default=128,
-        help="the number of steps to run in each environment per policy rollout")
+                        help="the number of steps to run in each environment per policy rollout")
     parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="Toggle learning rate annealing for policy and value networks")
+                        help="Toggle learning rate annealing for policy and value networks")
     parser.add_argument("--gamma", type=float, default=0.99,
-        help="the discount factor gamma")
+                        help="the discount factor gamma")
     parser.add_argument("--gae-lambda", type=float, default=0.95,
-        help="the lambda for the general advantage estimation")
+                        help="the lambda for the general advantage estimation")
     parser.add_argument("--num-minibatches", type=int, default=4,
-        help="the number of mini-batches")
+                        help="the number of mini-batches")
     parser.add_argument("--update-epochs", type=int, default=4,
-        help="the K epochs to update the policy")
+                        help="the K epochs to update the policy")
     parser.add_argument("--norm-adv", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="Toggles advantages normalization")
+                        help="Toggles advantages normalization")
     parser.add_argument("--clip-coef", type=float, default=0.2,
-        help="the surrogate clipping coefficient")
+                        help="the surrogate clipping coefficient")
     parser.add_argument("--clip-vloss", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="Toggles whether or not to use a clipped loss for the value function, as per the paper.")
+                        help="Toggles whether or not to use a clipped loss for the value function, as per the paper.")
     parser.add_argument("--ent-coef", type=float, default=0.01,
-        help="coefficient of the entropy")
+                        help="coefficient of the entropy")
     parser.add_argument("--vf-coef", type=float, default=0.5,
-        help="coefficient of the value function")
+                        help="coefficient of the value function")
     parser.add_argument("--int-vf-coef", type=float, default=0.5,
-        help="coefficient of the intrinsic value function")
+                        help="coefficient of the intrinsic value function")
     parser.add_argument("--max-grad-norm", type=float, default=0.5,
-        help="the maximum norm for the gradient clipping")
+                        help="the maximum norm for the gradient clipping")
     parser.add_argument("--target-kl", type=float, default=None,
-        help="the target KL divergence threshold")
+                        help="the target KL divergence threshold")
     parser.add_argument("--sticky-action", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="if toggled, sticky action will be used")
-    parser.add_argument("--normalize-ext-rewards", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="if toggled, extrinsic rewards will be normalized")
+                        help="if toggled, sticky action will be used")
+    parser.add_argument("--normalize-ext-rewards", type=lambda x: bool(strtobool(x)), default=True, nargs="?",
+                        const=True,
+                        help="if toggled, extrinsic rewards will be normalized")
+    parser.add_argument("--reward-free", type=str, default="True",
+                        help="whether to use the version of the four room environment that does not have any rewards")
+    parser.add_argument("--tags", nargs="*", type=str, default=["PPO_RLE"],
+                        help="a list of tags for wanddb")
+    parser.add_argument("--max-episode-steps", type=int, default=1_000,
+                        help="maximum number of steps per episode")
 
     # RLE arguments
     parser.add_argument("--switch-steps", type=int, default=128,
-        help="number of timesteps to switch the RLE network")
+                        help="number of timesteps to switch the RLE network")
     parser.add_argument("--norm-rle-features", type=lambda x: bool(strtobool(x)), default=True,
                         nargs="?", const=True, help="if toggled, rle features will be normalized")
     parser.add_argument("--int-coef", type=float, default=0.1,
-        help="coefficient of extrinsic reward")
+                        help="coefficient of extrinsic reward")
     parser.add_argument("--ext-coef", type=float, default=1.0,
-        help="coefficient of intrinsic reward")
+                        help="coefficient of intrinsic reward")
     parser.add_argument("--int-gamma", type=float, default=0.99,
-        help="Intrinsic reward discount rate")
+                        help="Intrinsic reward discount rate")
     parser.add_argument("--feature-size", type=int, default=4,
-        help="Size of the feature vector output by the rle network")
+                        help="Size of the feature vector output by the rle network")
     parser.add_argument("--tau", type=float, default=0.005,
-        help="The parameter for soft updating the rle network")
+                        help="The parameter for soft updating the rle network")
     parser.add_argument("--save-rle", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-        help="if toggled, save the rle network at the end of training")
+                        help="if toggled, save the rle network at the end of training")
     parser.add_argument("--num-iterations-feat-norm-init", type=int, default=1,
-        help="number of iterations to initialize the feature normalization parameters")
+                        help="number of iterations to initialize the feature normalization parameters")
     parser.add_argument("--goal-distribution", type=str, default="standard_normal",
-        help="the distribution that is used by the RLENetwork to sample goals (see ppo_rle_distribution.py)")
+                        help="the distribution that is used by the RLENetwork to sample goals (see ppo_rle_distribution.py)")
 
     parser.add_argument("--z-layer-init", type=str, default="ortho_1.41:0.0",
-        help="z layer init")  # Options: "sparse_{sparsity}:{std}:{bias}", "ortho_{std}:{bias}"
+                        help="z layer init")  # Options: "sparse_{sparsity}:{std}:{bias}", "ortho_{std}:{bias}"
 
     parser.add_argument("--local-dir", type=str, default="./results")
     parser.add_argument("--use-local-dir", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-        help="if toggled, the local directory will be used")
+                        help="if toggled, the local directory will be used")
 
     args = parser.parse_args()
     args.batch_size = int(args.num_envs * args.num_steps)
@@ -138,10 +149,9 @@ def parse_args():
     return args
 
 
-
 def make_env(env_id, idx, run_name):
     def thunk():
-        env = gym.make(env_id, max_episode_steps=1_000, size=ENV_SIZE)
+        env = gym.make(env_id, max_episode_steps=args.max_episode_steps, size=ENV_SIZE, is_reward_free=args.reward_free)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
 
@@ -242,7 +252,8 @@ class Agent(nn.Module):
 
 
 class RLEModel(nn.Module):
-    def __init__(self, input_size, feature_size, output_size, num_actions, num_envs, z_layer_init, device, goal_sampler):
+    def __init__(self, input_size, feature_size, output_size, num_actions, num_envs, z_layer_init, device,
+                 goal_sampler):
         super().__init__()
 
         self.input_size = input_size
@@ -283,7 +294,7 @@ class RLEModel(nn.Module):
     def sample_goals(self, num_envs=None):
         if num_envs is None:
             num_envs = self.num_envs
-        #goals = torch.randn((num_envs, self.feature_size), device=self.device).float()
+        # goals = torch.randn((num_envs, self.feature_size), device=self.device).float()
         goals = self.goal_sampler.sample(num_envs, self.feature_size, self.device)
 
         # normalize the goals
@@ -304,7 +315,8 @@ class RLEModel(nn.Module):
 
         # update the goals
         new_goals = self.sample_goals()
-        self.goals = self.goals * (1 - self.switch_goals_mask.unsqueeze(1)) + new_goals * self.switch_goals_mask.unsqueeze(1)
+        self.goals = self.goals * (
+                    1 - self.switch_goals_mask.unsqueeze(1)) + new_goals * self.switch_goals_mask.unsqueeze(1)
 
         # update the num_steps_left
         self.num_steps_left[self.switch_goals_mask.bool()] = args.switch_steps
@@ -335,7 +347,8 @@ class RLEModel(nn.Module):
         pass
 
 
-def plot_reward_function(feature_network, x_wall_gap_offset, y_wall_gap_offset, global_step, save_dir, number_reward_functions=10):
+def plot_reward_function(feature_network, x_wall_gap_offset, y_wall_gap_offset, global_step, wandb, save_dir,
+                         number_reward_functions=10):
     assert number_reward_functions == 10, "Can only plot exactly 10 reward functions"
 
     reward_functions = np.zeros((ENV_SIZE + 1, ENV_SIZE + 1, number_reward_functions))
@@ -363,8 +376,8 @@ def plot_reward_function(feature_network, x_wall_gap_offset, y_wall_gap_offset, 
     cbar.set_label('Reward')
 
     plt.suptitle(f"Intrinsic Reward Functions at Step {global_step:,}")
-    print(f"Saved intrinsic reward functions plot {save_dir}/{global_step}_reward_functions.png")
-    plt.savefig(f"{save_dir}/{global_step}_reward_functions.png")
+
+
 
 def get_trajectories_RLE(env, agent, device, rle_network, number_trajectories):
     trajectories = []
@@ -392,6 +405,59 @@ def get_trajectories_RLE(env, agent, device, rle_network, number_trajectories):
 
     return trajectories
 
+
+def sample_and_log_z_values(number_z_values, rle_network, global_step):
+    z_values = rle_network.sample_goals(number_z_values)
+    wandb.log({f"z_values_{global_step}": z_values.tolist()})
+    return z_values
+
+
+def log_trajectories(z_values, global_step, env):
+    number_trajectories = len(z_values)
+    trajectories = []
+
+    for i in range(number_trajectories):
+        obs, _ = env.reset()
+        trajectory = [obs]
+        obs = torch.Tensor(obs).to(device).unsqueeze(0)
+
+        z = z_values[i]
+
+        while True:
+            with torch.no_grad():
+                action, _, _, _, _ = agent.get_action_and_value(obs, 0, z)
+                action = action.item()
+
+                next_obs, reward, terminated, truncated, _ = env.step(action)
+                trajectory.append(next_obs)
+                obs = torch.Tensor(next_obs).unsqueeze(0).to(device)
+
+            if terminated or truncated:
+                break
+
+        trajectories.append(trajectory)
+
+    wandb.log({f"trajectories_{global_step}": trajectories})
+
+def log_reward_functions(z_values, global_step, rle_network):
+    number_reward_functions = len(z_values)
+
+    reward_functions = np.zeros((ENV_SIZE + 1, ENV_SIZE + 1, number_reward_functions))
+
+    for i in range(number_reward_functions):
+        x = np.arange(ENV_SIZE + 1)
+        y = np.arange(ENV_SIZE + 1)
+        xx, yy = np.meshgrid(x, y)
+        grid_cells = np.vstack([xx.ravel(), yy.ravel()]).T
+
+        z = z_values[i]
+        for x, y in grid_cells:
+            obs = torch.Tensor([[x, y]])  # Include batch dimension
+            reward_functions[x, y, i], _, _ = rle_network.compute_reward(obs, obs, z)
+
+    wandb.log({f"reward_functions_{global_step}": reward_functions.tolist()})
+
+
 class RewardForwardFilter:
     def __init__(self, gamma):
         self.rewems = None
@@ -416,6 +482,22 @@ class RewardForwardFilter:
 if __name__ == "__main__":
     fig = plt.figure()  # create a figure object for plotting rle statistics
     args = parse_args()
+
+    if args.reward_free == "True":
+        args.reward_free = True
+    elif args.reward_free == "False":
+        args.reward_free = False
+    else:
+        raise RuntimeError("Invalid reward-free parameter")
+
+    if args.reward_free:
+        args.tags.append("REWARD_FREE")
+    else:
+        args.tags.append("NOT_REWARD_FREE")
+
+    if args.goal_distribution:
+        args.tags.append(args.goal_distribution)
+
     os.makedirs(args.local_dir, exist_ok=True)
 
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
@@ -437,7 +519,7 @@ if __name__ == "__main__":
             name=run_name,
             # monitor_gym=True,
             save_code=True,
-            tags=[args.tag],
+            tags=args.tags,
         )
 
     # TRY NOT TO MODIFY: seeding
@@ -463,7 +545,8 @@ if __name__ == "__main__":
     num_actions = envs.single_action_space.n
 
     goal_sampler = RLEGoalSamplerCreator.create_from_name(args.goal_distribution)
-    rle_network = RLEModel(envs.single_observation_space.shape, args.feature_size, rle_output_size, num_actions, args.num_envs,
+    rle_network = RLEModel(envs.single_observation_space.shape, args.feature_size, rle_output_size, num_actions,
+                           args.num_envs,
                            z_layer_init=create_layer_init_from_spec(args.z_layer_init),
                            device=device, goal_sampler=goal_sampler).to(device)
     rle_feature_size = rle_network.feature_size
@@ -520,7 +603,8 @@ if __name__ == "__main__":
         for step in range(args.num_steps * args.num_iterations_feat_norm_init):
             acs = np.random.randint(0, envs.single_action_space.n, size=(args.num_envs,))
             s, r, d, t, _ = envs.step(acs)
-            rle_reward, raw_rle_feat, rle_feat = rle_network.compute_rle_feat(torch.Tensor(s).to(device).clone().float())
+            rle_reward, raw_rle_feat, rle_feat = rle_network.compute_rle_feat(
+                torch.Tensor(s).to(device).clone().float())
             next_raw_rle_feat += raw_rle_feat.detach().cpu().numpy().tolist()
 
             if len(next_raw_rle_feat) % (args.num_steps * args.num_envs) == 0:
@@ -545,7 +629,8 @@ if __name__ == "__main__":
             global_step += 1 * args.num_envs
             obs[step] = next_obs
             dones[step] = next_done  # done is True if the episode ended in the previous step
-            rle_dones[step] = rle_network.switch_goals_mask  # rle_done is True if the goal is switched in the previous step
+            rle_dones[
+                step] = rle_network.switch_goals_mask  # rle_done is True if the goal is switched in the previous step
             goals[step] = rle_network.goals
 
             # Compute the obs before stepping
@@ -587,18 +672,29 @@ if __name__ == "__main__":
             if step < args.num_steps - 1:
                 prev_rewards[step + 1] = rle_rewards[step] * args.int_coef
 
-            if global_step == 500_000 or global_step == 2_400_000:
-                plot_reward_function(rle_network, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset, global_step, f"runs/{run_name}", 10)
+            if global_step == 500_000 or is_last_step_in_last_epoch(update, num_updates, step, args.num_steps):
                 plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
-                wandb.log({"State visit heatmap": wandb.Image(plt.gcf())}, global_step)
+                if args.track:
+                    wandb.log({"state_visit_heatmap": wandb.Image(plt.gcf())}, global_step)
 
-            if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:
+                plot_reward_function(rle_network, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset, global_step, f"runs/{run_name}", 10)
+                if args.track:
+                    wandb.log({"reward_functions ": wandb.Image(plt.gcf())}, global_step)
+
+            if global_step == 500_000 or global_step == 1_500_000 or is_last_step_in_last_epoch(update, num_updates,
+                                                                                                step, args.num_steps):
                 trajectories = get_trajectories_RLE(plot_env, agent, device, rle_network, 5)
-                plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset, f"runs/{run_name}")
+                plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset,
+                                  plot_env.y_wall_gap_offset, f"runs/{run_name}")
+                if args.track:
+                    wandb.log({"trajectories": wandb.Image(plt.gcf())}, global_step)
+                    z_values = sample_and_log_z_values(10, rle_network, global_step)
+                    log_trajectories(z_values, global_step, plot_env)
+                    log_reward_functions(z_values, global_step, rle_network)
 
-            if global_step == 2_400_000:
-                with open(f"runs/{run_name}/ppo_rle_visit_counts.pkl", "wb") as file:
-                    pickle.dump(infos["visit_counts"], file)
+            if is_last_step_in_last_epoch(update, num_updates, step, args.num_steps):
+                if args.track:
+                    wandb.log({"visit_counts": visit_count_dict_to_list(infos["visit_counts"], ENV_SIZE)})
 
             for idx, d in enumerate(next_done):
                 if d:
@@ -610,7 +706,9 @@ if __name__ == "__main__":
                     avg_returns.append(episodic_return)
                     avg_ep_lens.append(episode_length)
                     if args.track:
-                        wandb.log({"charts/episode_return": infos["final_info"][idx]["episode"]["r"].item()}, step=global_step)
+                        wandb.log({"charts/episodic_return": episodic_return,
+                                   "charts/episodic_length": episode_length},
+                                  step=global_step)
 
             rle_network.step(next_done)
 
@@ -659,10 +757,10 @@ if __name__ == "__main__":
                 ext_delta = rewards[t] + args.gamma * ext_nextvalues * ext_nextnonterminal - ext_values[t]
                 int_delta = rle_rewards[t] + args.int_gamma * int_nextvalues * int_nextnonterminal - int_values[t]
                 ext_advantages[t] = ext_lastgaelam = (
-                    ext_delta + args.gamma * args.gae_lambda * ext_nextnonterminal * ext_lastgaelam
+                        ext_delta + args.gamma * args.gae_lambda * ext_nextnonterminal * ext_lastgaelam
                 )
                 int_advantages[t] = int_lastgaelam = (
-                    int_delta + args.int_gamma * args.gae_lambda * int_nextnonterminal * int_lastgaelam
+                        int_delta + args.int_gamma * args.gae_lambda * int_nextnonterminal * int_lastgaelam
                 )
             ext_returns = ext_advantages + ext_values
             int_returns = int_advantages + int_values

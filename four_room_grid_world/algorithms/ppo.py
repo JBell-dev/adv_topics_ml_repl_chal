@@ -3,7 +3,8 @@ import os
 import pickle
 import random
 import time
-from dataclasses import dataclass
+from collections import deque
+from dataclasses import dataclass, field
 
 import gymnasium as gym
 import imageio
@@ -18,7 +19,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
 from four_room_grid_world.util.plot_util import plot_heatmap, plot_trajectories, get_trajectories, create_plot_env, \
-    calculate_states_entropy
+    calculate_states_entropy, is_last_step_in_last_epoch, visit_count_dict_to_list
 
 from four_room_grid_world.env_gymnasium.registration import register  # DO NOT REMOTE THIS IMPORT
 
@@ -119,7 +120,10 @@ class Args:
     """the entity (team) of wandb's project"""
     reward_free: str = True
     """whether to use the version of the four room environment that does not have any rewards"""
-
+    tags: list[str] = field(default_factory=lambda: ["PPO"])
+    """a list of tags for wanddb"""
+    max_episode_steps: int = 1_000
+    "maximum number of steps in an episode"
 
     # Algorithm specific arguments
     env_id: str = "advtop/FourRoomGridWorld-v0"
@@ -168,7 +172,7 @@ class Args:
 
 def make_env(env_id, idx, run_name):
     def thunk():
-        env = gym.make(env_id, max_episode_steps=1_000, size=ENV_SIZE)
+        env = gym.make(env_id, max_episode_steps=args.max_episode_steps, size=ENV_SIZE, is_reward_free=args.reward_free)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
 
@@ -226,6 +230,18 @@ class Agent(nn.Module):
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
+    if args.reward_free == "True":
+        args.reward_free = True
+    elif args.reward_free == "False":
+        args.reward_free = False
+    else:
+        raise RuntimeError("Invalid reward-free parameter")
+
+    if args.reward_free:
+        args.tags.append("REWARD_FREE")
+    else:
+        args.tags.append("NOT_REWARD_FREE")
+
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
@@ -240,7 +256,7 @@ if __name__ == "__main__":
             name=run_name,
             monitor_gym=True,
             save_code=True,
-            tags=["PPO"],
+            tags=args.tags,
         )
     writer = SummaryWriter(f"runs/{run_name}")
     writer.add_text(
@@ -286,6 +302,9 @@ if __name__ == "__main__":
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
 
+    avg_returns = deque(maxlen=128)
+    avg_ep_lens = deque(maxlen=128)
+
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
@@ -312,26 +331,37 @@ if __name__ == "__main__":
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
 
-            if global_step == 500_000 or global_step == 2_400_000:
+            if global_step == 500_000 or is_last_step_in_last_epoch(iteration, args.num_iterations, step, args.num_steps):
                 plt = plot_heatmap(infos, global_step, ENV_SIZE, f"runs/{run_name}")
-                wandb.log({"State Visit Heatmap": wandb.Image(plt.gcf())}, step=global_step)
+                if args.track:
+                    wandb.log({"State Visit Heatmap": wandb.Image(plt.gcf())}, step=global_step)
 
-            if global_step == 500_000 or global_step == 1_500_000 or global_step == 2_400_000:
+            if global_step == 500_000 or global_step == 1_500_000 or is_last_step_in_last_epoch(iteration, args.num_iterations, step, args.num_steps):
                 trajectories = get_trajectories(plot_env, agent, device)
                 plot_trajectories(global_step, trajectories, ENV_SIZE, plot_env.x_wall_gap_offset, plot_env.y_wall_gap_offset, f"runs/{run_name}")
+                if args.track:
+                    wandb.log({"trajectories": wandb.Image(plt.gcf())}, global_step)
 
-            if global_step == 2_400_000:
-                with open(f"runs/{run_name}/ppo_visit_counts.pkl", "wb") as file:
-                    pickle.dump(infos["visit_counts"], file)
+            if is_last_step_in_last_epoch(iteration, args.num_iterations, step, args.num_steps):
+                if args.track:
+                    wandb.log({"visit_counts": visit_count_dict_to_list(infos["visit_counts"], ENV_SIZE)})
 
-            if "final_info" in infos:
-                for info in infos["final_info"]:
-                    if info and "episode" in info:
-                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                        if args.track:
-                            wandb.log({"charts/episodic_return": info["episode"]["r"],
-                                       "charts/episodic_length": info["episode"]["l"]},
-                                      step=global_step)
+
+            for idx, d in enumerate(next_done):
+                if d:
+                    episodic_return = infos["final_info"][idx]["episode"]["r"].item()
+                    episode_length = infos["final_info"][idx]["episode"]["l"].item()
+                    print(f"global_step={global_step}, episodic_return={episodic_return}")
+                    writer.add_scalar("charts/episodic_return", episodic_return, global_step)
+                    writer.add_scalar("charts/episodic_length", episode_length, global_step)
+                    avg_returns.append(episodic_return)
+                    avg_ep_lens.append(episode_length)
+                    if args.track:
+                        wandb.log({"charts/episodic_return": episodic_return,
+                                   "charts/episodic_length": episode_length},
+                                  step=global_step)
+
+
 
         state_visit_entropy = calculate_states_entropy(infos, global_step, ENV_SIZE)
         if args.track:
@@ -454,6 +484,9 @@ if __name__ == "__main__":
                 "losses/clipfrac": np.mean(clipfracs),
                 "losses/explained_variance": explained_var,
                 "charts/SPS": int(global_step / (time.time() - start_time)),
+                "charts/game_score": np.mean(avg_returns),
+                "charts/max_game_score": np.max(avg_returns, initial=0),
+                "charts/min_game_score": np.min(avg_returns, initial=0)
             }, step=global_step)
 
         print("SPS:", int(global_step / (time.time() - start_time)))

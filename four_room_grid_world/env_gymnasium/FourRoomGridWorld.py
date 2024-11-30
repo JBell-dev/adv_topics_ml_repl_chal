@@ -7,7 +7,9 @@ import numpy as np
 class FourRoomGridWorld(gym.Env):
     """
     Adopted from https://www.gymlibrary.dev/content/environment_creation/#subclassing-gym-env.
-    Locations are 2-tuples (x,y) where x is the horizontal axis and y is the vertical axis.
+    Locations are numpy arrays containing (x,y), where x is the horizontal axis and y is the vertical axis.
+    If the parameter is_reward_free is set to True then the agent does not receive any rewards.
+    If it is set to False the agent receives +1 reward for reaching the goal.
     """
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
@@ -38,8 +40,8 @@ class FourRoomGridWorld(gym.Env):
         self._action_to_direction = {
             0: np.array([1, 0]),  # Right
             1: np.array([0, 1]),  # Up
-            2: np.array([-1, 0]),  # Left
-            3: np.array([0, -1]),  # Down
+            2: np.array([-1, 0]), # Left
+            3: np.array([0, -1]), # Down
         }
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -99,6 +101,7 @@ class FourRoomGridWorld(gym.Env):
 
         # Check if the episode has terminated (i.e., agent reached the target)
         terminated = False
+
         if not self._is_reward_free:  # No goal in reward-free exploration
             terminated = np.array_equal(self._agent_location, self._target_location)
 

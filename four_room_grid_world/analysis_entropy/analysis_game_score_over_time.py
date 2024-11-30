@@ -14,15 +14,23 @@ def bootstrap_confidence_interval(data, num_bootstrap=10_000, confidence=0.95):
 
 
 def get_plot_data(row):
-    lower, upper = bootstrap_confidence_interval(row)
-    return np.array([np.mean(row), lower, upper])
+    new_row = []
+    for entry in row:
+        if entry == "NaN":
+            new_row.append(0)
+        else:
+            new_row.append(entry)
+
+    lower, upper = bootstrap_confidence_interval(new_row)
+
+    return np.array([np.mean(new_row), lower, upper])
 
 
-def get_entropy_per_step_per_run_per_algorithm(runs, distributions=False):
+def get_game_score_per_step_per_run_per_algorithm(runs, distributions=False):
     """
     Returns a dictionary that contains an entry for every algorithm. The key is the tag of the algorithm. The value
     is a numpy array where dimension zero are the steps and dimension one are the runs for this algorithm. Also
-    returns a list of the algorithm tags and a list that contains the global steps at which point the entropy was
+    returns a list of the algorithm tags and a list that contains the global steps at which point the game score was
     calculated.
     """
     data_per_algorithm = {}
@@ -32,19 +40,19 @@ def get_entropy_per_step_per_run_per_algorithm(runs, distributions=False):
         if distributions:
             tag = run.tags[2]  # Distribution is 2nd tag
         else:
-            tag = run.tags[0]
+            tag = run.tags[1]
 
-        history_df = run.history(keys=["charts/state_visit_entropy", "_step"])
+        history_df = run.history(keys=["charts/game_score", "_step"])
         steps = history_df["_step"].to_numpy()
-        entropy_per_step = history_df["charts/state_visit_entropy"].to_numpy()
+        game_score = history_df["charts/game_score"].to_numpy()
 
         if tag not in tags:
             tags.append(tag)
 
         if tag not in data_per_algorithm.keys():
-            data_per_algorithm[tag] = [entropy_per_step]
+            data_per_algorithm[tag] = [game_score]
         else:
-            data_per_algorithm[tag].append(entropy_per_step)
+            data_per_algorithm[tag].append(game_score)
 
     for key, value in data_per_algorithm.items():
         data_per_algorithm[key] = np.array(value).T
@@ -52,17 +60,17 @@ def get_entropy_per_step_per_run_per_algorithm(runs, distributions=False):
     return data_per_algorithm, tags, steps
 
 
-def plot_entropy_algorithms(api):
+def plot_game_score_algorithms(api):
     query_tags = ["PPO", "PPO_NOISY_NET", "standard_normal", "PPO_RND"]
 
     runs = api.runs("RLE", filters={
         "$and": [
             {"tags": {"$in": query_tags}},
-            {"tags": {"$in": ["REWARD_FREE"]}}
+            {"tags": {"$in": ["NOT_REWARD_FREE"]}}
         ]
     })
 
-    data_per_algorithm, tags, steps = get_entropy_per_step_per_run_per_algorithm(runs)
+    data_per_algorithm, tags, steps = get_game_score_per_step_per_run_per_algorithm(runs)
 
     colors = ["gray", "orange", "blue", "green"]
 
@@ -73,51 +81,51 @@ def plot_entropy_algorithms(api):
     for i in range(len(tags)):
         data = np.array([get_plot_data(row) for row in data_per_algorithm[tags[i]]])
         plt.plot(steps, data[:, 0], label=tags[i], color=colors[i], linewidth=2)
-        plt.fill_between(steps, data[:, 1], data[:, 2], color=colors[i], alpha=0.2)
+        #plt.fill_between(steps, data[:, 1], data[:, 2], color=colors[i], alpha=0.2)
 
     plt.ylim(bottom=0)
-    plt.ylim(top=10)
-    plt.title("Mean Entropy of the State Visit Count over the Training", fontsize=14)
+    plt.ylim(top=1)
+    plt.title("Mean Game Score over the Training", fontsize=14)
     plt.xlabel("Global Step", fontsize=12)
-    plt.ylabel("Entropy", fontsize=12)
+    plt.ylabel("Game Score", fontsize=12)
     plt.legend(fontsize=12)
     plt.grid(True)
     plt.show()
 
 
-def plot_entropy_distributions(api):
+def plot_game_score_distributions(api):
     query_tags = ["standard_normal", "standard_uniform", "von_mises", "exponential"]
     runs = api.runs("RLE", filters={
         "$and": [
             {"tags": {"$in": query_tags}},
-            {"tags": {"$in": ["REWARD_FREE"]}}
+            {"tags": {"$in": ["NOT_REWARD_FREE"]}}
         ]
     })
 
-    data_per_algorithm, tags, steps = get_entropy_per_step_per_run_per_algorithm(runs, distributions=True)
+    data_per_algorithm, tags, steps = get_game_score_per_step_per_run_per_algorithm(runs, distributions=True)
 
-    colors = ["blue", "gray", "orange", "green"]
+    colors = ["gray", "orange", "blue", "green"]
 
     assert len(tags) == len(colors), ("Number of colors does not match number of tags (algorithms). Did you run the "
-                                      "run_no_goal_experiment.py and the run_no_goal_distribution_experiment.py?")
+                                      "run_goal_experiment.py and the run_goal_distribution_experiment.py?")
 
     plt.figure(figsize=(8, 6))
 
     for i in range(len(tags)):
         data = np.array([get_plot_data(row) for row in data_per_algorithm[tags[i]]])
         plt.plot(steps, data[:, 0], label=tags[i], color=colors[i], linewidth=2)
-        plt.fill_between(steps, data[:, 1], data[:, 2], color=colors[i], alpha=0.2)
+        #plt.fill_between(steps, data[:, 1], data[:, 2], color=colors[i], alpha=0.2)
 
     plt.ylim(bottom=0)
-    plt.ylim(top=10)
-    plt.title("Mean Entropy of the State Visit Count over the Training", fontsize=14)
+    plt.ylim(top=1)
+    plt.title("Mean Game Score over the Training", fontsize=14)
     plt.xlabel("Global Step", fontsize=12)
-    plt.ylabel("Entropy", fontsize=12)
+    plt.ylabel("Game Score", fontsize=12)
     plt.legend(fontsize=12)
     plt.grid(True)
     plt.show()
 
 
 api = wandb.Api()
-plot_entropy_algorithms(api)
-plot_entropy_distributions(api)
+plot_game_score_algorithms(api)
+plot_game_score_distributions(api)
