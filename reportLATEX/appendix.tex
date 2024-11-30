@@ -22,7 +22,7 @@
     7: & | & \multicolumn{4}{l}{\textbf{For} $t = 0, ..., T$ \textbf{do (\textsuperscript{2})}}\\
     8: & | & | & \multicolumn{3}{l}{Take action $a_{t} \sim \boldsymbol{\pi}(. | s_{t}, \textbf{z})$ and transition to $s_{t+1}$.}\\
     9: & | & | & \multicolumn{3}{l}{Compute feature $\textbf{f}(s_{t+1}) = \frac{\boldsymbol{\phi}(s_{t+1}) - \boldsymbol{\mu}}{\boldsymbol{\sigma}}$.}\\
-    10: & | & | & \multicolumn{3}{l}{Compute random reward $F(s_{t+1}, \textbf{z}) = \frac{\textbf{f}(s_{t+1})}{\| f(s_{t+1}) \|} \cdot \textbf{z}$.}\\
+    10: & | & | & \multicolumn{3}{l}{Compute random reward $F(s_{t+1}, \textbf{z}) = \frac{\textbf{f}(s_{t+1})}{\| \textbf{f}(s_{t+1}) \|} \cdot \textbf{z}$.}\\
     11: & | & | & \multicolumn{3}{l}{Receive reward $r_{t} = R(s_{t}, a_{t}) + F(s_{t+1}, \textbf{z})$.}\\
     12: & | & | & \multicolumn{3}{l}{\textbf{For} $i = 0, 1, ..., N-1$ \textbf{do (\textsuperscript{3})}}\\
     13: & | & | & | & \multicolumn{2}{l}{\textbf{If} worker $i$ terminated \textbf{or} $S$ timesteps passed without resampling, \textbf{then (\textsuperscript{4})}}\\
