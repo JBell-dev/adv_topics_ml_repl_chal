@@ -83,18 +83,25 @@ In this project we aim to analyze the claims of \cite{rle-paper} in the paper \h
 
 \subsection{Random Latent Exploration}
 
-\noindent The new idea that the authors \cite{rle-paper} present is to augment the reward function by adding a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F(s, z)$ where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$ \textcolor{red}{<elaborate on the distribution>}. So if at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi(. | s_{t})$ from policy $\pi$, then it will obtain the task reward $r (s_{t}, a_{t})$. In RLE, we train a so-called latent-conditioned policy network $\pi(. | s, \textbf{z})$ and latent-conditioned value network $V^{\pi}(s, \textbf{z})$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
+\noindent The new idea that the authors \cite{rle-paper} present is to augment the reward function by adding a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F(s, z)$ or intrinsic reward function, where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$. The authors \cite{rle-paper} claim that RLE's efficiency is not significantly affected by the choice of $P_{\textbf{z}}$. If at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi(. | s_{t})$ from policy $\pi$, then it will obtain the task reward $r (s_{t}, a_{t})$. In RLE, we train a so-called latent-conditioned policy network $\pi(. | s, \textbf{z})$ and latent-conditioned value network $V^{\pi}(s, \textbf{z})$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
 
 \begin{equation}
     V^{\pi}(s, \textbf{z}) \approx \mathbb{E}_{\pi} \left[\sum_{t = 0}^{\infty} \gamma^{t} \left(r(s_{t}, a_{t}) + F(s_{t+1}, \textbf{z})\right) \right]
     \label{eq:value_func}
 \end{equation}
 
-\noindent In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F(s_{t+1}, \textbf{z}) =  \boldsymbol{\phi}(s) \cdot \textbf{z}$ where $\boldsymbol{\phi}(s): \mathcal{S} \rightarrow \mathbb{R}^{d}$ is a feature extraction network. Both $\boldsymbol{\phi}$ and $\textbf{z}$ are $d$-dimensional vectors. Note that $z$ is resampled only before a new trajectory $(s_{0}, a_{0}, r_{0}, s_{1}, ...)$ is explored, not before each action that the agent takes. To continue the example from above, in figure \ref{fig:sample-env-2} the agent would prioritize to go left as this promises the greater reward. It is not hard to imagine that for higher dimensional environments, every time we start a new trajectory and correspondingly sample a new $z$, the agent will explore a different region of the state space and thus we can discover non-obvious paths to maximize the rewards. For the detailed pseudocode of this algorithm, see \hyperlink{algo-rle}{Appendix A} \textcolor{red}{(check link before submmission)}.
+\noindent In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F(s_{t+1}, \textbf{z}) =  \boldsymbol{\phi}(s) \cdot \textbf{z}$ where $\boldsymbol{\phi}(s): \mathcal{S} \rightarrow \mathbb{R}^{d}$ is a feature extraction network. The feature network is updated as a linear combination of the old feature network's weights and the weights of the value network\footnote{In the pseudocode algorithm in line 19 on page 25, in the mathematical formulation, the authors state that the feature network is updated as a linear combination of the old feature network's weights and the policy network's weights. We contacted the authors, and they confirmed that it should read $\phi \leftarrow \tau \cdot V^\phi + (1 - \tau ) \cdot \phi$ (i.e., the value network should be used, not the policy network). However, they state it would be interesting to explore which network should be used to update the feature network.}. Both $\boldsymbol{\phi}$ and $\textbf{z}$ are $d$-dimensional vectors. Note that although equation \ref{eq:value_func} is presented by \cite{rle-paper}, in the implementation they introduce an intrinsic and extrinsic reward coefficient. In the experiments they choose intrinsic reward coefficient $\ll$ extrinsic reward coefficient. Thus, they are not directly optimizing equation \ref{eq:value_func} in the experiments. Furthermore, on page 3 the authors state that $\vz$ "is resampled at the start of each trajectory". However, in the pseudocode on page 15 the authors note that $\vz$ is resampled at the end of each trajectory or after a certain number of steps has passed. Since the authors implemented the latter, more general, case we adopt the latter approach for our experiments. The authors split the critic's head into two: one head predicts the intrinsic value function, the other head predicts the extrinsic value function. Figure \ref{fig:rle-architecture} depicts how the action logits, intrinsic value, and extrinsic value for a given observation and $\vz$ is calculated. Note the residual connection from the first element-wise addition to the second element-wise addition. There is no mention of this residual connection in the paper. However, it is present in the provided code for the \textsc{Atari} environment. To continue the example from above, in figure \ref{fig:sample-env-2} the agent would prioritize to go left as this promises the greater reward. It is not hard to imagine that for higher dimensional environments, every time we start a new trajectory and correspondingly sample a new $z$, the agent will explore a different region of the state space and thus we can discover non-obvious paths to maximize the rewards. For the detailed pseudocode of this algorithm, see \hyperlink{algo-rle}{Appendix A} \textcolor{red}{(check link before submmission)}.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=1.0\textwidth]{tikz/rle-architecture.tex}
+  \caption{In RLE, the policy and critic networks are conditioned on the latent vector z. \cite{rle-paper} split the critic's head into two: one head predicts the extrinsic value and the other head predicts the intrinsic value. In the vector dimension, $o$ represents the dimension of a single observation, $d$ represents the RLE feature dimension, and $a$ is the cardinality of the action space.}
+  \label{fig:rle-architecture}
+\end{figure}
 
 \subsection{Proximal Policy Optimization}
 
-\noindent The algorithm constituting the foundation of RLE is Proximal Policy Iteration (PPO), described in \cite{ppo-paper}, which can itself be run to solve RL problems. It is an on-line policy gradient method where after running the policy $\boldsymbol{\pi}_{\theta_{\text{old}}}$ in parallel with $N$ actors for $T << E$ timesteps, where $E$ is the length of an episode, we compute the advantage estimator for each time index $t \in [0, T]$:
+\noindent The algorithm constituting the foundation of RLE is Proximal Policy Iteration (PPO), described in \cite{ppo-paper}, which can itself be run to solve RL problems. It is an on-line policy gradient method where after running the policy $\boldsymbol{\pi}_{\theta_{\text{old}}}$ in parallel with $N$ actors for $T << E$ timesteps, where $E$ is the length of an episode, we compute the advantage estimator as proposed by \cite{generalized-advantage-estimation-paper} for each time index $t \in [0, T]$:
 
 \begin{equation}
   \hat{A}_{t} = \delta_{t} + \left(\gamma \lambda\right) \delta_{t+1} + ... + \left(\gamma \lambda\right)^{T-t+1} \delta_{T - 1}
@@ -174,7 +181,7 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
   \item RLE performance deteriorates if the policy and value networks are not conditioned on the random latent vector.
   \item RLE performance improves slightly if we use a slow-moving estimate of the value network's learned CNN features (i.e. we update the feature network) vs. no-update.
   \item RLE performance is insensitive to the feature extractor architecture.
-  \item RLE perforamnce deteriorates if the random reward function is simply white noise (N(0,1)) and thus uncorrelated to the states.
+  \item RLE performance deteriorates if the random reward function is simply white noise (N(0,1)) and thus uncorrelated to the states.
 \end{itemize}
 
 \noindent Unfortunately due to time constraints we are not able to test all of these claims, instead we will focus on the main ones. Finally, the authors also conclude that:
@@ -185,6 +192,8 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
 \end{itemize}
 
 \section{Methodology}
+Since the authors did not provide any code for the \textsc{FourRoom} environment, this environment was implemented by us using the gymnasium library introduced by \cite{gymnasium-paper}. A wrapper to record the state visitation counts per environment was also implemented. Furthermore, the code for PPO, Noisy Net, and RLE was adopted from the respective algorithms for the \textsc{Atari} environment. We also adopted the RND code for the \textsc{IsaacGym} environment to the \textsc{FourRoom} environment. Before we adopted RLE from the existing implementation for the \textsc{Atari} environment, we implemented it based on the description in \cite{rle-paper}. However, the paper lacked a lot of details present in the \textsc{Atari} code (e.g., split critic's head, residual connection) so that we decided to proceed with the adopted code to have consistent results over the different environments.
+
 \texttt{Explain your approach - did you use the author's code, or did you aim to re-implement the approach from the description in the paper? Summarize the resources (code, documentation, GPUs) that you used.}
 
 \subsection{Model descriptions}
@@ -195,17 +204,35 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
 \noindent Since we are dealing with a reinforcement learning task, we did not use any dataset to train our models but rather four different environments which will explain in \hyperlink{experimental-setup}{section 3.4} \textcolor{red}{(check link before submission)}.
 
 \subsection{Hyperparameters}
+For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-paper} were used. However, \cite{rle-paper} did not provide values for all available hyperparameters. For the missing hyperparameters we used the following values, that seemed reasonable to us:
+
+\begin{table}[ht]
+  \centering
+  \caption{Hyperparameters not stated by \cite{rle-paper} for the \textsc{FourRoom} experiments.}
+  \begin{tabular}{{ll}} 
+  \hline
+  \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+  Extrinsic Reward Coefficient & 1\\ 
+  Observation Normalization Iterations & 1 \\
+  Discount Rate & 0.99 \\ 
+  Intrinsic Discount Rate & 0.99 \\ 
+  Feature Network Update Rate $\tau$ & 0.005 \\ 
+  Learning Rate & 0.001 \\ 
+  \end{tabular}
+  \label{tab:}
+\end{table}
+
 \texttt{Describe how the hyperparameter values were set and what was the source for their value (e.g. paper, code, or your guess). If there was a hyperparameter search done, be sure to include the range of hyperparameters searched over, the method used to search (e.g. manual search, random search, grid search, etc.), and the best hyperparameters found. Include the number of total experiments (e.g. hyperparameter trials). You can also include all results from that search (not just the best-found results).}
 
 \hypertarget{experimental-setup}{\subsection{Experimental setup and code}}
 
-\noindent The code for our implementations can be found in GitHub\footnote{\href{https://github.com/jonupp/adv_topics_ml_repl_chal}{https://github.com/jonupp/adv\_topics\_ml\_repl\_chal} \textcolor{red}{Change github}}.
+\noindent The code for our implementations can be found in GitHub\footnote{\href{https://github.com/jonupp/adv_topics_ml_repl_chal}{https://github.com/jonupp/adv\_topics\_ml\_repl\_chal} \textcolor{red}{Change github}}. There are three types of environments in use on which we run our RL algorithms which are depicted in figure \ref{fig:environmnents}. 
 
 \noindent \textsc{Atari} represents "discrete action space deep RL benchmark". The human normalized scores are computed according to \textcolor{red}{formula: Agent57: Outperforming the Atari Human Benchmark} and the human scores are taking from
 
 \noindent \textcolor{red}{Do we need to explain the environments as well?}
 
-\noindent There are three types of environments in use on which we run our RL algorithms which are depicted in figure \ref{fig:environmnents}. More precisely, figure \ref{fig:sample-env-fourroom} shows the \textsc{FourRoom} environment where we have $50\times50 + 4$ states which are divided into four rooms of size $25\times25$ and $4$ holes in the walls located at positions $10$ horizontally and $5$ vertically, starting the count at $1$ from the inner corners. Exploring the state space, beginning from the initial state marked in \textcolor{red}{red}, becomes a deep exploration task due to the holes being only $1$ "pixel" wide. However, if we want to incentivize the agent to find a reward, then we can put it at the goal position marked in \textcolor{green}{green}. At every step, the agent can move one step vertically or horizontally, but if it would run into a wall it chooses to remain in place.
+\noindent Figure \ref{fig:sample-env-fourroom} shows the \textsc{FourRoom} environment where we have $50\times50 + 4$ states\footnote{In \cite{rle-paper}, the authors claim that there are $50\times 50$ states. We contacted the authors and they confirmed that it should read $50\times 50 + 4$ states.} which are divided into four rooms of size $25\times25$ and $4$ holes in the walls located at positions $10$ horizontally and $5$ vertically, starting the count at $1$ from the inner corners. Exploring the state space, beginning from the initial state marked in \textcolor{red}{red}, becomes a deep exploration task due to the holes being only $1$ "pixel" wide. However, if we want to incentivize the agent to find a reward, then we can put it at the goal position marked in \textcolor{green}{green}. At every step, the agent can move one step vertically or horizontally, but if it would run into a wall it chooses to remain in place. \cite{rle-paper} refer to \cite{grid-world-paper} when introducing the \textsc{FourRoom} environment. \cite{grid-world-paper} use action stochasticity. We asked \cite{rle-paper} whether they also used action stochasticity, and they stated that they did not use action stochasticity in their experiments. \cite{rle-paper} claims that RLE shows good exploration behavior based on a single heatmap of state visitation counts. To assess whether this result is expected or exceptional we trained each algorithm 20 times. Since it is not reasonable to compare 20 state visitation count heatmaps we used the Shannon entropy, introduced by \cite{shannon-entropy-paper}, of the state visitation counts as a proxy for how well an agent explored the environment. With increasing entropy the distribution of the state visitation counts becomes more uniform. Thus, the higher the entropy the better the explorative behavior. Furthermore, it was explored if the intrinsic value function really guides the generation of diverse trajectories. To assess this, the intrinsic value function for four latent vectors $z$ and four trajectories generated using the same latent vector $z$ were saved at the end of each experiment. We also tested to what degree RLE is indifferent to the distribution of the latent vector. To test this, we ran RLE with different latent vector distributions. The following distributions were considered: standard normal distribution, standard uniform distribution, Von-Mises distribution with $\mu=0$ and $\kappa=0.3$, and the exponential distribution with $\lambda=0.3$. We ran 20 experiments for each latent vector distribution and recorded the state visitation entropy. The same hyperparameters were used as before. Note that all latent vectors were normalized using the L2-norm, so that all latent vectors are on a unit sphere around the origin. This ensures that all intrinsic rewards are in the interval [-1,1]. \cite{rle-paper} performed a similar ablation study for the \textsc{Atari} environment. However, they did not normalize the latent vectors for all distributions. They only applied normalization for the normal distribution which they then denoted as "Sphere", that they compare to the unnormalized uniform distribution and the unnormalized normal distribution. We normalized all distributions because the "extrinsic reward coefficient" and the "intrinsic reward coefficient" hyperparameters already control the weighting between the intrinsic and extrinsic rewards, so we wanted the intrinsic rewards to be in the interval [-1,1].
 
 \noindent Moreover we have an example of the \textsc{Atari} environments in figure \ref{fig:sample-env-atari}, namely the \textsc{Alien-v5} game. In this environment, the agent perceives the $4$ most recent $84\times84$ grayscale frames. In the \textsc{IsaacGym} environment on the other hand, \textcolor{red}{<finish the environment description later>}.
 
@@ -241,7 +268,7 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
 
 \subsection{Computational requirements}
 
-\noindent To run the code we experimented with the CPU, T4 GPU and TPU v2-8 in Google Colab, integrated with Weights \& Biases (wandb) for easier runtime visualization of the scores and other measures.
+\noindent The code for the \textsc{FourRoom} experiments was exclusively run on the CPU. For Atari, we experimented with the CPU, T4 GPU and TPU v2-8 in Google Colab. Weights \& Biases (wandb) was used for easier runtime visualization of the scores and other measures.
 
 \noindent We would like to note, however, that \cite{rle-paper} had available the HPC resources of the MIT Supercloud and the Lincoln Laboratory Supercomputing Center. Within the framework of this course, we did not have the equivalent computing power to replicate all experiments in their original form and had to restrain ourselves to a mere few of them.
 

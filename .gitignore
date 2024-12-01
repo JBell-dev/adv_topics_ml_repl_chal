@@ -7,4 +7,14 @@ test
 gifs_rle/
 gifs_ppo/
 jonatan_stuff/somemath/
-
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.stac
+*.sta
+*.synctex.gz
+*.vscode/

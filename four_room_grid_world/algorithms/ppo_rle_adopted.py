@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import pickle
 import random
 import time
 from collections import deque
@@ -294,7 +293,6 @@ class RLEModel(nn.Module):
     def sample_goals(self, num_envs=None):
         if num_envs is None:
             num_envs = self.num_envs
-        # goals = torch.randn((num_envs, self.feature_size), device=self.device).float()
         goals = self.goal_sampler.sample(num_envs, self.feature_size, self.device)
 
         # normalize the goals

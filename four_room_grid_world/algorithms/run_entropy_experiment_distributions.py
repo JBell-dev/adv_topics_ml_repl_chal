@@ -1,6 +1,6 @@
 import subprocess
 
-NUMBER_RUNS = 5
+NUMBER_RUNS = 20
 is_reward_free = True
 is_reward_free = str(is_reward_free)
 max_episode_length = 1_000
