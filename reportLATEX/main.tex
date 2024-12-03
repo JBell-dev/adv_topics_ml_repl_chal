@@ -179,20 +179,20 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
   \item RLE performance improves over PPO irrespective of the distribution used to sample the 8-dim random latent vector.
   \item RLE performance does not significantly improve over PPO as a dependence of the dimensionality of the random latent vector.
   \item RLE performance deteriorates if the policy and value networks are not conditioned on the random latent vector.
-  \item RLE performance improves slightly if we use a slow-moving estimate of the value network's learned CNN features (i.e. we update the feature network) vs. no-update.
+  \item RLE performance improves slightly if a learning feature network is used in comparison to when the feature network has constant weights when evaluated on the Atari games.
   \item RLE performance is insensitive to the feature extractor architecture.
-  \item RLE performance deteriorates if the random reward function is simply white noise (N(0,1)) and thus uncorrelated to the states.
 \end{itemize}
 
-\noindent Unfortunately due to time constraints we are not able to test all of these claims, instead we will focus on the main ones. Finally, the authors also conclude that:
+\noindent Finally, the authors also conclude that: \noindent Unfortunately due to time constraints we are not able to test all of these claims, instead we will focus on the main ones.
 
-\begin{itemize}
-  \item Contrary to Posterior Sampling where the sampling distribution eventually converges to the true model, $P_{z}$ remains fixed in RLE the random rewards will act as regularization in the later stage of training.
-  \item RLE benefits from parallelization as z is independent from every other round and can be trained on identical copies of the environment thus reducing the overall running time of the training.
-\end{itemize}
+\noindent Unfortunately due to time constraints we are not able to test all of these claims, instead we will focus on the main ones.
 
 \section{Methodology}
 Since the authors did not provide any code for the \textsc{FourRoom} environment, this environment was implemented by us using the gymnasium library introduced by \cite{gymnasium-paper}. A wrapper to record the state visitation counts per environment was also implemented. Furthermore, the code for PPO, Noisy Net, and RLE was adopted from the respective algorithms for the \textsc{Atari} environment. We also adopted the RND code for the \textsc{IsaacGym} environment to the \textsc{FourRoom} environment. Before we adopted RLE from the existing implementation for the \textsc{Atari} environment, we implemented it based on the description in \cite{rle-paper}. However, the paper lacked a lot of details present in the \textsc{Atari} code (e.g., split critic's head, residual connection) so that we decided to proceed with the adopted code to have consistent results over the different environments.
+
+\textcolor{red}{Alessia explains Atari stuff}
+
+\textcolor{red}{Jonathan has the great pleasure of explaining now only Isaac but also the VMF stuff}
 
 \texttt{Explain your approach - did you use the author's code, or did you aim to re-implement the approach from the description in the paper? Summarize the resources (code, documentation, GPUs) that you used.}
 
@@ -300,11 +300,20 @@ For each experiment, include the total computational requirements (e.g. the tota
 \texttt{Give your judgment on if your experimental results support the claims of the paper. Discuss the strengths and weaknesses of your approach - perhaps you didn't have time to run all the experiments, or perhaps you did additional experiments that further strengthened the claims in the paper.}
 
 \subsection{What was easy}
+Atari code was ready to run. 
+
 \texttt{Give your judgment of what was easy to reproduce. Perhaps the author's code is clearly written and easy to run, so it was easy to verify the majority of original claims. Or, the explanation in the paper was really easy to follow and put into code.}
 
 \texttt{Be careful not to give sweeping generalizations. Something that is easy for you might be difficult for others. Put what was easy in context and explain why it was easy (e.g. code had extensive API documentation and a lot of examples that matched experiments in papers).}
 
 \subsection{What was difficult}
+\begin{itemize}
+  \item Isaac deprecated 
+  \item FourRoom env missing
+  \item Inconsistencies in the paper and lack of descriptions
+  \item Hardware constraints`'
+  \item Discrepancy between paper and code
+\end{itemize}
 \texttt{List part of the reproduction study that took more time than you anticipated or you felt was difficult.}
 
 \texttt{Be careful to put your discussion in context. For example, don't say "The maths was difficult to follow", say "The math requires advanced knowledge of calculus to follow".}
@@ -316,6 +325,8 @@ For each experiment, include the total computational requirements (e.g. the tota
 \texttt{Try to summarize the achievements of your project and its limits, suggesting (when appropriate) possible extensions and future works.}
 
 \section*{Member contributions}
+We send him an email got answer.
+
 \texttt{Include a section specifying how you organized the work within the group and clearly describe the contributions of each member. Make sure to properly balance the workload among the members.}
 
 %%%%
