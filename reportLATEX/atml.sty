@@ -37,22 +37,22 @@
 \DeclareOption*{\PackageWarning{atml}{Unknown ‘\CurrentOption’}}
 \ProcessOptions\relax
 
-% Instructions
-\newcommand{\geninstr}{%
-\noindent\fbox{%
-\hspace{10pt}
-\parbox{\dimexpr\linewidth-20pt\relax}{%
-\section*{\centering \color{red!80!black} \underline{General Instructions (summarized, to be removed before submission)}}
+% Instructions --- IF YOU WANT TO DISPLAY THIS, DON'T FORGET TO REMOVE FIRST % IN LINE 86, 87.
+%\newcommand{\geninstr}{%
+%\noindent\fbox{%
+%\hspace{10pt}
+%\parbox{\dimexpr\linewidth-20pt\relax}{%
+%\section*{\centering \color{red!80!black} \underline{General Instructions (summarized, to be removed before submission)}}
 
-\begin{itemize}
-\item Structure --- article-like, presenting the findings of our work clearly and objectively, provide well-supported analysis backing up our claims with references or empirical/theoretical evidence where appropriate
-\item Length --- 4 to 8 pages, excluding references and appendices.
-\item Focus --- provide insights valuable for future researchers or practitioners looking to reproduce / build upon the paper
-\item Evaluation --- not solely based on quantitative outcomes, but rather on depth, quality of analysis and clarity of the report
-\end{itemize}
+%\begin{itemize}
+%\item Structure --- article-like, presenting the findings of our work clearly and objectively, provide well-supported analysis backing up our claims with references or empirical/theoretical evidence where appropriate
+%\item Length --- 4 to 8 pages, excluding references and appendices.
+%\item Focus --- provide insights valuable for future researchers or practitioners looking to reproduce / build upon the paper
+%\item Evaluation --- not solely based on quantitative outcomes, but rather on depth, quality of analysis and clarity of the report
+%\end{itemize}
 
-\vspace{5pt}}\hspace{10pt}}
-\vspace{20pt}}
+%\vspace{5pt}}\hspace{10pt}}
+%\vspace{20pt}}
 
 % Specify the dimensions of each page
 
@@ -83,8 +83,8 @@
 
 % Title stuff, taken from deproc.
 \def\maketitle{%
-\if@instructions\geninstr\else\fi %
-\par
+%\if@instructions\geninstr\else\fi %
+%\par
 \begingroup
    \def\thefootnote{\fnsymbol{footnote}}
    \def\@makefnmark{\hbox to 0pt{$^{\@thefnmark}$\hss}} % for perfect author
