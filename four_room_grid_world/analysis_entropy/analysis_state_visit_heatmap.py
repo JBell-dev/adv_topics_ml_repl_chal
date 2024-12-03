@@ -5,34 +5,34 @@ from matplotlib.colors import LogNorm
 
 # Need to select the runs with the highest entropy in the no-goal setting and the runs with the highest game_score
 # in the setting with a goal.
-RUN_REWARD_FREE_PPO = ""
-RUN_REWARD_FREE_NOISY_NET = ""
-RUN_REWARD_FREE_RLE = ""
-RUN_REWARD_FREE_RND = ""
+RUN_REWARD_FREE_PPO = "random-latent-exploration/RLE/4v3gqh91"
+RUN_REWARD_FREE_NOISY_NET = "random-latent-exploration/RLE/6aw0fha8"
+RUN_REWARD_FREE_RLE = "random-latent-exploration/RLE/bzo2znfs"
+RUN_REWARD_FREE_RND = "random-latent-exploration/RLE/c8l3xsv5"
 REWARD_FREE_ALG_RUN_LIST = [RUN_REWARD_FREE_PPO, RUN_REWARD_FREE_NOISY_NET, RUN_REWARD_FREE_RLE, RUN_REWARD_FREE_RND]
 REWARD_FREE_ALG_LABELS = ["PPO", "PPO NOISY NET", "RLE", "RND"]
 REWARD_FREE_ALG_TITLE = "State visit heatmaps of different exploration methods in the setting without a goal"
 # ---
-RUN_REWARD_FREE_NORMAL = ""
-RUN_REWARD_FREE_UNIFORM = ""
-RUN_REWARD_FREE_VON_MISES = ""
-RUN_REWARD_FREE_RND_EXPONENTIAL = ""
+RUN_REWARD_FREE_NORMAL = "random-latent-exploration/RLE/bzo2znfs"
+RUN_REWARD_FREE_UNIFORM = "random-latent-exploration/RLE/jybcsrfv"
+RUN_REWARD_FREE_VON_MISES = "random-latent-exploration/RLE/9nff7264"
+RUN_REWARD_FREE_RND_EXPONENTIAL = "random-latent-exploration/RLE/xo1nqbdl"
 REWARD_FREE_DIST_RUN_LIST = [RUN_REWARD_FREE_NORMAL, RUN_REWARD_FREE_UNIFORM, RUN_REWARD_FREE_VON_MISES, RUN_REWARD_FREE_RND_EXPONENTIAL]
 REWARD_FREE_DIST_LABELS = ["standard_normal", "standard_uniform", "von_mises", "exponential"]
 REWARD_FREE_DIST_TITLE = "State visit heatmaps of RLE with different z distributions the setting without a goal"
 # ---
-RUN_NO_REWARD_FREE_PPO = "random-latent-exploration/RLE/pe2mf5kz"
-RUN_NO_REWARD_FREE_NOISY_NET = "random-latent-exploration/RLE/f28bzzj0"
-RUN_NO_REWARD_FREE_RLE = "random-latent-exploration/RLE/146oa5h2"
-RUN_NO_REWARD_FREE_RND = "random-latent-exploration/RLE/ofsbnmt2"
+RUN_NO_REWARD_FREE_PPO = "random-latent-exploration/RLE/1rogn8iu"
+RUN_NO_REWARD_FREE_NOISY_NET = "random-latent-exploration/RLE/bf3oz896"
+RUN_NO_REWARD_FREE_RLE = "random-latent-exploration/RLE/uo31t8jk"
+RUN_NO_REWARD_FREE_RND = "random-latent-exploration/RLE/wpxm7and"
 NO_REWARD_FREE_ALG_RUN_LIST = [RUN_NO_REWARD_FREE_PPO, RUN_NO_REWARD_FREE_NOISY_NET, RUN_NO_REWARD_FREE_RLE, RUN_NO_REWARD_FREE_RND]
 NO_REWARD_FREE_ALG_LABELS = ["PPO", "PPO NOISY NET", "RLE", "RND"]
 NO_REWARD_FREE_ALG_TITLE = "State visit heatmaps of different exploration methods in the setting with a goal"
 # ---
-RUN_NO_REWARD_FREE_NORMAL = "random-latent-exploration/RLE/146oa5h2"
-RUN_NO_REWARD_FREE_UNIFORM = "random-latent-exploration/RLE/cm4eidwn"
-RUN_NO_REWARD_FREE_VON_MISES = "random-latent-exploration/RLE/0ajny05e"
-RUN_NO_REWARD_FREE_RND_EXPONENTIAL = "random-latent-exploration/RLE/b212ia7m"
+RUN_NO_REWARD_FREE_NORMAL = "random-latent-exploration/RLE/nubtwlun"
+RUN_NO_REWARD_FREE_UNIFORM = "random-latent-exploration/RLE/xnits1sr"
+RUN_NO_REWARD_FREE_VON_MISES = "random-latent-exploration/RLE/ytz9pi8j"
+RUN_NO_REWARD_FREE_RND_EXPONENTIAL = "random-latent-exploration/RLE/luz5fgdh"
 NO_REWARD_FREE_DIST_RUN_LIST = [RUN_NO_REWARD_FREE_NORMAL, RUN_NO_REWARD_FREE_UNIFORM, RUN_NO_REWARD_FREE_VON_MISES, RUN_NO_REWARD_FREE_RND_EXPONENTIAL]
 NO_REWARD_FREE_DIST_LABELS = ["standard_normal", "standard_uniform", "von_mises", "exponential"]
 NO_REWARD_FREE_DIST_TITLE = "State visit heatmaps of RLE with different z distributions the setting with a goal"
@@ -74,6 +74,12 @@ def plot_state_visit_heatmap(state_visit_lists, labels, title):
     plt.suptitle(title, fontsize=16)
     plt.show()
 
+
+state_visit_lists = get_state_visit_lists(REWARD_FREE_ALG_RUN_LIST, api)
+plot_state_visit_heatmap(state_visit_lists, REWARD_FREE_ALG_LABELS, REWARD_FREE_ALG_TITLE)
+
+state_visit_lists = get_state_visit_lists(REWARD_FREE_DIST_RUN_LIST, api)
+plot_state_visit_heatmap(state_visit_lists, REWARD_FREE_DIST_LABELS, REWARD_FREE_DIST_TITLE)
 
 state_visit_lists = get_state_visit_lists(NO_REWARD_FREE_ALG_RUN_LIST, api)
 plot_state_visit_heatmap(state_visit_lists, NO_REWARD_FREE_ALG_LABELS, NO_REWARD_FREE_ALG_TITLE)

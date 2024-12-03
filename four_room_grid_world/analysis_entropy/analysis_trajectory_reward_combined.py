@@ -13,7 +13,7 @@ END = "2498560"
 # Can select between START, MID and END.
 SELECTED = END
 
-RUN_NAME = "/random-latent-exploration/RLE/runs/jlats3hg"
+RUN_NAME = "random-latent-exploration/RLE/lcgnai41"
 x_wall_gap_offset = 10
 y_wall_gap_offset = 5
 env_size = 50
