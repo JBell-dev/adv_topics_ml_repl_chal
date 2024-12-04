@@ -103,7 +103,7 @@ In this project we aim to analyze the claims of \cite{rle-paper} in the paper \h
     \item Moreover, "[...] introducting randomness to rewards influences the [... agent] to produce diverse behaviors" \citep{rle-paper} when this randomness is used to condition the policy and value networks, which manifests itself in an incentive to explore random (and thus in aggregate lager) parts of the state space.
     \item For the discrete-action discrete-states \textsc{FourRoom} environment absent of a goal reward, the authors claim that PPO's state visitation centers around the initial room (top right) concluding that action-noise methods cannot conduct deep exploration whereas RLE, NoisyNet and RND well reach across the four rooms and thus perform deep exploration.
     \item For the more challenging discrete-action continuous-states\footnote{While the input to the action sampler is a discrete $84\times84\times4$ tensor representing the pixels it perceives, in practice \textsc{Atari} games are considered to be continuous-state environments due to the high-dimensional state space and visual complexity of each frame.} \textsc{Atari} environment, the authors claim that, in the majority of games, RLE achieves a higher IQM of the human-normalized score with a probability of $67\%$, $72\%$ and $71\%$, compared to PPO, NoisyNet and RND, respectively.\footnote{The authors mention that for the \textsc{Montezuma's Revenge} game RLE underperforms likely due to RLE not factoring in bonus-based exploration.}
-    \item In the continuous-action continuous-states \textsc{IsaacGym} environment\footnote{Please note that the \textsc{IsaacGym} environment is deprecated and we're using \textsc{Isaac Lab} \textcolor{red}{(check this)} instead, however we will refer to it as \textsc{IsaacGym} for continuity.}, the authors claim that, with a probability of around $83\%$ for PPO, ca. $66\%$ for NoisyNet and roughly $65\%$ for RND, RLE improves performance in all of their selected \textsc{IsaacGym} tasks.
+    \item In the continuous-action continuous-states \textsc{IsaacGym} environment, the authors claim that, with a probability of around $83\%$ for PPO, ca. $66\%$ for NoisyNet and roughly $65\%$ for RND, RLE improves performance in all of their selected \textsc{IsaacGym} tasks.
 \end{enumerate}
 
 \noindent Our findings regarding these claims will be presented in \hyperlink{sec4}{section 4} \textcolor{red}{Check link before submission}. Moreover, \cite{rle-paper} performed ablation studies and claim to have found:
@@ -126,7 +126,7 @@ The authors of the paper at hand published code in a GitHub repository\footnote{
 
 \noindent Before we adapted RLE from the existing implementation for the \textsc{Atari} environment, we implemented it based on the description in \cite{rle-paper}. However, the paper lacked a lot of details present in the \textsc{Atari} code (e.g. split critic's head, residual connection) so that we decided to proceed with the adapted code to have consistent results over the different environments. In general, after coding the scripts, we uploaded the files to \href{https://colab.research.google.com/}{Google Colab} and linked a \href{https://drive.google.com}{Google Drive} to save the models, as well as \href{https://wandb.ai}{Weights \& Biases}
 
-\textcolor{red}{Alessia explains Atari stuff}
+\textcolor{red}{Alessia explains Atari stuff} Atari was run 5 times per game.
 
 \textcolor{red}{Jonathan has the great pleasure of explaining now only Isaac but also the VMF stuff}
 
@@ -214,7 +214,8 @@ For each experiment, include the total computational requirements (e.g. the tota
 \texttt{Note: You'll likely have to record this as you run your experiments, so it's better to think about it ahead of time.}
 
 \hypertarget{sec4}{\section{Results}}
-\texttt{Start with a high-level overview of your results. Do your results support the main claims of the original paper? Keep this section as factual and precise as possible, and reserve your judgment and discussion points for the next "Discussion" section.}
+
+\noindent \texttt{Start with a high-level overview of your results. Do your results support the main claims of the original paper? Keep this section as factual and precise as possible, and reserve your judgment and discussion points for the next "Discussion" section.}
 
 
 \subsection{Results reproducing original paper}
