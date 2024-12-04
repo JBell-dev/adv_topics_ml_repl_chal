@@ -2,6 +2,13 @@ import numpy as np
 from matplotlib import pyplot as plt
 import wandb
 
+from four_room_grid_world.analysis.mapper import NAME_MAPPER, COLOR_MAPPER, sort
+
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "serif",
+    "font.serif": ["Computer Modern"],
+})
 
 def bootstrap_confidence_interval(data, num_bootstrap=10_000, confidence=0.95):
     if len(data) == 0:
@@ -53,7 +60,7 @@ def get_entropy_per_step_per_run_per_algorithm(runs, distributions=False):
 
 
 def plot_entropy_algorithms(api):
-    query_tags = ["PPO", "PPO_NOISY_NET", "standard_normal", "PPO_RND"]
+    query_tags = ["standard_normal", "PPO", "PPO_NOISY_NET", "PPO_RND"]
 
     runs = api.runs("RLE", filters={
         "$and": [
@@ -63,26 +70,22 @@ def plot_entropy_algorithms(api):
     })
 
     data_per_algorithm, tags, steps = get_entropy_per_step_per_run_per_algorithm(runs)
-
-    colors = ["gray", "orange", "blue", "green"]
-
-    assert len(tags) == len(colors), "Number of colors does not match number of tags (algorithms)"
+    data_per_algorithm, tags = sort(data_per_algorithm, tags)
 
     plt.figure(figsize=(8, 6))
 
     for i in range(len(tags)):
         data = np.array([get_plot_data(row) for row in data_per_algorithm[tags[i]]])
-        plt.plot(steps, data[:, 0], label=tags[i], color=colors[i], linewidth=2)
-        plt.fill_between(steps, data[:, 1], data[:, 2], color=colors[i], alpha=0.2)
+        plt.plot(steps, data[:, 0], label=NAME_MAPPER[tags[i]], color=COLOR_MAPPER[tags[i]], linewidth=2)
+        plt.fill_between(steps, data[:, 1], data[:, 2], color=COLOR_MAPPER[tags[i]], alpha=0.2)
 
     plt.ylim(bottom=0)
     plt.ylim(top=10)
-    plt.title("Mean Entropy of the State Visit Count over the Training", fontsize=14)
     plt.xlabel("Global Step", fontsize=12)
     plt.ylabel("Entropy", fontsize=12)
     plt.legend(fontsize=12)
     plt.grid(True)
-    plt.show()
+    plt.savefig("./plots/gridworld_mean_entropy_state_visitation_algorithms.pdf", dpi=600, bbox_inches="tight")
 
 
 def plot_entropy_distributions(api):
@@ -96,26 +99,20 @@ def plot_entropy_distributions(api):
 
     data_per_algorithm, tags, steps = get_entropy_per_step_per_run_per_algorithm(runs, distributions=True)
 
-    colors = ["blue", "gray", "orange", "green"]
-
-    assert len(tags) == len(colors), ("Number of colors does not match number of tags (algorithms). Did you run the "
-                                      "run_no_goal_experiment.py and the run_no_goal_distribution_experiment.py?")
-
     plt.figure(figsize=(8, 6))
 
     for i in range(len(tags)):
         data = np.array([get_plot_data(row) for row in data_per_algorithm[tags[i]]])
-        plt.plot(steps, data[:, 0], label=tags[i], color=colors[i], linewidth=2)
-        plt.fill_between(steps, data[:, 1], data[:, 2], color=colors[i], alpha=0.2)
+        plt.plot(steps, data[:, 0], label=NAME_MAPPER[tags[i]], color=COLOR_MAPPER[tags[i]], linewidth=2)
+        plt.fill_between(steps, data[:, 1], data[:, 2], color=COLOR_MAPPER[tags[i]], alpha=0.2)
 
     plt.ylim(bottom=0)
     plt.ylim(top=10)
-    plt.title("Mean Entropy of the State Visit Count over the Training", fontsize=14)
     plt.xlabel("Global Step", fontsize=12)
     plt.ylabel("Entropy", fontsize=12)
     plt.legend(fontsize=12)
     plt.grid(True)
-    plt.show()
+    plt.savefig("./plots/gridworld_mean_entropy_state_visitation_distributions.pdf", dpi=600, bbox_inches="tight")
 
 
 api = wandb.Api()

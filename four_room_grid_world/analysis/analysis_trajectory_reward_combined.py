@@ -5,6 +5,12 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from four_room_grid_world.util.plot_util import add_room_layout_to_plot
 
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "serif",
+    "font.serif": ["Computer Modern"],
+})
+
 START = "500000"
 MID = "1500000"
 END = "2498560"
@@ -50,14 +56,14 @@ def plot_combined(trajectories, reward_functions, env_size, x_wall_gap_offset, y
         add_room_layout_to_plot(ax, env_size, x_wall_gap_offset, y_wall_gap_offset)
         im = ax.imshow(reward_function, cmap="coolwarm", vmin=-1, vmax=1)
         ax.set_aspect("equal", adjustable="box")
-        ax.set_xlabel("X Position")
-        ax.set_ylabel("Y Position")
+        ax.set_xlabel("X Position", fontsize=12)
+        ax.set_ylabel("Y Position", fontsize=12)
         ax.set_xlim(0 - 1 / 2, env_size + 1 - 1 + 1 / 2)
         ax.set_ylim(env_size + 1 - 1 + 1 / 2, 0 - 1 / 2)  # Reverse order to invert y-axis
 
     cbar = fig.colorbar(im, ax=axes.ravel().tolist(), orientation="vertical")
-    cbar.set_label("Intrinsic reward")
-    plt.show()
+    cbar.set_label("Intrinsic state value", fontsize=12)
+    plt.savefig(f"./plots/gridworld_value_function_trajectory.pdf", dpi=600, bbox_inches="tight")
 
 
 plot_combined(trajectories, reward_functions, env_size, x_wall_gap_offset, y_wall_gap_offset)

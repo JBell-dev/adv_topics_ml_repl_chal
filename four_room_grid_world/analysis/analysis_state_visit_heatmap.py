@@ -3,39 +3,45 @@ import wandb
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "serif",
+    "font.serif": ["Computer Modern"],
+})
+
 # Need to select the runs with the highest entropy in the no-goal setting and the runs with the highest game_score
 # in the setting with a goal.
+RUN_REWARD_FREE_RLE = "random-latent-exploration/RLE/bzo2znfs"
 RUN_REWARD_FREE_PPO = "random-latent-exploration/RLE/4v3gqh91"
 RUN_REWARD_FREE_NOISY_NET = "random-latent-exploration/RLE/6aw0fha8"
-RUN_REWARD_FREE_RLE = "random-latent-exploration/RLE/bzo2znfs"
 RUN_REWARD_FREE_RND = "random-latent-exploration/RLE/c8l3xsv5"
-REWARD_FREE_ALG_RUN_LIST = [RUN_REWARD_FREE_PPO, RUN_REWARD_FREE_NOISY_NET, RUN_REWARD_FREE_RLE, RUN_REWARD_FREE_RND]
-REWARD_FREE_ALG_LABELS = ["PPO", "PPO NOISY NET", "RLE", "RND"]
-REWARD_FREE_ALG_TITLE = "State visit heatmaps of different exploration methods in the setting without a goal"
+REWARD_FREE_ALG_RUN_LIST = [RUN_REWARD_FREE_RLE, RUN_REWARD_FREE_PPO, RUN_REWARD_FREE_NOISY_NET, RUN_REWARD_FREE_RND]
+REWARD_FREE_ALG_LABELS = ["RLE", "PPO", "NoisyNet", "RND"]
+REWARD_FREE_ALG_TITLE = "heatmaps_no_goal_algorithms"
 # ---
 RUN_REWARD_FREE_NORMAL = "random-latent-exploration/RLE/bzo2znfs"
 RUN_REWARD_FREE_UNIFORM = "random-latent-exploration/RLE/jybcsrfv"
 RUN_REWARD_FREE_VON_MISES = "random-latent-exploration/RLE/9nff7264"
 RUN_REWARD_FREE_RND_EXPONENTIAL = "random-latent-exploration/RLE/xo1nqbdl"
 REWARD_FREE_DIST_RUN_LIST = [RUN_REWARD_FREE_NORMAL, RUN_REWARD_FREE_UNIFORM, RUN_REWARD_FREE_VON_MISES, RUN_REWARD_FREE_RND_EXPONENTIAL]
-REWARD_FREE_DIST_LABELS = ["standard_normal", "standard_uniform", "von_mises", "exponential"]
-REWARD_FREE_DIST_TITLE = "State visit heatmaps of RLE with different z distributions the setting without a goal"
+REWARD_FREE_DIST_LABELS = ["Standard Normal", "Standard Uniform", "Von Mises", "Exponential"]
+REWARD_FREE_DIST_TITLE = "heatmaps_no_goal_distributions"
 # ---
+RUN_NO_REWARD_FREE_RLE = "random-latent-exploration/RLE/uo31t8jk"
 RUN_NO_REWARD_FREE_PPO = "random-latent-exploration/RLE/1rogn8iu"
 RUN_NO_REWARD_FREE_NOISY_NET = "random-latent-exploration/RLE/bf3oz896"
-RUN_NO_REWARD_FREE_RLE = "random-latent-exploration/RLE/uo31t8jk"
 RUN_NO_REWARD_FREE_RND = "random-latent-exploration/RLE/wpxm7and"
-NO_REWARD_FREE_ALG_RUN_LIST = [RUN_NO_REWARD_FREE_PPO, RUN_NO_REWARD_FREE_NOISY_NET, RUN_NO_REWARD_FREE_RLE, RUN_NO_REWARD_FREE_RND]
-NO_REWARD_FREE_ALG_LABELS = ["PPO", "PPO NOISY NET", "RLE", "RND"]
-NO_REWARD_FREE_ALG_TITLE = "State visit heatmaps of different exploration methods in the setting with a goal"
+NO_REWARD_FREE_ALG_RUN_LIST = [RUN_NO_REWARD_FREE_RLE, RUN_NO_REWARD_FREE_PPO, RUN_NO_REWARD_FREE_NOISY_NET, RUN_NO_REWARD_FREE_RND]
+NO_REWARD_FREE_ALG_LABELS = ["RLE", "PPO", "NoisyNet", "RND"]
+NO_REWARD_FREE_ALG_TITLE = "heatmaps_goal_algorithms"
 # ---
 RUN_NO_REWARD_FREE_NORMAL = "random-latent-exploration/RLE/nubtwlun"
 RUN_NO_REWARD_FREE_UNIFORM = "random-latent-exploration/RLE/xnits1sr"
 RUN_NO_REWARD_FREE_VON_MISES = "random-latent-exploration/RLE/ytz9pi8j"
 RUN_NO_REWARD_FREE_RND_EXPONENTIAL = "random-latent-exploration/RLE/luz5fgdh"
 NO_REWARD_FREE_DIST_RUN_LIST = [RUN_NO_REWARD_FREE_NORMAL, RUN_NO_REWARD_FREE_UNIFORM, RUN_NO_REWARD_FREE_VON_MISES, RUN_NO_REWARD_FREE_RND_EXPONENTIAL]
-NO_REWARD_FREE_DIST_LABELS = ["standard_normal", "standard_uniform", "von_mises", "exponential"]
-NO_REWARD_FREE_DIST_TITLE = "State visit heatmaps of RLE with different z distributions the setting with a goal"
+NO_REWARD_FREE_DIST_LABELS = ["Standard Normal", "Standard Uniform", "Von Mises", "Exponential"]
+NO_REWARD_FREE_DIST_TITLE = "heatmaps_goal_distributions"
 
 api = wandb.Api()
 
@@ -50,7 +56,7 @@ def get_state_visit_lists(run_names, api):
     return state_visit_lists
 
 
-def plot_state_visit_heatmap(state_visit_lists, labels, title):
+def plot_state_visit_heatmap(state_visit_lists, labels, file_name):
     assert len(state_visit_lists) == len(labels) == 4
 
     state_visit_array = np.array(state_visit_lists)
@@ -71,8 +77,8 @@ def plot_state_visit_heatmap(state_visit_lists, labels, title):
 
     # Add a shared colorbar
     fig.colorbar(im, ax=axes, location="right", aspect=40, pad=0.02)
-    plt.suptitle(title, fontsize=16)
-    plt.show()
+    plt.savefig(f"./plots/gridworld_{file_name}.pdf", dpi=600, bbox_inches="tight")
+
 
 
 state_visit_lists = get_state_visit_lists(REWARD_FREE_ALG_RUN_LIST, api)
