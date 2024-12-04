@@ -1,6 +1,16 @@
 \appendix
 \section{Random Latent Exploration}
 
+\noindent The architecture of our RLE implementation can be found in figure \ref{fig:rle-architecture}:
+
+\begin{figure}[h!]
+  \centering
+  %\includegraphics[width=0.5\textwidth]{tikz/rle-architecture.tex}
+  \includegraphics[width=\textwidth]{tikz/rle-architecture-modified.tex}
+  \caption{In RLE, the policy and critic networks are conditioned on the latent vector z. \cite{rle-paper} split the critic's head in two: one head predicts the extrinsic value and the other head predicts the intrinsic value. In the vector dimension, $o$ represents the dimension of a single observation, $d$ represents the RLE feature dimension, and $a$ is the cardinality of the action space.}
+  \label{fig:rle-architecture}
+\end{figure}
+
 \noindent For the RLE algorithm, the detailed pseudocode according to \cite{rle-paper} is as follows:
 
 \hypertarget{algo-rle}{
@@ -39,6 +49,7 @@
   \end{tabular}
 \end{table}}
 
+\clearpage
 \hypertarget{algo-ppo}{\section{Proximal Policy Optimization}}
 
 \noindent The algorithm constituting the foundation of RLE is Proximal Policy Iteration (PPO), described in \cite{ppo-paper}, which can itself be run to solve RL problems. It is an on-line policy gradient method where after running the policy $\boldsymbol{\pi}_{\theta_{\text{old}}}$ in parallel with $N$ actors for $T << E$ timesteps, where $E$ is the length of an episode, we compute the advantage estimator as proposed by \cite{generalized-advantage-estimation-paper} for each time index $t \in [0, T]$:
@@ -159,7 +170,6 @@ Moreover, for factorized networks, we initialize $\mu_{i,j} \sim \mathcal{U}\lef
   \end{tabular}
 \end{table}
 
-\clearpage
 \hypertarget{algo-rnd}{\section{Random Network Distillation}}
 
 In Random Network Distillation, as described by \cite{rnd-paper}, we compose the reward which the agent obtains as $r_{t} = e_{t} + i_{t}$ where $e_{t}$ represents a sparse extrinsic (environment's) reward and $i_{t}$ is the intrinsic reward for transitioning, i.e. the exploration bonus emanating from the transition at time step $t$. The latter measures the novelty of a state and should yield a higher value, the less frequently a state has been visited so far. In case of a finite state space we can use $i_{t} = \frac{1}{n_{t}}$ or $i_{t} = \frac{1}{\sqrt{s}}$ where $n_{t}(s)$ denotes the number of times state $s$ has been visited until time step $t$. However, there exist alternatives, e.g. we could use state density based approaches to calculate an exploration bonus, which are described in the paper mentioned above. Moreover, they specify that in the paper the intrinsic reward is the prediction error of a randomly generated problem $i_{t} = \|\hat{f}(x|\theta) - f(x)\|^{2}$ involving a target network $f: \mathcal{O} \rightarrow \mathbb{R}^{k}$ (fixed and randomly initialized, maps an observation $\mathcal{O}$ to an embedding $\mathbb{R}^{k}$) to sample the problem as well as a predictor network $\hat{f}: \mathcal{O} \rightarrow \mathbb{R}^{k}$ which was trained on the agent's data by gradient descent to optimize $i_{t}$ w.r.t. parameters $\theta_{\hat{f}}$.

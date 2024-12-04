@@ -92,13 +92,6 @@ In this project we aim to analyze the claims of \cite{rle-paper} in the paper \h
 
 \noindent In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F(s_{t+1}, \textbf{z}) =  \boldsymbol{\phi}(s) \cdot \textbf{z}$ where $\boldsymbol{\phi}(s): \mathcal{S} \rightarrow \mathbb{R}^{d}$ is a feature extraction network. The feature network is updated as a linear combination of the old feature network's weights and the weights of the value network\footnote{In the pseudocode algorithm in line 19 on page 25, in the mathematical formulation, the authors state that the feature network is updated as a linear combination of the old feature network's weights and the policy network's weights. We contacted the authors, and they confirmed that it should read $\phi \leftarrow \tau \cdot V^\phi + (1 - \tau ) \cdot \phi$ (i.e., the value network should be used, not the policy network). However, they state it would be interesting to explore which network should be used to update the feature network.}. Both $\boldsymbol{\phi}$ and $\textbf{z}$ are $d$-dimensional vectors. Note that although equation \ref{eq:value_func} is presented by \cite{rle-paper}, in the implementation they introduce an intrinsic and extrinsic reward coefficient. In the experiments they choose intrinsic reward coefficient $\ll$ extrinsic reward coefficient. Thus, they are not directly optimizing equation \ref{eq:value_func} in the experiments. Furthermore, on page 3 the authors state that $\vz$ "is resampled at the start of each trajectory". However, in the pseudocode on page 15 the authors note that $\vz$ is resampled at the end of each trajectory or after a certain number of steps has passed. Since the authors implemented the latter, more general, case we adopt the latter approach for our experiments. The authors split the critic's head into two: one head predicts the intrinsic value function, the other head predicts the extrinsic value function. Figure \ref{fig:rle-architecture} depicts how the action logits, intrinsic value, and extrinsic value for a given observation and $\vz$ is calculated. Note the residual connection from the first element-wise addition to the second element-wise addition. There is no mention of this residual connection in the paper. However, it is present in the provided code for the \textsc{Atari} environment. To continue the example from above, in figure \ref{fig:sample-env-2} the agent would prioritize to go left as this promises the greater reward. It is not hard to imagine that for higher dimensional environments, every time we start a new trajectory and correspondingly sample a new $z$, the agent will explore a different region of the state space and thus we can discover non-obvious paths to maximize the rewards. For the detailed pseudocode of this algorithm, see \hyperlink{algo-rle}{Appendix A} \textcolor{red}{(check link before submmission)}.
 
-\begin{figure}
-  \centering
-  \includegraphics[width=1.0\textwidth]{tikz/rle-architecture.tex}
-  \caption{In RLE, the policy and critic networks are conditioned on the latent vector z. \cite{rle-paper} split the critic's head into two: one head predicts the extrinsic value and the other head predicts the intrinsic value. In the vector dimension, $o$ represents the dimension of a single observation, $d$ represents the RLE feature dimension, and $a$ is the cardinality of the action space.}
-  \label{fig:rle-architecture}
-\end{figure}
-
 \noindent A description of the other three algorithms can be found in \hyperlink{algo-ppo}{Appendix B}, \hyperlink{algo-noisynet}{Appendix C} (NoisyNet) and \hyperlink{algo-rnd}{Appendix D} (RND). \textcolor{red}{(check all three links before submission)}
 
 \section{Scope of reproducibility}
@@ -264,13 +257,13 @@ Atari code was ready to run.
 \texttt{Be careful to put your discussion in context. For example, don't say "The maths was difficult to follow", say "The math requires advanced knowledge of calculus to follow".}
 
 \subsection{Communication with original authors}
-\texttt{Document the extent of (or lack of) communication with the original authors. To make sure the reproducibility report is a fair assessment of the original research we recommend getting in touch with the original authors. We advise you to contact them through their email displayed in the paper and by asking specific questions.}
+
+\noindent During our attempt to reproduce the code of \cite{rle-paper}, a number of questions, mainly regarding parameters and model/environment architecture, came up which we were unable to answer by ourselves, so we sent an email to Mr. Mahankali. and got a response a few days later. \textcolor{red}{Do you wish to add more detail?}
 
 \section{Conclusion}
 \texttt{Try to summarize the achievements of your project and its limits, suggesting (when appropriate) possible extensions and future works.}
 
 \section*{Member contributions}
-We send him an email got answer. \textcolor{red}{Shouldn't this be in sec. 5.3?}
 
 \noindent We divided the workload among the group members as follows:
 
