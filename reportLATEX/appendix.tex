@@ -1,5 +1,15 @@
 \appendix
-\section{Pseudocode --- Random Latent Exploration}
+\section{Random Latent Exploration}
+
+\noindent The architecture of our RLE implementation can be found in figure \ref{fig:rle-architecture}:
+
+\begin{figure}[h!]
+  \centering
+  %\includegraphics[width=0.5\textwidth]{tikz/rle-architecture.tex}
+  \includegraphics[width=\textwidth]{tikz/rle-architecture-modified.tex}
+  \caption{In RLE, the policy and critic networks are conditioned on the latent vector z. \cite{rle-paper} split the critic's head in two: one head predicts the extrinsic value and the other head predicts the intrinsic value. In the vector dimension, $o$ represents the dimension of a single observation, $d$ represents the RLE feature dimension, and $a$ is the cardinality of the action space.}
+  \label{fig:rle-architecture}
+\end{figure}
 
 \noindent For the RLE algorithm, the detailed pseudocode according to \cite{rle-paper} is as follows:
 
@@ -39,11 +49,45 @@
   \end{tabular}
 \end{table}}
 
-\section{Pseudocode --- Proximal Policy Optimization}
+\clearpage
+\hypertarget{algo-ppo}{\section{Proximal Policy Optimization}}
+
+\noindent The algorithm constituting the foundation of RLE is Proximal Policy Iteration (PPO), described in \cite{ppo-paper}, which can itself be run to solve RL problems. It is an on-line policy gradient method where after running the policy $\boldsymbol{\pi}_{\theta_{\text{old}}}$ in parallel with $N$ actors for $T << E$ timesteps, where $E$ is the length of an episode, we compute the advantage estimator as proposed by \cite{generalized-advantage-estimation-paper} for each time index $t \in [0, T]$:
+
+\begin{equation}
+  \hat{A}_{t} = \delta_{t} + \left(\gamma \lambda\right) \delta_{t+1} + ... + \left(\gamma \lambda\right)^{T-t+1} \delta_{T - 1}
+  \label{eq:ppo-advantage-estimator}
+\end{equation}
+
+\noindent where we have $\delta_{t} = r_{t} + \gamma V(s_{t+1}) - V(s_{t})$. Here, $\lambda$ is the Generalized Advantage Estimation (GAE) parameter and $V(s)$ is a learned state-value function. Afterwards, for each $t$ the surrogate objective is computed and the parameters $\theta$ are optimized e.g. with minibatch SGD or Adam (note that we optimize by maximizing the objective). This surrogate objective takes the form:
+
+\begin{equation}
+  L_{t}^{\text{CLIP} + \text{VF} + \text{S}}(\theta) = \hat{\mathbb{E}}_{t} \left[L_{t}^{\text{CLIP}}(\theta) - c_{1} L_{t}^{\text{VF}}(\theta) + c_{2} S[\boldsymbol{\pi}_{\theta}](s_{t})\right]
+  \label{eq:ppo-objective-function}
+\end{equation}
+
+\noindent In \eqref{eq:ppo-objective-function}, we have the VF coefficient $c_{1}$ and the entropy coefficient $c_{2}$, together with the (optional, to enhance exploration) entropy bonus $S[\boldsymbol{\pi}_{\theta}](s_{t})$, which is calculated as the sum of $- p \log{p}$ over each of the action-probabilities $p$ resulting from the policy distribution $\boldsymbol{\pi}_{\theta}$ for a state $s_{t}$, and the objectives:
+
+\begin{align}
+  \label{eq:ppo-clip-objective} L_{t}^{\text{CLIP}}(\theta) &= \hat{\mathbb{E}}_{t}\left[\min\left(r_{t}(\theta) \hat{A}_{t}, \text{clip}\left(r_{t}(\theta), 1 - \epsilon, 1 + \epsilon\right) \hat{A}_{t}\right)\right]\\
+  \label{eq:ppo-vf-objective} L_{t}^{\text{VF}}(\theta) &= \left(V_{\theta}(s_{t}) - V_{t}^{\text{targ}}\right)^{2}
+\end{align}
+
+\noindent In \eqref{eq:ppo-clip-objective} we denote the probability ratio as $r_{t}(\theta) = \frac{\pi_{\theta}\left(a_{t}|s_{t}\right)}{\pi_{\theta_{\text{old}}}(a_{t}|s_{t})}$, where $\pi_{\theta_{\text{old}}}$ is the policy before the update, and the clipping function is:
+
+\begin{equation}
+  \text{clip}\left(r_{t}(\theta), 1 - \epsilon, 1 + \epsilon\right) = \begin{cases}
+    1 - \epsilon, &r_{t}(\theta) < 1 - \epsilon\\
+    r_{t}(\theta), &1 - \epsilon \leq r_{t}(\theta) \leq 1 + \epsilon\\
+    1 + \epsilon, &r_{t}(\theta) > 1 + \epsilon
+  \end{cases}
+  \label{eq:clipping-function}
+\end{equation}
+
+\noindent Moreover in \eqref{eq:ppo-vf-objective}, $V_{t}^{\text{targ}}$ represents some target state-value function that is to be obtained. Note that there exist also other objective functions mentioned in \cite{ppo-paper} that can substitute $L_{t}^{\text{CLIP}}(\theta)$ in \eqref{eq:ppo-objective-function}. In \eqref{eq:clipping-function}, we make use of a hyperparameter $\epsilon \in [0, 1]$ and in combination with the minimizer from \eqref{eq:ppo-clip-objective} we can prevent a single policy update to accidentally ruin the policy forever by sending the algorithm to a gradient region with a worse local extremum.
 
 \noindent For the PPO algorithm, the detailed pseudocode according to \cite{ppo-paper} is as follows:
 
-\hypertarget{algo-ppo}{
 \begin{table}[h!]
   \centering
   \begin{tabular}{rlll}
@@ -63,14 +107,27 @@
     9: & \multicolumn{3}{l}{\textbf{(\textsuperscript{1})}}\\
     \hline\hline
   \end{tabular}
-\end{table}}
+\end{table}
 
 \clearpage
-\section{Pseudocode --- NoisyNet}
+\hypertarget{algo-noisynet}{\section{NoisyNet}}
+
+\noindent The central idea in a NoisyNet architecture brought forward by \cite{noisynet-paper} is to introduce random noise into the weights learned by the network ($p$ inputs, $q$ outputs), i.e. if we have a neural network whose output can be parametrized by a vector of weights $\boldsymbol{\theta}$ as $\textbf{y} = f_{\boldsymbol{\theta}}(\textbf{x}) = \textbf{w} \cdot \textbf{x} + \textbf{b}$, then we can learn the set of parameter vectors $\zeta = (\boldsymbol{\mu}, \boldsymbol{\Sigma})$ to compute $\textbf{w} = (\boldsymbol{\mu}^{w} + \boldsymbol{\sigma}^{w} \odot \boldsymbol{\varepsilon}^{w})$ and $\textbf{b} = (\boldsymbol{\mu}^{b} + \boldsymbol{\sigma}^{b} \odot \boldsymbol{\varepsilon}^{b})$ with the following dimensionalities: $\boldsymbol{\mu}^{w}$, $\boldsymbol{\sigma}^{w}$, $\boldsymbol{\varepsilon}^{w} \in \mathbb{R}^{q \times p}$ implying $\textbf{w} \in \mathbb{R}^{q \times p}$, and $\boldsymbol{\mu}^{b}$, $\boldsymbol{\sigma}^{b}$, $\boldsymbol{\varepsilon}^{b} \in \mathbb{R}^{q}$ resulting in $\textbf{b} \in \mathbb{R}^{q}$. Note that $\textbf{x} \in \mathbb{R}^{p}$, $\textbf{y} \in \mathbb{R}^{q}$ and $\odot$ denotes element-wise multiplication.
+
+\noindent We optimize the loss $\bar{L}(\zeta) = \mathbb{E}_{\varepsilon}[L(\boldsymbol{\theta})]$, i.e. the expectation of the loss $L(\boldsymbol{\theta})$ over the noise $\varepsilon$ which has a mean of zero and fixed statistics, using gradient descent on the parameters $\zeta$. The noise can be sampled either independently or in a factorized way from a Gaussian. The former method samples the noise $\varepsilon^{w}_{i,j} \in \boldsymbol{\varepsilon}^{w}$ and $\varepsilon^{b}_{j} \in \boldsymbol{\varepsilon}^{b}$ for every input to the network leading to a total of $pq + q$ random samples. Factorized sampling on the other hand greatly reduces computational complexity by factorizing $\varepsilon^{w}_{i,j} = f(\varepsilon_{i}) f(\varepsilon_{j})$ and then $\varepsilon^{b}_{j} = f(\varepsilon_{j})$ thereby lowering the number of required random samples to $p + q$, where $f: \mathbb{R} \rightarrow \mathbb{R}$. In \cite{noisynet-paper} the function $f(x) = \sign(x) \sqrt{|x|}$ is used. After sampling the noise, in theory we compute the gradients $\nabla\bar{L}(\zeta) = \nabla\mathbb{E}_{\varepsilon}[L(\boldsymbol{\theta})] = \mathbb{E}_{\varepsilon}[\nabla_{\boldsymbol{\mu}, \boldsymbol{\Sigma}}L(\boldsymbol{\mu} + \boldsymbol{\Sigma} \odot \boldsymbol{\varepsilon})]$, whereas in practice we approximate $\nabla\bar{L}(\zeta) \approx \nabla_{\boldsymbol{\mu}, \boldsymbol{\Sigma}}L(\boldsymbol{\mu} + \boldsymbol{\Sigma} \odot \boldsymbol{\varepsilon})$ with the Monte Carlo method.
+
+\noindent In the code of \cite{rle-paper}, a NoisyNet is used in conjunction with the A3C-algorithm, in particular the loss is computed from the action-value function is estimated using:
+
+\begin{equation}
+  \hat{Q}_{i} = \sum_{j=i}^{k-1} \gamma^{j-i} r_{t+j} + \gamma^{k-i} V(x_{t+k} | \zeta, \varepsilon_{i})
+\end{equation}
+
+Moreover, for factorized networks, we initialize $\mu_{i,j} \sim \mathcal{U}\left[-\frac{1}{\sqrt{p}}, +\frac{1}{\sqrt{p}}\right]$ and $\sigma_{i,j} = \frac{\sigma_{0}}{\sqrt{p}}$ with $p$ being the number of inputs to the corresponding linear layer, $\mathcal{U}$ is a uniform distribution over the specified interval, and $\sigma_{0}$ is a hyperparameter.
+
+\textcolor{red}{Are we using independent or factorized sampling in the code? (I'm guessing factorized).}
 
 \noindent For the NoisyNet + A3C algorithm, the detailed pseudocode according to \cite{noisynet-paper} is as follows:
 
-\hypertarget{algo-noisynet}{
 \begin{table}[h!]
   \centering
   \begin{tabular}{rlll}
@@ -111,14 +168,16 @@
     30: & \multicolumn{3}{l}{\textbf{(\textsuperscript{1}) until} $T > T_{\text{max}}$}\\
     \hline\hline
   \end{tabular}
-\end{table}}
+\end{table}
 
-\clearpage
-\section{Pseudocode --- Random Network Distillation}
+\hypertarget{algo-rnd}{\section{Random Network Distillation}}
 
-\noindent For the RND algorithm, the detailed pseudocode according to \cite{rnd-paper} is as follows:
+In Random Network Distillation, as described by \cite{rnd-paper}, we compose the reward which the agent obtains as $r_{t} = e_{t} + i_{t}$ where $e_{t}$ represents a sparse extrinsic (environment's) reward and $i_{t}$ is the intrinsic reward for transitioning, i.e. the exploration bonus emanating from the transition at time step $t$. The latter measures the novelty of a state and should yield a higher value, the less frequently a state has been visited so far. In case of a finite state space we can use $i_{t} = \frac{1}{n_{t}}$ or $i_{t} = \frac{1}{\sqrt{s}}$ where $n_{t}(s)$ denotes the number of times state $s$ has been visited until time step $t$. However, there exist alternatives, e.g. we could use state density based approaches to calculate an exploration bonus, which are described in the paper mentioned above. Moreover, they specify that in the paper the intrinsic reward is the prediction error of a randomly generated problem $i_{t} = \|\hat{f}(x|\theta) - f(x)\|^{2}$ involving a target network $f: \mathcal{O} \rightarrow \mathbb{R}^{k}$ (fixed and randomly initialized, maps an observation $\mathcal{O}$ to an embedding $\mathbb{R}^{k}$) to sample the problem as well as a predictor network $\hat{f}: \mathcal{O} \rightarrow \mathbb{R}^{k}$ which was trained on the agent's data by gradient descent to optimize $i_{t}$ w.r.t. parameters $\theta_{\hat{f}}$.
 
-\hypertarget{algo-rnd}{
+\noindent Since the overall return can be composed as a sum of returns $R = R_{E} + R_{I}$ we can train two heads $V_{E}$ and $V_{I}$ to estimate the value function $V = V_{E} + V_{I}$ and in extension the advantages. In the end, a policy is trained with standard PPO using the advantage estimators. Note that the intrinsic rewards have to be normalized in order to be useful because otherwise we could not guarantee that they are on a consistent scale, which is done by dividing $i_{t}$ by a running estimate of the standard deviations of the intrinsic return. Furthermore, the observation also has to be normalized as $x \leftarrow \text{clip}(\frac{x - \mu}{\sigma}, -5, 5)$. The normalization parameters can be initialized by letting a random agent briefly move in the environment before beginning the optimization.
+
+\noindent The detailed pseudocode according to \cite{rnd-paper} is as follows:
+
 \begin{table}[h!]
   \centering
   \begin{tabular}{rlll}
@@ -156,7 +215,7 @@
     28: & \multicolumn{3}{l}{\textbf{(\textsuperscript{2})}}\\
     \hline\hline
   \end{tabular}
-\end{table}}
+\end{table}
 
 \section{Citations, figures, and tables}
 

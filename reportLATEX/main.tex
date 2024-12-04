@@ -81,103 +81,25 @@ In this project we aim to analyze the claims of \cite{rle-paper} in the paper \h
   \label{fig:sample-env}
 \end{figure}
 
-\subsection{Random Latent Exploration}
-
-\noindent The new idea that the authors \cite{rle-paper} present is to augment the reward function by adding a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F(s, z)$ or intrinsic reward function, where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$. The authors \cite{rle-paper} claim that RLE's efficiency is not significantly affected by the choice of $P_{\textbf{z}}$. If at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi(. | s_{t})$ from policy $\pi$, then it will obtain the task reward $r (s_{t}, a_{t})$. In RLE, we train a so-called latent-conditioned policy network $\pi(. | s, \textbf{z})$ and latent-conditioned value network $V^{\pi}(s, \textbf{z})$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
-
-\begin{equation}
-    V^{\pi}(s, \textbf{z}) \approx \mathbb{E}_{\pi} \left[\sum_{t = 0}^{\infty} \gamma^{t} \left(r(s_{t}, a_{t}) + F(s_{t+1}, \textbf{z})\right) \right]
-    \label{eq:value_func}
-\end{equation}
-
-\noindent In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F(s_{t+1}, \textbf{z}) =  \boldsymbol{\phi}(s) \cdot \textbf{z}$ where $\boldsymbol{\phi}(s): \mathcal{S} \rightarrow \mathbb{R}^{d}$ is a feature extraction network. The feature network is updated as a linear combination of the old feature network's weights and the weights of the value network\footnote{In the pseudocode algorithm in line 19 on page 25, in the mathematical formulation, the authors state that the feature network is updated as a linear combination of the old feature network's weights and the policy network's weights. We contacted the authors, and they confirmed that it should read $\phi \leftarrow \tau \cdot V^\phi + (1 - \tau ) \cdot \phi$ (i.e., the value network should be used, not the policy network). However, they state it would be interesting to explore which network should be used to update the feature network.}. Both $\boldsymbol{\phi}$ and $\textbf{z}$ are $d$-dimensional vectors. Note that although equation \ref{eq:value_func} is presented by \cite{rle-paper}, in the implementation they introduce an intrinsic and extrinsic reward coefficient. In the experiments they choose intrinsic reward coefficient $\ll$ extrinsic reward coefficient. Thus, they are not directly optimizing equation \ref{eq:value_func} in the experiments. Furthermore, on page 3 the authors state that $\vz$ "is resampled at the start of each trajectory". However, in the pseudocode on page 15 the authors note that $\vz$ is resampled at the end of each trajectory or after a certain number of steps has passed. Since the authors implemented the latter, more general, case we adopt the latter approach for our experiments. The authors split the critic's head into two: one head predicts the intrinsic value function, the other head predicts the extrinsic value function. Figure \ref{fig:rle-architecture} depicts how the action logits, intrinsic value, and extrinsic value for a given observation and $\vz$ is calculated. Note the residual connection from the first element-wise addition to the second element-wise addition. There is no mention of this residual connection in the paper. However, it is present in the provided code for the \textsc{Atari} environment. To continue the example from above, in figure \ref{fig:sample-env-2} the agent would prioritize to go left as this promises the greater reward. It is not hard to imagine that for higher dimensional environments, every time we start a new trajectory and correspondingly sample a new $z$, the agent will explore a different region of the state space and thus we can discover non-obvious paths to maximize the rewards. For the detailed pseudocode of this algorithm, see \hyperlink{algo-rle}{Appendix A} \textcolor{red}{(check link before submmission)}.
-
-\begin{figure}
-  \centering
-  \includegraphics[width=1.0\textwidth]{tikz/rle-architecture.tex}
-  \caption{In RLE, the policy and critic networks are conditioned on the latent vector z. \cite{rle-paper} split the critic's head into two: one head predicts the extrinsic value and the other head predicts the intrinsic value. In the vector dimension, $o$ represents the dimension of a single observation, $d$ represents the RLE feature dimension, and $a$ is the cardinality of the action space.}
-  \label{fig:rle-architecture}
-\end{figure}
-
-\subsection{Proximal Policy Optimization}
-
-\noindent The algorithm constituting the foundation of RLE is Proximal Policy Iteration (PPO), described in \cite{ppo-paper}, which can itself be run to solve RL problems. It is an on-line policy gradient method where after running the policy $\boldsymbol{\pi}_{\theta_{\text{old}}}$ in parallel with $N$ actors for $T << E$ timesteps, where $E$ is the length of an episode, we compute the advantage estimator as proposed by \cite{generalized-advantage-estimation-paper} for each time index $t \in [0, T]$:
-
-\begin{equation}
-  \hat{A}_{t} = \delta_{t} + \left(\gamma \lambda\right) \delta_{t+1} + ... + \left(\gamma \lambda\right)^{T-t+1} \delta_{T - 1}
-  \label{eq:ppo-advantage-estimator}
-\end{equation}
-
-\noindent where we have $\delta_{t} = r_{t} + \gamma V(s_{t+1}) - V(s_{t})$. Here, $\lambda$ is the Generalized Advantage Estimation (GAE) parameter and $V(s)$ is a learned state-value function. Afterwards, for each $t$ the surrogate objective is computed and the parameters $\theta$ are optimized e.g. with minibatch SGD or Adam (note that we optimize by maximizing the objective). This surrogate objective takes the form:
-
-\begin{equation}
-  L_{t}^{\text{CLIP} + \text{VF} + \text{S}}(\theta) = \hat{\mathbb{E}}_{t} \left[L_{t}^{\text{CLIP}}(\theta) - c_{1} L_{t}^{\text{VF}}(\theta) + c_{2} S[\boldsymbol{\pi}_{\theta}](s_{t})\right]
-  \label{eq:ppo-objective-function}
-\end{equation}
-
-\noindent In \eqref{eq:ppo-objective-function}, we have the VF coefficient $c_{1}$ and the entropy coefficient $c_{2}$, together with the (optional, to enhance exploration) entropy bonus $S[\boldsymbol{\pi}_{\theta}](s_{t})$, which is calculated as the sum of $- p \log{p}$ over each of the action-probabilities $p$ resulting from the policy distribution $\boldsymbol{\pi}_{\theta}$ for a state $s_{t}$, and the objectives:
-
-\begin{align}
-  \label{eq:ppo-clip-objective} L_{t}^{\text{CLIP}}(\theta) &= \hat{\mathbb{E}}_{t}\left[\min\left(r_{t}(\theta) \hat{A}_{t}, \text{clip}\left(r_{t}(\theta), 1 - \epsilon, 1 + \epsilon\right) \hat{A}_{t}\right)\right]\\
-  \label{eq:ppo-vf-objective} L_{t}^{\text{VF}}(\theta) &= \left(V_{\theta}(s_{t}) - V_{t}^{\text{targ}}\right)^{2}
-\end{align}
-
-\noindent In \eqref{eq:ppo-clip-objective} we denote the probability ratio as $r_{t}(\theta) = \frac{\pi_{\theta}\left(a_{t}|s_{t}\right)}{\pi_{\theta_{\text{old}}}(a_{t}|s_{t})}$, where $\pi_{\theta_{\text{old}}}$ is the policy before the update, and the clipping function is:
-
-\begin{equation}
-  \text{clip}\left(r_{t}(\theta), 1 - \epsilon, 1 + \epsilon\right) = \begin{cases}
-    1 - \epsilon, &r_{t}(\theta) < 1 - \epsilon\\
-    r_{t}(\theta), &1 - \epsilon \leq r_{t}(\theta) \leq 1 + \epsilon\\
-    1 + \epsilon, &r_{t}(\theta) > 1 + \epsilon
-  \end{cases}
-  \label{eq:clipping-function}
-\end{equation}
-
-\noindent Moreover in \eqref{eq:ppo-vf-objective}, $V_{t}^{\text{targ}}$ represents some target state-value function that is to be obtained. Note that there exist also other objective functions mentioned in \cite{ppo-paper} that can substitute $L_{t}^{\text{CLIP}}(\theta)$ in \eqref{eq:ppo-objective-function}. In \eqref{eq:clipping-function}, we make use of a hyperparameter $\epsilon \in [0, 1]$ and in combination with the minimizer from \eqref{eq:ppo-clip-objective} we can prevent a single policy update to accidentally ruin the policy forever by sending the algorithm to a gradient region with a worse local extremum. The detailed pseudocode of this algorithm can be found in \hyperlink{algo-ppo}{Appendix B} \textcolor{red}{(check link before submmission)}.
-
-\noindent In the paper that we investigate, the authors \cite{rle-paper} compare the empirical results of the RLE to PPO as the baseline, as well as two other exploration techniques, namely NoisyNet and RND, which will be briefly explained in the following sections.
-
-\subsection{NoisyNet}
-
-\noindent The central idea in a NoisyNet architecture brought forward by \cite{noisynet-paper} is to introduce random noise into the weights learned by the network ($p$ inputs, $q$ outputs), i.e. if we have a neural network whose output can be parametrized by a vector of weights $\boldsymbol{\theta}$ as $\textbf{y} = f_{\boldsymbol{\theta}}(\textbf{x}) = \textbf{w} \cdot \textbf{x} + \textbf{b}$, then we can learn the set of parameter vectors $\zeta = (\boldsymbol{\mu}, \boldsymbol{\Sigma})$ to compute $\textbf{w} = (\boldsymbol{\mu}^{w} + \boldsymbol{\sigma}^{w} \odot \boldsymbol{\varepsilon}^{w}$ and $\textbf{b} = (\boldsymbol{\mu}^{b} + \boldsymbol{\sigma}^{b} \odot \boldsymbol{\varepsilon}^{b})$ with the following dimensionalities: $\boldsymbol{\mu}^{w}$, $\boldsymbol{\sigma}^{w}$, $\boldsymbol{\varepsilon}^{w} \in \mathbb{R}^{q \times p}$ implying $\textbf{w} \in \mathbb{R}^{q \times p}$, and $\boldsymbol{\mu}^{b}$, $\boldsymbol{\sigma}^{b}$, $\boldsymbol{\varepsilon}^{b} \in \mathbb{R}^{q}$ resulting in $\textbf{b} \in \mathbb{R}^{q}$. Note that $\textbf{x} \in \mathbb{R}^{p}$, $\textbf{y} \in \mathbb{R}^{q}$ and $\odot$ denotes element-wise multiplication.
-
-\noindent We optimize the loss $\bar{L}(\zeta) = \mathbb{E}_{\varepsilon}[L(\boldsymbol{\theta})]$, i.e. the expectation of the loss $L(\boldsymbol{\theta})$ over the noise $\varepsilon$ which has a mean of zero and fixed statistics, using gradient descent on the parameters $\zeta$. The noise can be sampled either independently or in a factorized way from a Gaussian. The former method samples the noise $\varepsilon^{w}_{i,j} \in \boldsymbol{\varepsilon}^{w}$ and $\varepsilon^{b}_{j} \in \boldsymbol{\varepsilon}^{b}$ for every input to the network leading to a total of $pq + q$ random samples. Factorized sampling on the other hand greatly reduces computational complexity by factorizing $\varepsilon^{w}_{i,j} = f(\varepsilon_{i}) f(\varepsilon_{j})$ and then $\varepsilon^{b}_{j} = f(\varepsilon_{j})$ thereby lowering the number of required random samples to $p + q$, where $f: \mathbb{R} \rightarrow \mathbb{R}$. In \cite{noisynet-paper} the function $f(x) = \sign(x) \sqrt{|x|}$ is used. After sampling the noise, in theory we compute the gradients $\nabla\bar{L}(\zeta) = \nabla\mathbb{E}_{\varepsilon}[L(\boldsymbol{\theta})] = \mathbb{E}_{\varepsilon}[\nabla_{\boldsymbol{\mu}, \boldsymbol{\Sigma}}L(\boldsymbol{\mu} + \boldsymbol{\Sigma} \odot \boldsymbol{\varepsilon})]$, whereas in practice we approximate $\nabla\bar{L}(\zeta) \approx \nabla_{\boldsymbol{\mu}, \boldsymbol{\Sigma}}L(\boldsymbol{\mu} + \boldsymbol{\Sigma} \odot \boldsymbol{\varepsilon})$ with the Monte Carlo method.
-
-\noindent In the code of \cite{rle-paper}, a NoisyNet is used in conjunction with the A3C-algorithm, in particular the loss is computed from the action-value function is estimated using:
-
-\begin{equation}
-  \hat{Q}_{i} = \sum_{j=i}^{k-1} \gamma^{j-i} r_{t+j} + \gamma^{k-i} V(x_{t+k} | \zeta, \varepsilon_{i})
-\end{equation}
-
-Moreover, for factorized networks, we initialize $\mu_{i,j} \sim \mathcal{U}\left[-\frac{1}{\sqrt{p}}, +\frac{1}{\sqrt{p}}\right]$ and $\sigma_{i,j} = \frac{\sigma_{0}}{\sqrt{p}}$ with $p$ being the number of inputs to the corresponding linear layer, $\mathcal{U}$ is a uniform distribution over the specified interval, and $\sigma_{0}$ is a hyperparameter. The pseudocode for this variant given by \cite{noisynet-paper} can be found in appendix \hyperlink{algo-noisynet}{Appendix C} \textcolor{red}{Check link before submission}.
-
-\textcolor{red}{Are we using independent or factorized sampling in the code? (I'm guessing factorized).}
-
-\subsection{Random Network Distillation}
-
-In Random Network Distillation, as described by \cite{rnd-paper}, we compose the reward which the agent obtains as $r_{t} = e_{t} + i_{t}$ where $e_{t}$ represents a sparse extrinsic (environment's) reward and $i_{t}$ is the intrinsic reward for transitioning, i.e. the exploration bonus emanating from the transition at time step $t$. The latter measures the novelty of a state and should yield a higher value, the less frequently a state has been visited so far. In case of a finite state space we can use $i_{t} = \frac{1}{n_{t}}$ or $i_{t} = \frac{1}{\sqrt{s}}$ where $n_{t}(s)$ denotes the number of times state $s$ has been visited until time step $t$. However, there exist alternatives, e.g. we could use state density based approaches to calculate an exploration bonus, which are described in the paper mentioned above. Moreover, they specify that in the paper the intrinsic reward is the prediction error of a randomly generated problem $i_{t} = \|\hat{f}(x|\theta) - f(x)\|^{2}$ involving a target network $f: \mathcal{O} \rightarrow \mathbb{R}^{k}$ (fixed and randomly initialized, maps an observation $\mathcal{O}$ to an embedding $\mathbb{R}^{k}$) to sample the problem as well as a predictor network $\hat{f}: \mathcal{O} \rightarrow \mathbb{R}^{k}$ which was trained on the agent's data by gradient descent to optimize $i_{t}$ w.r.t. parameters $\theta_{\hat{f}}$.
-
-\noindent Since the overall return can be composed as a sum of returns $R = R_{E} + R_{I}$ we can train two heads $V_{E}$ and $V_{I}$ to estimate the value function $V = V_{E} + V_{I}$ and in extension the advantages. In the end, a policy is trained with standard PPO using the advantage estimators. Note that the intrinsic rewards have to be normalized in order to be useful because otherwise we could not guarantee that they are on a consistent scale, which is done by dividing $i_{t}$ by a running estimate of the standard deviations of the intrinsic return. Furthermore, the observation also has to be normalized as $x \leftarrow \text{clip}(\frac{x - \mu}{\sigma}, -5, 5)$. The normalization parameters can be initialized by letting a random agent briefly move in the environment before beginning the optimization. The pseudocode given by \cite{rnd-paper} can be found in appendix \hyperlink{algo-rnd}{Appendix D} \textcolor{red}{Check link before submission}.
-
+\newpage
 \section{Scope of reproducibility}
 \label{sec:claims}
 
 \noindent The main quantifiable claims made by \cite{rle-paper} consist of the following:
 
 \begin{enumerate}
-    \item In the abstract, \cite{rle-paper} claim "[...] RLE exhibits higher overall scores across all of the tasks than other approaches, including action-noise and randomized value exploration." They refer to the tasks being the \textsc{Atari}, \textsc{IssacGym} and \textsc{FourRoom} environments. The benchmark approaches are standard PPO, NoisyNet and RND.
-    \item The first claim holds for "[...] both discrete and continuous control tasks." \citep{rle-paper}
-    \item Moreover, "[...] introducting randomness to rewards influences the policy to produce diverse behaviors" \citep{rle-paper} which manifests itself in an incentive to explore random (and thus in aggregate lager) parts of the state space.
+    \item In the abstract, \cite{rle-paper} claim "[...] RLE exhibits higher overall scores across all of the tasks than other approaches, including action-noise and randomized value exploration", which they later specify for both "[...] discrete and continuous control tasks." They refer to the tasks being the \textsc{Atari}, \textsc{IssacGym} and \textsc{FourRoom} environments. The benchmark approaches are standard PPO, NoisyNet and RND.
+    \item Moreover, "[...] introducting randomness to rewards influences the [... agent] to produce diverse behaviors" \citep{rle-paper} when this randomness is used to condition the policy and value networks, which manifests itself in an incentive to explore random (and thus in aggregate lager) parts of the state space.
     \item For the discrete-action discrete-states \textsc{FourRoom} environment absent of a goal reward, the authors claim that PPO's state visitation centers around the initial room (top right) concluding that action-noise methods cannot conduct deep exploration whereas RLE, NoisyNet and RND well reach across the four rooms and thus perform deep exploration.
     \item For the more challenging discrete-action continuous-states\footnote{While the input to the action sampler is a discrete $84\times84\times4$ tensor representing the pixels it perceives, in practice \textsc{Atari} games are considered to be continuous-state environments due to the high-dimensional state space and visual complexity of each frame.} \textsc{Atari} environment, the authors claim that, in the majority of games, RLE achieves a higher IQM of the human-normalized score with a probability of $67\%$, $72\%$ and $71\%$, compared to PPO, NoisyNet and RND, respectively.\footnote{The authors mention that for the \textsc{Montezuma's Revenge} game RLE underperforms likely due to RLE not factoring in bonus-based exploration.}
-    \item In the continuous-action continuous-states \textsc{IsaacGym} environment\footnote{Please note that the \textsc{IsaacGym} environment is deprecated and we're using \textsc{Isaac Lab} \textcolor{red}{(check this)} instead, however we will refer to it as \textsc{IsaacGym} for continuity.}, the authors claim that, with a probability of around $83\%$ for PPO, ca. $66\%$ for NoisyNet and roughly $65\%$ for RND, RLE improves performance in all of their selected \textsc{IsaacGym} tasks.
+    \item In the continuous-action continuous-states \textsc{IsaacGym} environment, the authors claim that, with a probability of around $83\%$ for PPO, ca. $66\%$ for NoisyNet and roughly $65\%$ for RND, RLE improves performance in all of their selected \textsc{IsaacGym} tasks.
 \end{enumerate}
 
 \noindent Our findings regarding these claims will be presented in \hyperlink{sec4}{section 4} \textcolor{red}{Check link before submission}. Moreover, \cite{rle-paper} performed ablation studies and claim to have found:
 
 \begin{itemize}
   \item RLE performance improves over PPO irrespective of the distribution used to sample the 8-dim random latent vector.
-  \item RLE performance does not significantly improve over PPO as a dependence of the dimensionality of the random latent vector.
+  \item RLE performance compared to PPO is invariant under a change in the dimensionality of the random latent vector.
   \item RLE performance deteriorates if the policy and value networks are not conditioned on the random latent vector.
   \item RLE performance improves slightly if a learning feature network is used in comparison to when the feature network has constant weights when evaluated on the Atari games.
   \item RLE performance is insensitive to the feature extractor architecture.
@@ -189,25 +111,31 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
 
 \section{Methodology}
 
-The authors of the paper at hand published code in a GitHub repository\footnote{\href{https://github.com/Improbable-AI/random-latent-exploration}{https://github.com/Improbable-AI/random-latent-exploration}}. This repository contains code for the \textsc{Atari} and \textsc{IsaacGym}\footnote{Please note that the \textsc{IsaacGym} environment is deprecated and we are using \textsc{IsaacLab} instead, however we will refer to it as \textsc{IsaacGym} for reasons of continuity.} environments with the 4 algorithms (RLE, PPO, RND, NoisyNet). However, the authors did not provide any code for the \textsc{FourRoom} environment, so this environment was implemented by us using the gymnasium library introduced by \cite{gymnasium-paper} together with our adaptation of the code for PPO, NoisyNet and RLE algorithms from the \textsc{Atari} environment, while we adapted the RLE code from the \textsc{IsaacGym} environment. A wrapper to record the state visitation counts per environment was also implemented.
+\noindent The authors of the paper at hand published code in a GitHub repository\footnote{\href{https://github.com/Improbable-AI/random-latent-exploration}{https://github.com/Improbable-AI/random-latent-exploration}}. This repository contains code for the \textsc{Atari} and \textsc{IsaacGym}\footnote{Please note that the \textsc{IsaacGym} environment is deprecated and we are using \textsc{IsaacLab} instead, however we will refer to it as \textsc{IsaacGym} for reasons of continuity.} environments with the 4 algorithms (RLE, PPO, RND, NoisyNet). However, the authors did not provide any code for the \textsc{FourRoom} environment, so this environment was implemented by us using the gymnasium library introduced by \cite{gymnasium-paper} together with our adaptation of the code for PPO, NoisyNet and RLE algorithms from the \textsc{Atari} environment, while we adapted the RLE code from the \textsc{IsaacGym} environment. A wrapper to record the state visitation counts per environment was also implemented.
 
-\noindent Before we adapted RLE from the existing implementation for the \textsc{Atari} environment, we implemented it based on the description in \cite{rle-paper}. However, the paper lacked a lot of details present in the \textsc{Atari} code (e.g. split critic's head, residual connection) so that we decided to proceed with the adapted code to have consistent results over the different environments. In general, after coding the scripts, we uploaded the files to \href{https://colab.research.google.com/}{Google Colab} and linked a \href{https://drive.google.com}{Google Drive} to save the models, as well as \href{https://wandb.ai}{Weights \& Biases}
-
-\textcolor{red}{Alessia explains Atari stuff}
-
-\textcolor{red}{Jonathan has the great pleasure of explaining now only Isaac but also the VMF stuff}
-
-\texttt{Explain your approach - did you use the author's code, or did you aim to re-implement the approach from the description in the paper? Summarize the resources (code, documentation, GPUs) that you used.}
+\noindent Before we adapted RLE from the existing implementation for the \textsc{Atari} environment, we implemented it based on the description in \cite{rle-paper}. However, the paper lacked a lot of details present in the \textsc{Atari} code (e.g. split critic's head, residual connection) so that we decided to proceed with the adapted code to have consistent results over the different environments. In general, after coding the scripts, we uploaded the files to \href{https://colab.research.google.com/}{Google Colab}, of which we used/tested the available TPU/GPU for the training (for more detail see section \hyperlink{computational-requirements}{3.5} \textcolor{red}{check link before submission}), and linked a \href{https://drive.google.com}{Google Drive} to save the models, as well as a \href{https://wandb.ai}{Weights \& Biases} workspace for a live overview of the results and various parameters while the models were still training. Regarding documentation we were guided mostly by the paper at hand and the official environment documentation, as well as other papers that we found along the way.
 
 \subsection{Model descriptions}
-\texttt{Include a description of each model or algorithm used. Be sure to list the type of model, the number of parameters, and other relevant info (e.g. if it's pre-trained).}
+
+\noindent Random Latent Exploration --- The new idea that the authors \cite{rle-paper} present is to augment the reward function by adding a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F(s, z)$ or intrinsic reward function, where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$. The authors \cite{rle-paper} claim that RLE's efficiency is not significantly affected by the choice of $P_{\textbf{z}}$. If at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi(. | s_{t})$ from policy $\pi$, then it will obtain the task reward $r (s_{t}, a_{t})$. In RLE, we train a so-called latent-conditioned policy network $\pi(. | s, \textbf{z})$ and latent-conditioned value network $V^{\pi}(s, \textbf{z})$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
+
+\begin{equation}
+    V^{\pi}(s, \textbf{z}) \approx \mathbb{E}_{\pi} \left[\sum_{t = 0}^{\infty} \gamma^{t} \left(r(s_{t}, a_{t}) + F(s_{t+1}, \textbf{z})\right) \right]
+    \label{eq:value_func}
+\end{equation}
+
+\noindent In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F(s_{t+1}, \textbf{z}) =  \boldsymbol{\phi}(s) \cdot \textbf{z}$ where $\boldsymbol{\phi}(s): \mathcal{S} \rightarrow \mathbb{R}^{d}$ is a feature extraction network. The feature network is updated as a linear combination of the old feature network's weights and the weights of the value network\footnote{In the pseudocode algorithm in line 19 on page 25, in the mathematical formulation, the authors state that the feature network is updated as a linear combination of the old feature network's weights and the policy network's weights. We contacted the authors, and they confirmed that it should read $\phi \leftarrow \tau \cdot V^\phi + (1 - \tau ) \cdot \phi$ (i.e., the value network should be used, not the policy network). However, they state it would be interesting to explore which network should be used to update the feature network.}. Both $\boldsymbol{\phi}$ and $\textbf{z}$ are $d$-dimensional vectors. Note that although equation \ref{eq:value_func} is presented by \cite{rle-paper}, in the implementation they introduce an intrinsic and extrinsic reward coefficient. In the experiments they choose intrinsic reward coefficient $\ll$ extrinsic reward coefficient. Thus, they are not directly optimizing equation \ref{eq:value_func} in the experiments. Furthermore, on page 3 the authors state that $\vz$ "is resampled at the start of each trajectory". However, in the pseudocode on page 15 the authors note that $\vz$ is resampled at the end of each trajectory or after a certain number of steps has passed. Since the authors implemented the latter, more general, case we adopt the latter approach for our experiments. The authors split the critic's head into two: one head predicts the intrinsic value function, the other head predicts the extrinsic value function. Figure \ref{fig:rle-architecture} depicts how the action logits, intrinsic value, and extrinsic value for a given observation and $\vz$ is calculated. Note the residual connection from the first element-wise addition to the second element-wise addition. There is no mention of this residual connection in the paper. However, it is present in the provided code for the \textsc{Atari} environment. To continue the example from above, in figure \ref{fig:sample-env-2} the agent would prioritize to go left as this promises the greater reward. It is not hard to imagine that for higher dimensional environments, every time we start a new trajectory and correspondingly sample a new $z$, the agent will explore a different region of the state space and thus we can discover non-obvious paths to maximize the rewards. For the detailed pseudocode of this algorithm, see \hyperlink{algo-rle}{Appendix A} \textcolor{red}{(check link before submmission)}.
+
+\noindent A description of the other three algorithms can be found in \hyperlink{algo-ppo}{Appendix B} (PPO), \hyperlink{algo-noisynet}{Appendix C} (NoisyNet) and \hyperlink{algo-rnd}{Appendix D} (RND). Moreover, since the architecture of the neural networks we are using, e.g. for the feature extractor, value function approximation and policy, differ for each environment and every algorithm, we will explain them in \hyperlink{experimental-setup}{section 3.4} in detail. \textcolor{red}{(check all four links before submission)}
+
+\textcolor{red}{Apparently we're supposed to write here a description of each model or algorithm used. But we moved the description of the other 3 algorithms to the appendix.}
 
 \subsection{Datasets}
 
 \noindent Since we are dealing with a reinforcement learning task, we did not use any dataset to train our models but rather four different environments which will explain in \hyperlink{experimental-setup}{section 3.4} \textcolor{red}{(check link before submission)}.
 
 \subsection{Hyperparameters}
-For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-paper} were used. However, \cite{rle-paper} did not provide values for all available hyperparameters. For the missing hyperparameters we used the following values, that seemed reasonable to us:
+For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-paper} were used. However, \cite{rle-paper} did not provide values for all available hyperparameters. For the missing hyperparameters we used the following values, that seemed reasonable to us although we did not spend a lot of time finetuning them:
 
 \begin{table}[ht]
   \centering
@@ -225,7 +153,9 @@ For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-pa
   \label{tab:}
 \end{table}
 
-\texttt{Describe how the hyperparameter values were set and what was the source for their value (e.g. paper, code, or your guess). If there was a hyperparameter search done, be sure to include the range of hyperparameters searched over, the method used to search (e.g. manual search, random search, grid search, etc.), and the best hyperparameters found. Include the number of total experiments (e.g. hyperparameter trials). You can also include all results from that search (not just the best-found results).}
+\noindent \textcolor{red}{@Jonathan: We need your input here for IsaacLab: Are all of the hyperparameters you used the ones from the RLE paper, or did you change/add/remove some of them, if yes which ones, what are their values and did you finetune them (how, what was the tuning range, how many different values did you try out)?}
+
+\noindent \textcolor{red}{@Alessia: We need your input here for Atari: Are all of the hyperparameters you used the ones from the RLE paper, or did you change/add/remove some of them, if yes which ones, what are their values and did you finetune them (how, what was the tuning range, how many different values did you try out)?}
 
 \hypertarget{experimental-setup}{\subsection{Experimental setup and code}}
 
@@ -265,23 +195,29 @@ For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-pa
   \label{fig:environmnents}
 \end{figure}
 
+\textcolor{red}{Alessia explains Atari stuff} Atari was run 5 times per game.
+
+\textcolor{red}{Jonathan has the great pleasure of explaining now only Isaac but also the VMF stuff}
+
 \texttt{Include a description of how the experiments were set up that's clear enough a reader could replicate the setup.}
 \texttt{Include a description of the specific measure used to evaluate the experiments (e.g. accuracy, precision@K, BLEU score, etc.).}
 \texttt{Provide a link to your code or notebook (if available). Add in this section (or in the following) any reference to cloud-based providers you}
 
-\subsection{Computational requirements}
+\hypertarget{computational-requirements}{\subsection{Computational requirements}}
 
 \noindent The code for the \textsc{FourRoom} experiments was exclusively run on the CPU. For Atari, we experimented with the CPU, T4 GPU and TPU v2-8 in Google Colab. Weights \& Biases (wandb) was used for easier runtime visualization of the scores and other measures.
 
 \noindent We would like to note, however, that \cite{rle-paper} had available the HPC resources of the MIT Supercloud and the Lincoln Laboratory Supercomputing Center. Within the framework of this course, we did not have the equivalent computing power to replicate all experiments in their original form and had to restrain ourselves to a mere few of them.
 
-\texttt{Include a description of the hardware used, such as the GPU or CPU the experiments were run on. 
-For each model, include a measure of the average runtime (e.g. average time to predict labels for a given validation set with a particular batch size).
-For each experiment, include the total computational requirements (e.g. the total GPU hours spent).}\\
-\texttt{Note: You'll likely have to record this as you run your experiments, so it's better to think about it ahead of time.}
+\noindent \textcolor{red}{@Jonas: We need your input here for FourRooms: Did you run all of the experiments on your mac or did you use colab as well (which CPU or GPU was used (name))? What are the average training times e.g. per episode or global step? How many runs did you do overall (i.e. how many compute hours did you spend on this project) for each of the algorithms?}
+
+\noindent \textcolor{red}{@Alessia: We need your input here for Atari: Did you run all of the experiments on colab (which CPU or GPU was used (name))? What are the average training times e.g. per episode or global step? How many runs did you do overall (i.e. how many compute hours did you spend on this project) for each of the algorithms?}
+
+\noindent \textcolor{red}{@Jonatan: We need your input here for Isaac: Did you run all of the experiments on your mac/other laptop or did you use colab as well (which CPU or GPU was used (name))? What are the average training times e.g. per episode or global step? How many runs did you do overall (i.e. how many compute hours did you spend on this project) for each of the algorithms?}
 
 \hypertarget{sec4}{\section{Results}}
-\texttt{Start with a high-level overview of your results. Do your results support the main claims of the original paper? Keep this section as factual and precise as possible, and reserve your judgment and discussion points for the next "Discussion" section.}
+
+\noindent \texttt{Start with a high-level overview of your results. Do your results support the main claims of the original paper? Keep this section as factual and precise as possible, and reserve your judgment and discussion points for the next "Discussion" section.}
 
 
 \subsection{Results reproducing original paper}
@@ -322,15 +258,24 @@ Atari code was ready to run.
 \texttt{Be careful to put your discussion in context. For example, don't say "The maths was difficult to follow", say "The math requires advanced knowledge of calculus to follow".}
 
 \subsection{Communication with original authors}
-\texttt{Document the extent of (or lack of) communication with the original authors. To make sure the reproducibility report is a fair assessment of the original research we recommend getting in touch with the original authors. We advise you to contact them through their email displayed in the paper and by asking specific questions.}
+
+\noindent During our attempt to reproduce the code of \cite{rle-paper}, a number of questions, mainly regarding parameters and model/environment architecture, came up which we were unable to answer by ourselves, so we sent an email to Mr. Mahankali. and got a response a few days later. \textcolor{red}{Do you wish to add more detail?}
 
 \section{Conclusion}
 \texttt{Try to summarize the achievements of your project and its limits, suggesting (when appropriate) possible extensions and future works.}
 
 \section*{Member contributions}
-We send him an email got answer.
 
-\texttt{Include a section specifying how you organized the work within the group and clearly describe the contributions of each member. Make sure to properly balance the workload among the members.}
+\noindent We divided the workload among the group members as follows:
+
+\begin{itemize}
+  \item Jonatan Bella: \textsc{IsaacLab} implementation, \textcolor{red}{please let me know what you want to add}
+  \item Alessia Berarducci: \textsc{Atari} implementation, \textcolor{red}{please let me know what you want to add}
+  \item Jonas Knupp: \textsc{FourRoom} implementation, \textcolor{red}{please let me know what you want to add}
+  \item Tobias Erbacher: Report writing, project management, numpy-visualization.
+\end{itemize}
+
+\noindent However, we met regularly and assisted each other in their tasks so the split is not completely clear-cut.
 
 %%%%
 
