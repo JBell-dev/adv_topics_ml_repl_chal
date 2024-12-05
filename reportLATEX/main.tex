@@ -57,7 +57,7 @@ In this project we analyze the claims of \cite{rle-paper} in the paper \href{htt
 \section{Introduction}
 \noindent The paper we investigate deals with the problem of motivating an agent in a high-dimensional state space to explore the environment more exhaustively during training and thereby find non-obvious trajectories that can lead to higher long-term rewards for both discrete and continuous action spaces. The paper compares the new \textit{Random Latent Exploration} (RLE) technique to standard \textit{Proximal Policy Optimization} (PPO, see \cite{ppo-paper}), \textit{NoisyNet} (see \cite{noisynet-paper}) and \textit{Random Network Distillation} (RND, see \cite{rnd-paper}).
 
-\noindent Exploration is one of the major issues of Reinforcement Learning (RL) and its techniques can generally be divided into two categories: Noise-based exploration and bonus-based exploration. There are advantages and disadvantages for both of them but we always have to keep in mind that always choosing the highest short-term (local) reward does not necessarily also yield the highest long-term (global) reward, e.g. picture the environment as shown in figure \ref{fig:sample-env-1}. Here, the agent starting in the \textcolor{blue}{blue state} will always choose the small reward of $1$, i.e. going right, then move back to the initial state, then move right, and so on, dithering between these two states, instead of accepting to collect a reward of $0$ by going left in order to be able to collect the much higher reward of $100$ in the following step.
+\noindent Exploration is one of the major challenges of Reinforcement Learning (RL) and its techniques can generally be divided into two categories: Noise-based exploration and bonus-based exploration. There are advantages and disadvantages for both of them but we always have to keep in mind that always choosing the highest short-term (local) reward does not necessarily also yield the highest long-term (global) reward. E.g., picture the environment shown in figure \ref{fig:sample-env-1}. Here, the agent starting in the \textcolor{blue}{blue state} will always choose the small reward of $1$, i.e. going right, then move back to the initial state, then move right, and so on, dithering between these two states, instead of accepting to collect a reward of $0$ by going left in order to be able to collect the much higher reward of $100$ in the following step.
 
 \noindent \cite{rle-paper} use RND to represent bonus-based exploration, NoisyNet to represent noise-based exploration and standard PPO as the baseline benchmark.
 
@@ -260,13 +260,9 @@ Atari code was ready to run.
 \texttt{Be careful not to give sweeping generalizations. Something that is easy for you might be difficult for others. Put what was easy in context and explain why it was easy (e.g. code had extensive API documentation and a lot of examples that matched experiments in papers).}
 
 \subsection{What was difficult}
-\begin{itemize}
-  \item Isaac deprecated 
-  \item FourRoom env missing
-  \item Inconsistencies in the paper and lack of descriptions
-  \item Hardware constraints`'
-  \item Discrepancy between paper and code
-\end{itemize}
+A major challenge we faced was evaluating RLE across three distinct environments, each presenting unique difficulties. For the FourRoom environment, no implementation was available, requiring us to develop one from scratch. We aimed to replicate the approach used by \cite{rle-paper} as closely as possible to ensure comparability. The Atari environment, on the other hand, could be used without modification, but training agents demanded substantial computational resources. \textcolor{red}{@Jonathan add something about Isaac here.} Furthermore, in the paper, an important implementation detail, the split critic's head, is omitted. The paper itself also contains some contradicting information (\textsc{Atari} feature network size, condition to resample z) and minor errors (\textsc{FourRoom} environment description and typo in pseudocode regarding feature network update). Lastly, as RLE builds upon PPO with optimizations such as generalized advantage estimation, we had to dedicate considerable time to thoroughly understand the underlying PPO framework. 
+
+
 \texttt{List part of the reproduction study that took more time than you anticipated or you felt was difficult.}
 
 \texttt{Be careful to put your discussion in context. For example, don't say "The maths was difficult to follow", say "The math requires advanced knowledge of calculus to follow".}
