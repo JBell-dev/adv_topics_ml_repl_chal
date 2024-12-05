@@ -60,8 +60,6 @@ def parse_args():
                         help="the entity (team) of wandb's project")
     parser.add_argument("--gpu-id", type=int, default=0,
                         help="ID of GPU to use")
-    parser.add_argument("--tag", type=str, default="PPO_RLE",
-                        help="the tag used in wandb")
 
     # Algorithm specific arguments
     parser.add_argument("--env-id", type=str, default="advtop/FourRoomGridWorld-v0",
@@ -299,7 +297,7 @@ class RLEModel(nn.Module):
         goals = goals / torch.norm(goals, dim=1, keepdim=True)
         return goals
 
-    def step(self, next_done: torch.Tensor):  # Todo: removed next_ep_done: torch.Tensor since it was not used
+    def step(self, next_done: torch.Tensor):
         """
         next_done: termination indicator
         """
@@ -371,7 +369,7 @@ def plot_reward_function(feature_network, x_wall_gap_offset, y_wall_gap_offset, 
         add_room_layout_to_plot(ax, ENV_SIZE, x_wall_gap_offset, y_wall_gap_offset)
 
     cbar = fig.colorbar(im, ax=axes.ravel().tolist())
-    cbar.set_label('Reward')
+    cbar.set_label("Reward")
 
     plt.suptitle(f"Intrinsic Reward Functions at Step {global_step:,}")
 

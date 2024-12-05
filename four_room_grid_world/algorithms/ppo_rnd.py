@@ -29,7 +29,6 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_action_isaacgympy
 import argparse
 import os
-import pickle
 import random
 import time
 from distutils.util import strtobool

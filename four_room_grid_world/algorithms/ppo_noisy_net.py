@@ -1,7 +1,6 @@
 # Adopted from ppo_noisy_net atari
 import argparse
 import os
-import pickle
 import random
 import time
 from collections import deque
