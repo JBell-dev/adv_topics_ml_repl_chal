@@ -1,6 +1,4 @@
-# This file implements the PPO algorithm with RLE as the exploration method
-# The RLE intrinsic reward is based on features from the value function
-# The policy network is a CNN
+# This file contains the implementation of RLE with adaptive Von Mises latent vector distribution
 
 import argparse
 import random
@@ -35,6 +33,7 @@ os.makedirs(log_dir, exist_ok=True)
 # Setup logging with created directory
 log_filename = os.path.join(log_dir, f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
 logging.basicConfig(
+    # If you want more logging message, change the logging level
     level=logging.WARNING,
     format='%(asctime)s - %(message)s',
     handlers=[
@@ -163,7 +162,7 @@ def parse_args():
     # fmt: on
     return args
 
-#### THIS COMES FROM THE PAPER OF THE FRENCH UNI #####
+#### Taken from Pinzón and Jung (see https://hal.science/hal-04004568) #####
 def random_VMF(mu, kappa, size=None):
     """
     Von Mises-Fisher distribution sampler
@@ -388,7 +387,7 @@ class RLEModel(nn.Module):
         self.max_kappa = self.base_kappa
         
         # Success tracking for the weighting of kappa
-        self.min_samples_for_exploitation = 10  #TO PLAY AROUND
+        self.min_samples_for_exploitation = 10
         self.success_threshold_percentile = 50
         self.success_memory = deque(maxlen=100)
         self.returns_memory = deque(maxlen=100)
@@ -396,10 +395,10 @@ class RLEModel(nn.Module):
         # Running statistics for kappa
         self.running_avg_return = 0
         self.running_std_return = 0
-        self.return_momentum = 0.99  #TO PLAY AROUND
+        self.return_momentum = 0.99
         
         self.episode_count = 0 # Also for weighting
-        
+
         # Init goal
         self.goals = self.sample_goals()
         
@@ -487,7 +486,7 @@ class RLEModel(nn.Module):
         
         # Dynamic thresholding
         if len(self.returns_memory) > 0:
-            #we get the min return value according to the pass threshold percentile
+            # We get the min return value according to the pass threshold percentile
             threshold = np.percentile(list(self.returns_memory), self.success_threshold_percentile)
             logging.info(f"Success threshold: {threshold}")
 
@@ -496,20 +495,7 @@ class RLEModel(nn.Module):
             if episode_return > threshold:
                 self.success_memory.append(z.detach().cpu())
                 self.returns_memory.append(float(episode_return))
-                
-                # Here are the kappa weights
-                quality_factor = min(max(0.0, (episode_return - self.running_avg_return)) / (self.running_std_return + 1e-8), 2.0) # so more weight to quality
-                memory_factor = len(self.success_memory) / self.success_memory.maxlen # more weight to "experience"
-                consistency_factor = min(self.episode_count / 1000, 1.0)  # and warm up idea 1000 SHOULD BE PASS AS HYPERPARAMETER #TO PLAY AROUND
 
-                target_kappa = self.base_kappa * quality_factor * memory_factor * consistency_factor 
-                target_kappa = min(max(target_kappa, self.min_kappa), self.max_kappa)
-
-                # SMOOTHING KAPPA
-                # TODO: uncomment
-                # self.current_kappa = (self.kappa_momentum * self.current_kappa +
-                                    #(1 - self.kappa_momentum) * target_kappa)
-                ## Jonas
                 def average_pairwise_cosine_similarity(vectors):
                     vectors = np.array(vectors)
 
@@ -532,19 +518,9 @@ class RLEModel(nn.Module):
 
                     t = (avg_pairwise_cosine_similarity--1)/(1--1)
 
-                    #e = 3
-                    #t_exp = t ** e
-
                     self.current_kappa = (1 - t) * 0 + t * 30
 
-                ## End of Jonas
-
-                
                 logging.info(f"Added new z vector. New memory size: {len(self.success_memory)}")
-                logging.info(f"Quality factor: {quality_factor:.3f}")
-                logging.info(f"Memory factor: {memory_factor:.3f}")
-                logging.info(f"Consistency factor: {consistency_factor:.3f}")
-                logging.info(f"Target kappa: {target_kappa:.3f}")
                 logging.info(f"New kappa: {self.current_kappa:.3f}")
                 logging.info(f"Running avg return: {self.running_avg_return:.1f}")
                 logging.info(f"Running std return: {self.running_std_return:.1f}")

@@ -62,7 +62,7 @@ def plot_combined(trajectories, reward_functions, env_size, x_wall_gap_offset, y
         ax.set_ylim(env_size + 1 - 1 + 1 / 2, 0 - 1 / 2)  # Reverse order to invert y-axis
 
     cbar = fig.colorbar(im, ax=axes.ravel().tolist(), orientation="vertical")
-    cbar.set_label("Intrinsic state value", fontsize=12)
+    cbar.set_label("Intrinsic reward function", fontsize=12)
     plt.savefig(f"./plots/gridworld_value_function_trajectory.pdf", dpi=600, bbox_inches="tight")
 
 
