@@ -49,7 +49,7 @@
 \maketitle
 
 \begin{abstract}
-In this project we analyze the claims of \cite{rle-paper} in the paper \href{https://arxiv.org/abs/2407.13755}{\textsc{Random Latent Exploration for Deep Reinforcement Learning}}\footnote{Please note that there exists an older version of this paper by \cite{rle-paper-old} marked in the references with "(OLD VERSION)" which was provided by the course instructors. Only where there are significant differences we will refer to the new version.} which introduces a new technique to explore the state space and thus yield better overall agent scores. Moreover, we intend to reproduce the results obtained by the authors, expand on the findings and verify that the results are not cherry-picked. \textcolor{red}{<write the main findings of our project>} This report is prepared as part of the course project in \textit{Advanced Topics in Machine Learning} at \textit{Università della Svizzera italiana} in the autumn semester of 2024.
+In this project we analyze the claims of \cite{rle-paper} in the paper \href{https://arxiv.org/abs/2407.13755}{\textsc{Random Latent Exploration for Deep Reinforcement Learning}}\footnote{Please note that there exists an older version of this paper by \cite{rle-paper-old} marked in the references with "(OLD VERSION)" which was provided by the course instructors. Only where there are significant differences we will refer to the new version.} which introduces a new technique to explore the state space and thus yield better overall agent scores. Moreover, we intend to reproduce the results obtained by the authors, expand on the findings and verify that the results are not cherry-picked. \textcolor{red}{<write the main findings of our project>} This report is prepared as part of the course project in \textit{Advanced Topics in Machine Learning} at \textit{Università della Svizzera italiana} in the autumn semester of 2024. \textcolor{red}{@ Update once we have all the findings}
 \end{abstract}
 
 %%%%
@@ -86,6 +86,7 @@ In this project we analyze the claims of \cite{rle-paper} in the paper \href{htt
 \label{sec:claims}
 
 \noindent The main quantifiable claims made by \cite{rle-paper} consist of the following:
+\textcolor{red}{@Tobias Move untested claims to appendix (make sure that numbering its sensible)}
 
 \begin{enumerate}
     \item In the abstract, \cite{rle-paper} claim "[...] RLE exhibits higher overall scores across all of the tasks than other approaches, including action-noise and randomized value exploration", which they later specify for both "[...] discrete and continuous control tasks." They refer to the tasks being the \textsc{Atari}, \textsc{IssacGym} and \textsc{FourRoom} environments. The benchmark approaches are standard PPO, NoisyNet and RND.
@@ -110,29 +111,20 @@ In this project we analyze the claims of \cite{rle-paper} in the paper \href{htt
 \noindent Unfortunately, due to time constraints we are not able to test all of these claims, instead we focus on claims 1, 2, 3, and 6 in this study.
 
 \section{Methodology}
-
-\noindent The authors of the paper at hand published code in a GitHub repository\footnote{\href{https://github.com/Improbable-AI/random-latent-exploration}{https://github.com/Improbable-AI/random-latent-exploration}}. This repository contains code for the \textsc{Atari} and \textsc{IsaacGym}\footnote{Please note that the \textsc{IsaacGym} environment is deprecated and we are using \textsc{IsaacLab} instead, however we will refer to it as \textsc{IsaacGym} for reasons of continuity.} environments with the 4 algorithms (RLE, PPO, RND, NoisyNet). However, the authors did not provide any code for the \textsc{FourRoom} environment, so this environment was implemented by us using the gymnasium library introduced by \cite{gymnasium-paper} together with our adaptation of the code for PPO, NoisyNet and RLE algorithms from the \textsc{Atari} environment, while we adapted the RLE code from the \textsc{IsaacGym} environment. A wrapper to record the state visitation counts per environment was also implemented.
-
-\noindent Before we adapted RLE from the existing implementation for the \textsc{Atari} environment, we implemented it based on the description in \cite{rle-paper}. However, the paper lacked a lot of details present in the \textsc{Atari} code (e.g. split critic's head, residual connection) so that we decided to proceed with the adapted code to have consistent results over the different environments. In general, after coding the scripts, we uploaded the files to \href{https://colab.research.google.com/}{Google Colab}, of which we used/tested the available TPU/GPU for the training (for more detail see section \hyperlink{computational-requirements}{3.5} \textcolor{red}{check link before submission}), and linked a \href{https://drive.google.com}{Google Drive} to save the models, as well as a \href{https://wandb.ai}{Weights \& Biases} workspace for a live overview of the results and various parameters while the models were still training. Regarding documentation we were guided mostly by the paper at hand and the official environment documentation, as well as other papers that we found along the way.
-
-\subsection{Model descriptions}
-
-\noindent Random Latent Exploration --- The new idea that the authors \cite{rle-paper} present is to augment the reward function by adding a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F(s, z)$ or intrinsic reward function, where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$. The authors \cite{rle-paper} claim that RLE's efficiency is not significantly affected by the choice of $P_{\textbf{z}}$. If at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi(. | s_{t})$ from policy $\pi$, then it will obtain the task reward $r (s_{t}, a_{t})$. In RLE, we train a so-called latent-conditioned policy network $\pi(. | s, \textbf{z})$ and latent-conditioned value network $V^{\pi}(s, \textbf{z})$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
+Random Latent Exploration --- The new idea that the authors \cite{rle-paper} present is to augment the reward function by adding a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F(s, z)$ or intrinsic reward function, where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$. The authors \cite{rle-paper} claim that RLE's efficiency is not significantly affected by the choice of $P_{\textbf{z}}$. If at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi(. | s_{t})$ from policy $\pi$, then it will obtain the task reward $r (s_{t}, a_{t})$. In RLE, we train a so-called latent-conditioned policy network $\pi(. | s, \textbf{z})$ and latent-conditioned value network $V^{\pi}(s, \textbf{z})$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
 
 \begin{equation}
     V^{\pi}(s, \textbf{z}) \approx \mathbb{E}_{\pi} \left[\sum_{t = 0}^{\infty} \gamma^{t} \left(r(s_{t}, a_{t}) + F(s_{t+1}, \textbf{z})\right) \right]
     \label{eq:value_func}
 \end{equation}
 
-\noindent In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F(s_{t+1}, \textbf{z}) =  \boldsymbol{\phi}(s) \cdot \textbf{z}$ where $\boldsymbol{\phi}(s): \mathcal{S} \rightarrow \mathbb{R}^{d}$ is a feature extraction network. The feature network is updated as a linear combination of the old feature network's weights and the weights of the value network\footnote{In the pseudocode algorithm in line 19 on page 25, in the mathematical formulation, the authors state that the feature network is updated as a linear combination of the old feature network's weights and the policy network's weights. We contacted the authors, and they confirmed that it should read $\phi \leftarrow \tau \cdot V^\phi + (1 - \tau ) \cdot \phi$ (i.e., the value network should be used, not the policy network). However, they state it would be interesting to explore which network should be used to update the feature network.}. Both $\boldsymbol{\phi}$ and $\textbf{z}$ are $d$-dimensional vectors. Note that although equation \ref{eq:value_func} is presented by \cite{rle-paper}, in the implementation they introduce an intrinsic and extrinsic reward coefficient. In the experiments they choose intrinsic reward coefficient $\ll$ extrinsic reward coefficient. Thus, they are not directly optimizing equation \ref{eq:value_func} in the experiments. Furthermore, on page 3 the authors state that $\vz$ "is resampled at the start of each trajectory". However, in the pseudocode on page 15 the authors note that $\vz$ is resampled at the end of each trajectory or after a certain number of steps has passed. Since the authors implemented the latter, more general, case we adopt the latter approach for our experiments. The authors split the critic's head into two: one head predicts the intrinsic value function, the other head predicts the extrinsic value function. Figure \ref{fig:rle-architecture} depicts how the action logits, intrinsic value, and extrinsic value for a given observation and $\vz$ is calculated. Note the residual connection from the first element-wise addition to the second element-wise addition. There is no mention of this residual connection in the paper. However, it is present in the provided code for the \textsc{Atari} environment. \textcolor{red}{@Tobias Where is above?} To continue the example from above, in figure \ref{fig:sample-env-2} the agent would prioritize to go left as this promises the greater reward. It is not hard to imagine that for higher dimensional environments, every time we start a new trajectory and correspondingly sample a new $z$, the agent will explore a different region of the state space and thus we can discover non-obvious paths to maximize the rewards. For the detailed pseudocode of this algorithm, see \hyperlink{algo-rle}{Appendix A} \textcolor{red}{(check link before submmission)}.
+\noindent In \eqref{eq:value_func}, $\gamma$ describes the discount factor and $F(s_{t+1}, \textbf{z}) =  \boldsymbol{\phi}(s) \cdot \textbf{z}$ where $\boldsymbol{\phi}(s): \mathcal{S} \rightarrow \mathbb{R}^{d}$ is a feature extraction network. The feature network is updated as a linear combination of the old feature network's weights and the weights of the value network\footnote{In the pseudocode algorithm in line 19 on page 25, in the mathematical formulation, the authors state that the feature network is updated as a linear combination of the old feature network's weights and the policy network's weights. We contacted the authors, and they confirmed that it should read $\phi \leftarrow \tau \cdot V^\phi + (1 - \tau ) \cdot \phi$ (i.e., the value network should be used, not the policy network). However, they state it would be interesting to explore which network should be used to update the feature network.}. Both $\boldsymbol{\phi}$ and $\textbf{z}$ are $d$-dimensional vectors. Note that although equation \ref{eq:value_func} is presented by \cite{rle-paper}, in the implementation they introduce an intrinsic and extrinsic reward coefficient. In the experiments they choose intrinsic reward coefficient $\ll$ extrinsic reward coefficient. Thus, they are not directly optimizing equation \ref{eq:value_func} in the experiments. Furthermore, on page 3 the authors state that $\vz$ "is resampled at the start of each trajectory". However, in the pseudocode on page 15 the authors note that $\vz$ is resampled at the end of each trajectory or after a certain number of steps has passed. Since the authors implemented the latter, more general, case we adopt the latter approach for our experiments. The authors split the critic's head into two: one head predicts the intrinsic value function, the other head predicts the extrinsic value function. Figure \ref{fig:rle-architecture} depicts how the action logits, intrinsic value, and extrinsic value for a given observation and $\vz$ is calculated. Note the residual connection from the first element-wise addition to the second element-wise addition. There is no mention of this residual connection in the paper. However, it is present in the provided code for the \textsc{Atari} environment. To continue the example from the introduction, in figure \ref{fig:sample-env-2} the agent would prioritize to go left as this promises the greater reward. It is not hard to imagine that for higher dimensional environments, every time we start a new trajectory and correspondingly sample a new $z$, the agent will explore a different region of the state space and thus we can discover non-obvious paths to maximize the rewards. For the detailed pseudocode of this algorithm, see \hyperlink{algo-rle}{Appendix A} \textcolor{red}{(check link before submmission)}.
 
 \noindent A description of the other three algorithms can be found in \hyperlink{algo-ppo}{Appendix B} (PPO), \hyperlink{algo-noisynet}{Appendix C} (NoisyNet) and \hyperlink{algo-rnd}{Appendix D} (RND). Moreover, since the architecture of the neural networks we are using, e.g. for the feature extractor, value function approximation and policy, differ for each environment and every algorithm, we will explain them in \hyperlink{experimental-setup}{section 3.4} in detail. \textcolor{red}{(check all four links before submission)}
 
-\textcolor{red}{Apparently we're supposed to write here a description of each model or algorithm used. But we moved the description of the other 3 algorithms to the appendix.}
+%\subsection{Datasets}
 
-\subsection{Datasets}
-
-\noindent Since we are dealing with a reinforcement learning task, we did not use any dataset to train our models but rather four different environments which will explain in \hyperlink{experimental-setup}{section 3.4} \textcolor{red}{(check link before submission)}.
+%\noindent Since we are dealing with a reinforcement learning task, we did not use any dataset to train our models but rather four different environments which will explain in \hyperlink{experimental-setup}{section 3.4} \textcolor{red}{(check link before submission)}.
 
 \subsection{Hyperparameters}
 For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-paper} were used. However, \cite{rle-paper} did not provide values for all available hyperparameters. For the missing hyperparameters we used the following values, that seemed reasonable to us although we did not spend a lot of time finetuning them:
@@ -153,23 +145,38 @@ For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-pa
   \label{tab:}
 \end{table}
 
-\noindent \textcolor{red}{@Jonathan: We need your input here for IsaacLab: Are all of the hyperparameters you used the ones from the RLE paper, or did you change/add/remove some of them, if yes which ones, what are their values and did you finetune them (how, what was the tuning range, how many different values did you try out)?}
+\noindent \textcolor{red}{@Alessia: We need your input here for Atari: Are all of the hyperparameters you used the ones from the RLE paper, or did you change/add/remove some of them, if yes which ones, what are their values and did you finetune them (how, what was the tuning range, how many different values did you try out)? Certainly, the z resampling frequency was changed.}
 
-\noindent \textcolor{red}{@Alessia: We need your input here for Atari: Are all of the hyperparameters you used the ones from the RLE paper, or did you change/add/remove some of them, if yes which ones, what are their values and did you finetune them (how, what was the tuning range, how many different values did you try out)?}
+\noindent \textcolor{red}{@Jonathan: We need your input here for IsaacLab: Are all of the hyperparameters you used the ones from the RLE paper, or did you change/add/remove some of them, if yes which ones, what are their values and did you finetune them (how, what was the tuning range, how many different values did you try out)?}
 
 \hypertarget{experimental-setup}{\subsection{Experimental setup and code}}
 
 \noindent The code for our implementations can be found in GitHub\footnote{\href{https://github.com/jonupp/adv_topics_ml_repl_chal}{https://github.com/jonupp/adv\_topics\_ml\_repl\_chal} \textcolor{red}{Change github}}. There are three types of environments in use on which we run our RL algorithms which are depicted in figure \ref{fig:environmnents}. 
 
+
+\noindent The authors of the paper at hand published code in a GitHub repository\footnote{\href{https://github.com/Improbable-AI/random-latent-exploration}{https://github.com/Improbable-AI/random-latent-exploration}}. This repository contains code for the \textsc{Atari} and \textsc{IsaacGym}\footnote{Please note that the \textsc{IsaacGym} environment is deprecated and we are using \textsc{IsaacLab} instead, however we will refer to it as \textsc{IsaacGym} for reasons of continuity.} environments with the 4 algorithms (RLE, PPO, RND, NoisyNet). 
+
+\textcolor{red}{@Alessia: The information from the following two sections need to be integrated in the corresponding subsubsections}
+
+In general, after coding the scripts, we uploaded the files to \href{https://colab.research.google.com/}{Google Colab}, of which we used/tested the available TPU/GPU for the training (for more detail see section \hyperlink{computational-requirements}{3.5} \textcolor{red}{check link before submission}), and linked a \href{https://drive.google.com}{Google Drive} to save the models, as well as a \href{https://wandb.ai}{Weights \& Biases} workspace for a live overview of the results and various parameters while the models were still training. Regarding documentation we were guided mostly by the paper at hand and the official environment documentation, as well as other papers that we found along the way.
+
 \subsubsection{Atari}
+\textcolor{red}{@Tobias extend description of experiments etc.}
+
+\textcolor{red}{@Who it may concern: trajectory length longer in RLE, compensating lower rewards?}
+
 \noindent \textsc{Atari} represents "discrete action space deep RL benchmark". The human normalized scores are computed according to \textcolor{red}{formula: Agent57: Outperforming the Atari Human Benchmark} and the human scores are taking from
+
+\noindent Moreover we have an example of the \textsc{Atari} environments in figure \ref{fig:sample-env-atari}, namely the \textsc{Alien-v5} game. In this environment, the agent perceives the $4$ most recent $84\times84$ grayscale frames.
 
 \noindent \textcolor{red}{Do we need to explain the environments as well?}
 \textcolor{red}{Alessia explains Atari stuff} Atari was run 5 times per game.
 
 
 \subsubsection{FourRoom}
-\noindent Figure \ref{fig:sample-env-fourroom} shows the \textsc{FourRoom} environment where we have $50\times50 + 4$ states\footnote{In \cite{rle-paper}, the authors claim that there are $50\times 50$ states. We contacted the authors, and they confirmed that it should read $50\times 50 + 4$ states.} which are divided into four rooms of size $25\times25$ and $4$ holes in the walls located at positions $10$ horizontally and $5$ vertically, starting the count at $1$ from the inner corners. Exploring the state space, beginning from the initial state marked in \textcolor{red}{red}, becomes a deep exploration task due to the holes being only $1$ "pixel" wide. However, if we want to incentivize the agent to find a reward, then we can put it at the goal position marked in \textcolor{green}{green}. The \textsc{FourRoom} environment was implemented such that we can pass a flag to the environment's constructor to choose whether the environment is reward-free or has the goal in the bottom-left corner. At every step, the agent can move one step vertically or horizontally, but if it would run into a wall it chooses to remain in place. \cite{rle-paper} refer to \cite{grid-world-paper} when introducing the \textsc{FourRoom} environment. \cite{grid-world-paper} use action stochasticity. We asked Mr. Mahankali whether they also used action stochasticity, and they stated that they did not use action stochasticity in their experiments. 
+Figure \ref{fig:sample-env-fourroom} shows the \textsc{FourRoom} environment where we have $50\times50 + 4$ states\footnote{In \cite{rle-paper}, the authors claim that there are $50\times 50$ states. We contacted the authors, and they confirmed that it should read $50\times 50 + 4$ states.} which are divided into four rooms of size $25\times25$ and $4$ holes in the walls located at positions $10$ horizontally and $5$ vertically, starting the count at $1$ from the inner corners. Exploring the state space, beginning from the initial state marked in \textcolor{red}{red}, becomes a deep exploration task due to the holes being only $1$ "pixel" wide. However, if we want to incentivize the agent to find a reward, then we can put it at the goal position marked in \textcolor{green}{green}. The \textsc{FourRoom} environment was implemented such that we can pass a flag to the environment's constructor to choose whether the environment is reward-free or has the goal in the bottom-left corner. At every step, the agent can move one step vertically or horizontally, but if it would run into a wall it chooses to remain in place. \cite{rle-paper} refer to \cite{grid-world-paper} when introducing the \textsc{FourRoom} environment. \cite{grid-world-paper} use action stochasticity. We asked Mr. Mahankali whether they also used action stochasticity, and they stated that they did not use action stochasticity in their experiments. 
+
+The authors did not provide any code for the \textsc{FourRoom} environment, so this environment was implemented by us using the gymnasium library introduced by \cite{gymnasium-paper} together with our adaptation of the code for PPO, NoisyNet and RLE algorithms from the \textsc{Atari} environment, while we adapted the RLE code from the \textsc{IsaacGym} environment. A wrapper to record the state visitation counts per environment was also implemented. Before we adapted RLE from the existing implementation for the \textsc{Atari} environment, we implemented it based on the description in \cite{rle-paper}. However, the paper lacked a lot of details present in the \textsc{Atari} code (e.g., split critic's head, residual connection) so that we decided to proceed with the adapted code to have consistent results over the different environments. 
 
 First we investigate how RLE performs in a reward-free setting in comparison to PPO, NoisyNet, and RND. \cite{rle-paper} claims that RLE shows good explorative behavior based on a single heatmap of state visitation counts. To assess whether this result is expected or exceptional we trained each algorithm 20 times. Since it is not reasonable to compare 20 state visitation count heatmaps we used the Shannon entropy, introduced by \cite{shannon-entropy-paper}, of the state visitation counts as a proxy for how well an agent explored the environment. With increasing entropy the distribution of the state visitation counts becomes more uniform. Thus, the higher the entropy the better the explorative behavior. 
 
@@ -181,9 +188,9 @@ We also tested to what degree RLE is indifferent to the distribution of the late
 
 
 \subsubsection{IsaacGym}
-\textcolor{red}{Jonathan has the great pleasure of explaining now only Isaac but also the VMF stuff}
+\textcolor{red}{@Jonathan explain environment and experiments (NOT RESULT)}
 
-\noindent Moreover we have an example of the \textsc{Atari} environments in figure \ref{fig:sample-env-atari}, namely the \textsc{Alien-v5} game. In this environment, the agent perceives the $4$ most recent $84\times84$ grayscale frames. In the \textsc{IsaacGym} environment on the other hand, \textcolor{red}{<finish the environment description later>}.
+
 
 \begin{figure}
   \centering
@@ -212,24 +219,27 @@ We also tested to what degree RLE is indifferent to the distribution of the late
 \end{figure}
 
 
+\subsubsection{Adaptive Von Mises-Fisher (Simple)}
+\textcolor{red}{@Jonas finish}
+\cite{rle-paper} suggest it might be worthwhile to explore using a latent vector distribution that changes during the training. Our hypothesis is that at the start of the training the latent vector distribution $P_{\textbf{z}}$ should give diverse $\textbf{z}$ since the agent should explore the environment. However, with increasing training progress, the agent should put less emphasis on exploration. We use the Von Mises-Fisher distribution with the parameters $\vmu$, the mean direction, and $\kappa$, the concentration to model $P_{\textbf{z}}$. The idea is to slowly change $\vmu$ during the training, so that it points to a point in the space such that $P_{\textbf{z}}$ samples $\mathbf{z}$ values that yield high returns. Furthermore, $\kappa$ should be slowly increased during the training to increase the probability to sample $\mathbf{z}$ close to $\vmu$. Since PyTorch does not provide an implementation to sample from this distribution, we used the implementation described by \cite{von-mises-fisher-paper} that is based on rejection sampling. We maintain a queue of $\textbf{z}$ values with good episodic return and a queue with the respective returns. After every finished episode, the queues are updated if necessary. We then update $\vmu$ as a linear combination of the $\textbf{z}$ values in the success memory. The weighting is done using the returns in the returns memory. The $\kappa$ should be large if the model has converged to a $\vmu$ that reliably gives $\textbf{z}$ values with high return. Thus, $\kappa$ is updated by linearly interpolation between 0 and 30. The weight is the average pairwise cosine similarity between the $\textbf{z}$ values in the success memory.
 
-\texttt{Include a description of how the experiments were set up that's clear enough a reader could replicate the setup.}
-\texttt{Include a description of the specific measure used to evaluate the experiments (e.g. accuracy, precision@K, BLEU score, etc.).}
-\texttt{Provide a link to your code or notebook (if available). Add in this section (or in the following) any reference to cloud-based providers you}
+
+\subsubsection{Adaptive Von Mises-Fisher (LSTM)}
+\textcolor{red}{@Jonathan}
+
 
 \hypertarget{computational-requirements}{\subsection{Computational requirements}}
-
-\noindent The code for the \textsc{FourRoom} experiments was exclusively run on the CPU. For Atari, we experimented with the CPU, T4 GPU and TPU v2-8 in Google Colab. Weights \& Biases (wandb) was used for easier runtime visualization of the scores and other measures.
-
-\noindent We would like to note, however, that \cite{rle-paper} had the HPC resources of the MIT Supercloud and the Lincoln Laboratory Supercomputing Center available. Within the framework of this course, we did not have the equivalent computing power to replicate all experiments in their original form and had to restrain ourselves to a mere few of them.
-
 All \textsc{FourRoom} experiments were performed on an Apple M2 Pro with 16 GB RAM. Every experiment was conducted in the reward-free environment and in the environment with a goal. Every algorithm and every RLE variant with different latent vector distribution was run 20 times with different seeds in each of the two environments. This resulted in a total of 280 runs. It took ca. 1 minute to do a single PPO run, ca. 1 minute and 20 seconds to do a single NoisyNet run, ca. 2 minutes to do a single RLE run, and ca. 2 minutes and 20 seconds to do a single RND run. The experiments for the different algorithms took at total time of ca. 4.4 hours. In addition, we trained RLE with three different latent vector distributions (apart from the standard normal distribution). These experiments took ca. 4 hours. Thus, the total computing time for all \textsc{FourRoom} experiments amounts to ca. 8.4 hours.
 
 \noindent \textcolor{red}{@Alessia: We need your input here for Atari: Did you run all of the experiments on colab (which CPU or GPU was used (name))? What are the average training times e.g. per episode or global step? How many runs did you do overall (i.e. how many compute hours did you spend on this project) for each of the algorithms?}
+\noindent For Atari, we experimented with the CPU, T4 GPU and TPU v2-8 in Google Colab. Weights \& Biases (wandb) was used for easier runtime visualization of the scores and other measures.
 
 \noindent \textcolor{red}{@Jonatan: We need your input here for Isaac: Did you run all of the experiments on your mac/other laptop or did you use colab as well (which CPU or GPU was used (name))? What are the average training times e.g. per episode or global step? How many runs did you do overall (i.e. how many compute hours did you spend on this project) for each of the algorithms?}
 
+We would like to note, however, that \cite{rle-paper} had the HPC resources of the MIT Supercloud and the Lincoln Laboratory Supercomputing Center available. Within the framework of this course, we did not have the equivalent computing power to replicate all experiments in their original form and had to restrain ourselves to a mere few of them.
+
 \hypertarget{sec4}{\section{Results}}
+\textcolor{red}{all figures in appendix as first item}
 
 \noindent \texttt{Start with a high-level overview of your results. Do your results support the main claims of the original paper? Keep this section as factual and precise as possible, and reserve your judgment and discussion points for the next "Discussion" section.}
 
@@ -239,21 +249,34 @@ All \textsc{FourRoom} experiments were performed on an Apple M2 Pro with 16 GB R
 \texttt{For example, an experiment training and evaluating a model on a dataset may support a claim that that model outperforms some baseline.}
 \texttt{Logically group related results into subsections.}
 
-\subsubsection{Result 1}
-\subsubsection{Result 2}
+\subsubsection{FourRoom}
+\textcolor{red}{@Jonas}
+
+\subsubsection{Atari}
+\textcolor{red}{@Alessia}
+
+\subsubsection{IsaacGym}
+\textcolor{red}{@Jonathan}
+
 
 \subsection{Results beyond original paper}
 \texttt{Often papers don't include enough information to fully specify their experiments, so some additional experimentation may be necessary. For example, it might be the case that batch size was not specified, and so different batch sizes need to be evaluated to reproduce the original results. Include the results of any additional experiments here. Note: this won't be necessary for all reproductions.}
  
-\subsubsection{Additional Result 1}
-\subsubsection{Additional Result 2}
+\subsubsection{Adaptive Von Mises-Fisher}
+\textcolor{red}{@Jonathan}
+
 
 \section{Discussion}
+\textcolor{red}{Discuss claims}
+
 
 \texttt{Give your judgment on if your experimental results support the claims of the paper. Discuss the strengths and weaknesses of your approach - perhaps you didn't have time to run all the experiments, or perhaps you did additional experiments that further strengthened the claims in the paper.}
 
 \subsection{What was easy}
-Atari code was ready to run. 
+\textcolor{red}{@Tobias}
+
+- Atari code was ready to run. 
+- The concept of the paper is not hard to understand (also mathematically)
 
 \texttt{Give your judgment of what was easy to reproduce. Perhaps the author's code is clearly written and easy to run, so it was easy to verify the majority of original claims. Or, the explanation in the paper was really easy to follow and put into code.}
 
@@ -263,13 +286,9 @@ Atari code was ready to run.
 A major challenge we faced was evaluating RLE across three distinct environments, each presenting unique difficulties. For the FourRoom environment, no implementation was available, requiring us to develop one from scratch. We aimed to replicate the approach used by \cite{rle-paper} as closely as possible to ensure comparability. The Atari environment, on the other hand, could be used without modification, but training agents demanded substantial computational resources. \textcolor{red}{@Jonathan add something about Isaac here.} Furthermore, in the paper, an important implementation detail, the split critic's head, is omitted. The paper itself also contains some contradicting information (\textsc{Atari} feature network size, condition to resample z) and minor errors (\textsc{FourRoom} environment description and typo in pseudocode regarding feature network update). Lastly, as RLE builds upon PPO with optimizations such as generalized advantage estimation, we had to dedicate considerable time to thoroughly understand the underlying PPO framework. 
 
 
-\texttt{List part of the reproduction study that took more time than you anticipated or you felt was difficult.}
-
-\texttt{Be careful to put your discussion in context. For example, don't say "The maths was difficult to follow", say "The math requires advanced knowledge of calculus to follow".}
-
 \subsection{Communication with original authors}
 
-\noindent During our replication study, a number of questions, mainly regarding parameters and model/environment architecture, came up which we were unable to answer by ourselves, so we sent an email to Mr. Mahankali. and got a response a few days later. Our questions and Mr. Mahankali's answers will be provided upon request. \textcolor{red}{Do you wish to add more detail?}
+\noindent During our replication study, a number of questions, mainly regarding parameters and model/environment architecture, came up which we were unable to answer by ourselves, so we sent an email to Mr. Mahankali. and got a response a few days later. Our questions and Mr. Mahankali's answers will be provided upon request. 
 
 \section{Conclusion}
 \texttt{Try to summarize the achievements of your project and its limits, suggesting (when appropriate) possible extensions and future works.}
