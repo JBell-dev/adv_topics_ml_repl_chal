@@ -1,4 +1,72 @@
 \appendix
+
+\section{Figures}
+Since we could not fit all figures in eight pages, we include them here.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/gridworld_mean_entropy_state_visitation_algorithms.pdf}
+  \caption{Mean entropy of state visitation counts over the training steps, with the shaded area representing the 95\% confidence interval for different algorithms. By the end of training, RLE achieves the highest entropy and the narrowest confidence interval.}
+  \label{fig:gridworld-entropy-algorithms}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/gridworld_mean_game_score_algorithms.pdf}
+  \caption{Mean game score of different algorithms. RLE clearly outperforms the other algorithms.}
+  \label{fig:gridworld-score-algorithms}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/gridworld_mean_entropy_state_visitation_distributions.pdf}
+  \caption{Mean entropy of state visitation counts over the training steps, with the shaded area representing the 95\% confidence interval for RLE variants with different latent vector distributions. The standard uniform and exponential variants explore less than the other two variants.}
+  \label{fig:gridworld-entropy-distributions}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/gridworld_mean_game_score_distributions.pdf}
+  \caption{Mean game score of RLE variants with different latent vector distributions. The figure shows substantial differences in the mean game score across the different RLE variants.}
+  \label{fig:gridworld-score-distributions}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/gridworld_heatmaps_no_goal_algorithms.pdf}
+  \caption{For each algorithm, the run with the highest entropy over the state visitation counts was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the algorithms after training for 2.5M timesteps in the reward-free environment. The start location is in the top right cell. RLE achieves the best state visitation coverage.}
+  \label{fig:gridworld-heatmap-nogoal-algorithms}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/gridworld_heatmaps_goal_algorithms.pdf}
+  \caption{For each algorithm, the run with the highest game score was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the algorithms after training for 2.5M timesteps in the environment with a goal. The start location is in the top right cell and the goal location in the bottom left cell.}
+  \label{fig:gridworld-heatmap-goal-algorithms}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/gridworld_heatmaps_no_goal_distributions.pdf}
+  \caption{For each RLE variant with different latent vector distribution, the run with the highest entropy over the state visitation counts was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the RLE variants with different latent vector distribution after training for 2.5M timesteps in the reward-free environment. The RLE variants where the latent vector distribution is a standard normal and the Von Mises distribution achieve the best state visitation coverage.}
+  \label{fig:gridworld-heatmap-nogoal-distributions}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/gridworld_heatmaps_goal_distributions.pdf}
+  \caption{For each RLE variant with different latent vector distribution, the run with the highest game score was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the RLE variants with different latent vector distribution after training for 2.5M timesteps in the environment with a goal. The start location is in the top right cell and the goal location in the bottom left cell. All RLE variants reach the goal but the standard normal and Von Mises variants also explore most of the state space.}
+  \label{fig:gridworld-heatmap-goal-distributions}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/gridworld_value_function_trajectory.pdf}
+  \caption{Trajectory and intrinsic reward function for four different $\textbf{z}$ values. The trajectories generally tend towards regions with high intrinsic reward. The example is not cherry-picked. This behavior was observed for almost every figure we generated.}
+  \label{fig:gridworld-value-function-trajectories}
+\end{figure}
+
+
 \section{Random Latent Exploration}
 
 \noindent The architecture of our RLE implementation can be found in figure \ref{fig:rle-architecture}:
