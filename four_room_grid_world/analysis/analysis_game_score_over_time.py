@@ -85,12 +85,11 @@ def plot_game_score_algorithms(api):
     for i in range(len(tags)):
         data = np.array([get_plot_data(row) for row in data_per_algorithm[tags[i]]])
         plt.plot(steps, data[:, 0], label=NAME_MAPPER[tags[i]], color=COLOR_MAPPER[tags[i]], linewidth=2)
-        #plt.fill_between(steps, data[:, 1], data[:, 2], color=colors[i], alpha=0.2)
 
     plt.ylim(bottom=0)
     plt.ylim(top=1)
     plt.xlabel("Global Step", fontsize=12)
-    plt.ylabel("Game Score", fontsize=12)
+    plt.ylabel("Mean Game Score", fontsize=12)
     plt.legend(fontsize=12)
     plt.grid(True)
     plt.savefig("./plots/gridworld_mean_game_score_algorithms.pdf", dpi=600, bbox_inches="tight")
@@ -112,12 +111,11 @@ def plot_game_score_distributions(api):
     for i in range(len(tags)):
         data = np.array([get_plot_data(row) for row in data_per_algorithm[tags[i]]])
         plt.plot(steps, data[:, 0], label=NAME_MAPPER[tags[i]], color=COLOR_MAPPER[tags[i]], linewidth=2)
-        #plt.fill_between(steps, data[:, 1], data[:, 2], color=colors[i], alpha=0.2)
 
     plt.ylim(bottom=0)
     plt.ylim(top=1)
     plt.xlabel("Global Step", fontsize=12)
-    plt.ylabel("Game Score", fontsize=12)
+    plt.ylabel("Mean Game Score", fontsize=12)
     plt.legend(fontsize=12)
     plt.grid(True)
     plt.savefig("./plots/gridworld_mean_game_score_distributions.pdf", dpi=600, bbox_inches="tight")
