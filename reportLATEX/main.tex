@@ -85,30 +85,18 @@ In this project we analyze the claims of \cite{rle-paper} in the paper \href{htt
 \section{Scope of reproducibility}
 \label{sec:claims}
 
-\noindent The main quantifiable claims made by \cite{rle-paper} consist of the following:
-\textcolor{red}{@Tobias Move untested claims to appendix (make sure that numbering its sensible)}
+\noindent The main quantifiable claims made by \cite{rle-paper} that we will be testing consist of the following:
 
 \begin{enumerate}
     \item In the abstract, \cite{rle-paper} claim "[...] RLE exhibits higher overall scores across all of the tasks than other approaches, including action-noise and randomized value exploration", which they later specify for both "[...] discrete and continuous control tasks." They refer to the tasks being the \textsc{Atari}, \textsc{IssacGym} and \textsc{FourRoom} environments. The benchmark approaches are standard PPO, NoisyNet and RND.
     \item Moreover, "[...] introducting randomness to rewards influences the [... agent] to produce diverse behaviors" \citep{rle-paper} when this randomness is used to condition the policy and value networks, which manifests itself in an incentive to explore random (and thus in aggregate lager) parts of the state space.
     \item For the discrete-action discrete-states \textsc{FourRoom} environment absent of a goal reward, the authors claim that PPO's state visitation centers around the initial room (top right) concluding that action-noise methods cannot conduct deep exploration whereas RLE, NoisyNet and RND well reach across the four rooms and thus perform deep exploration.
-    \item For the more challenging discrete-action continuous-states\footnote{While the input to the action sampler is a discrete $84\times84\times4$ tensor representing the pixels it perceives, in practice \textsc{Atari} games are considered to be continuous-state environments due to the high-dimensional state space and visual complexity of each frame.} \textsc{Atari} environment, the authors claim that, in the majority of games, RLE achieves a higher IQM of the human-normalized score with a probability of $67\%$, $72\%$ and $71\%$, compared to PPO, NoisyNet and RND, respectively.\footnote{The authors mention that for the \textsc{Montezuma's Revenge} game RLE underperforms likely due to RLE not factoring in bonus-based exploration.}
-    \item In the continuous-action continuous-states \textsc{IsaacGym} environment, the authors claim that, with a probability of around $83\%$ for PPO, ca. $66\%$ for NoisyNet and roughly $65\%$ for RND, RLE improves performance in all of their selected \textsc{IsaacGym} tasks.
+    \item RLE performance improves over PPO irrespective of the distribution used to sample the 8-dim random latent vector.
 \end{enumerate}
 
-\noindent Our findings regarding these claims will be presented in \hyperlink{sec4}{section 4} \textcolor{red}{Check link before submission}. Moreover, \cite{rle-paper} performed ablation studies and claim:
+\noindent Our findings regarding these claims will be presented in \hyperlink{sec4}{section 4} \textcolor{red}{Check link before submission}. Please note that there are more claims made by the authors, however, due to time constraints we are not able to test all of them, the remaining ones are shown in \hyperlink{untested-claims}{appendix B} \textcolor{red}{check link before submission.}
 
-\begin{enumerate}
-  \setcounter{enumi}{5}
-  \item RLE performance improves over PPO irrespective of the distribution used to sample the 8-dim random latent vector.
-  \item RLE performance compared to PPO is invariant under a change in the dimensionality of the random latent vector.
-  \item RLE performance deteriorates if the policy and value networks are not conditioned on the random latent vector.
-  \item RLE performance improves slightly if a learning feature network is used in comparison to when the feature network has constant weights when evaluated on the Atari games.
-  \item RLE performance is insensitive to the feature extractor architecture.
-\end{enumerate}
-
-
-\noindent Unfortunately, due to time constraints we are not able to test all of these claims, instead we focus on claims 1, 2, 3, and 6 in this study.
+%instead we focus on claims 1, 2, 3, and 6 in this study.
 
 \section{Methodology}
 Random Latent Exploration --- The new idea that the authors \cite{rle-paper} present is to augment the reward function by adding a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F(s, z)$ or intrinsic reward function, where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$. The authors \cite{rle-paper} claim that RLE's efficiency is not significantly affected by the choice of $P_{\textbf{z}}$. If at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi(. | s_{t})$ from policy $\pi$, then it will obtain the task reward $r (s_{t}, a_{t})$. In RLE, we train a so-called latent-conditioned policy network $\pi(. | s, \textbf{z})$ and latent-conditioned value network $V^{\pi}(s, \textbf{z})$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
