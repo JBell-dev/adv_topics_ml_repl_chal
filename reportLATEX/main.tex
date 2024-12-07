@@ -262,7 +262,47 @@ Lastly, figure \ref{fig:gridworld-value-function-trajectories} shows that the in
 All the 95\% confidence intervals are calculated using the bootstrapping method. 
 
 \subsubsection{Atari}
-\textcolor{red}{@Alessia}
+
+\noindent After running each game for a total of $40$ million time steps, we have obtained the results shown in table \ref{tab:atari-results}.
+
+\begin{table}[h!]
+  \centering
+  \caption{Results of the \textsc{Atari} experiments.}
+  \begin{subtable}[h]{0.48\textwidth}
+      \centering
+      \begin{tabular}{{llll}} 
+        \hline
+        \textbf{Algorithm} & & Game Score & Human-Norm.\\
+        \hline
+        RLE & & $1626$ & $0.203$\\ 
+        PPO & & $1384$ & $0.168$\\
+        NoisyNet & & $648$ & $0.061$\\
+        RND & & $1048$ & $0.119$\\
+    \end{tabular}
+    \caption{The \textsc{Alien} game.}
+    \label{tab:alien-score}
+  \end{subtable}
+  \hfill
+  \begin{subtable}[h]{0.48\textwidth}
+      \centering
+      \begin{tabular}{{llll}} 
+        \hline
+        \textbf{Algorithm} & & Game Score & Human-Norm.\\
+        \hline
+        RLE & & $42481$ & $4.362$\\ 
+        PPO & & $54564$ & $5.623$\\
+        NoisyNet & & $27530$ & $2.803$\\
+        RND & & $21565$ & $2.180$\\
+    \end{tabular}
+    \caption{The \textsc{StarGunner} game.}
+    \label{tab:stargunner-score}
+  \end{subtable}
+  \label{tab:atari-results}
+\end{table}
+
+\noindent For the \textsc{Atari} game, as can be seen in table \ref{tab:alien-score}, the algorithm perform in a similar manner to the authors' result. Only NoisyNet performs much worse in our run, obtaining a score of $648$, while the authors report a score of approximately $1113$. However, regarding claim $(1)$ we can confirm that RLE obtains the highest score of them all, which is evident from the plot of human-normalized scores in figure \ref{fig:alien-score}. Additionally, we can compare the depth of exploration done by these algorithms in figure \ref{fig:alien-entropy} by looking at the entropy distribution. Here, it is evident that RLE explores the largest part of the state space in comparison to the other algorithms. Using entropy as a measure of diverse behavior, we can moreover confirm as well claim $(2)$ for this game.\\
+
+\noindent In the case of the \textsc{StarGunner} game, as becomes apparent in table \ref{tab:stargunner-score}, the RLE algorithm does not yield the best game score but PPO does. This result differs strongly from the findings of the authors. In more detail, we find that RLE obtains a game score of around $42481$ while the authors report $64011$, and in addition their implementation of NoisyNet performs much better at $42645$ while our agent only got $27530$ in the end. Thus, in this case we have to object claim $(1)$, which is shown in more detail in figure \ref{fig:stargunner-score}. On the contrary, we can confirm claim $(2)$ again as shown in figure \ref{fig:stargunner-entropy} since RLE does exhibit the most diverse behavior out of all four algorithms. Perhaps this hints at instabilities in the algorithmic behavior of the agent which are depending on e.g. the seed with which the run was initialized.
 
 \subsubsection{IsaacGym}
 \textcolor{red}{@Jonathan}
@@ -270,7 +310,11 @@ All the 95\% confidence intervals are calculated using the bootstrapping method.
 
 \subsection{Results beyond original paper}
 \texttt{Often papers don't include enough information to fully specify their experiments, so some additional experimentation may be necessary. For example, it might be the case that batch size was not specified, and so different batch sizes need to be evaluated to reproduce the original results. Include the results of any additional experiments here. Note: this won't be necessary for all reproductions.}
- 
+
+\subsubsection{Atari}
+
+\noindent One interesting observation that we made during our experiments is the fact that in \textsc{Alien}, the agent seems to obtain lower rewards on average with RLE, see figure \ref{fig:alien-rewards}, but still has the highest game score overall. We conjecture that this means the agent with RLE behaves more cautiously trying to stay alive for longer and collect lower/safer rewards but over a longer time horizon meaning the overall accumulated reward (game score) still turns out to be superior compared to the other algorithms. This would be confirmed by RLE having the largest trajectory (episode) length, see figure \ref{fig:alien-trajectorylength}. However, this is probably not the entire explanation, since in \textsc{StarGunner}, see figure \ref{fig:stargunner-rewards} and \ref{fig:stargunner-trajectorylength}, RLE also gets very low reward on average but here this cannot be compensated by having the largest trajectory length. Moreover, given that we also normalized the game scores, the result suggests that the agent is better at playing \textsc{StarGunner} and worse at playing \textsc{Alien} compared to an average human.
+
 \subsubsection{Adaptive Von Mises-Fisher}
 \textcolor{red}{@Jonathan}
 
