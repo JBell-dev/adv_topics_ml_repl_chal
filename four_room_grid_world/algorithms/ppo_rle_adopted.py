@@ -21,6 +21,7 @@ from copy import deepcopy
 from torch.utils.tensorboard import SummaryWriter
 
 from four_room_grid_world.algorithms.ppo_rle_distribution import RLEGoalSamplerCreator
+from four_room_grid_world.util.plot_util import create_demo
 from four_room_grid_world.util.plot_util import plot_heatmap, create_plot_env, add_room_layout_to_plot, \
     plot_trajectories, calculate_states_entropy, is_last_step_in_last_epoch, visit_count_dict_to_list
 from four_room_grid_world.env_gymnasium.StateVisitCountWrapper import StateVisitCountWrapper
@@ -109,6 +110,8 @@ def parse_args():
                         help="a list of tags for wanddb")
     parser.add_argument("--max-episode-steps", type=int, default=1_000,
                         help="maximum number of steps per episode")
+    parser.add_argument("--create-demo", type=lambda x: bool(strtobool(x)), default=False,
+                        help="whether a demo gif should created")
 
     # RLE arguments
     parser.add_argument("--switch-steps", type=int, default=128,
@@ -535,7 +538,7 @@ if __name__ == "__main__":
 
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
-    plot_env = create_plot_env(args.env_id, ENV_SIZE)
+    plot_env = create_plot_env(args.env_id, ENV_SIZE, args.reward_free)
 
     rle_output_size = args.feature_size  # NOTE: this is not used
     num_actions = envs.single_action_space.n
@@ -691,6 +694,8 @@ if __name__ == "__main__":
             if is_last_step_in_last_epoch(update, num_updates, step, args.num_steps):
                 if args.track:
                     wandb.log({"visit_counts": visit_count_dict_to_list(infos["visit_counts"], ENV_SIZE)})
+                if args.create_demo:
+                    create_demo(rle_network, agent, plot_env, f"runs/{run_name}")
 
             for idx, d in enumerate(next_done):
                 if d:

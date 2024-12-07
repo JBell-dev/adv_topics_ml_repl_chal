@@ -206,7 +206,7 @@ if __name__ == "__main__":
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     record_env = gym.make(args.env_id, render_mode="rgb_array", max_episode_steps=None, size=ENV_SIZE)
-    plot_env = create_plot_env(args.env_id, ENV_SIZE)
+    plot_env = create_plot_env(args.env_id, ENV_SIZE, args.reward_free)
 
 
     # ALGO Logic: Storage setup -> experience collection

@@ -284,7 +284,7 @@ if __name__ == "__main__":
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
     envs = StateVisitCountWrapper(envs)
-    plot_env = create_plot_env(args.env_id, ENV_SIZE)
+    plot_env = create_plot_env(args.env_id, ENV_SIZE, args.reward_free)
 
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(
