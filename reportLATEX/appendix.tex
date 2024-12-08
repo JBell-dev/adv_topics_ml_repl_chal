@@ -353,7 +353,7 @@ The timestep determination was done by observing a comparable figure with the au
   \end{tabular}
 \end{table}
 
-\clearpage
+%\clearpage
 \hypertarget{algo-noisynet}{\section{NoisyNet}}
 
 \noindent The central idea in a NoisyNet architecture brought forward by \cite{noisynet-paper} is to introduce random noise into the weights learned by the network ($p$ inputs, $q$ outputs), i.e. if we have a neural network whose output can be parametrized by a vector of weights $\boldsymbol{\theta}$ as $\textbf{y} = f_{\boldsymbol{\theta}}(\textbf{x}) = \textbf{w} \cdot \textbf{x} + \textbf{b}$, then we can learn the set of parameter vectors $\zeta = (\boldsymbol{\mu}, \boldsymbol{\Sigma})$ to compute $\textbf{w} = (\boldsymbol{\mu}^{w} + \boldsymbol{\sigma}^{w} \odot \boldsymbol{\varepsilon}^{w})$ and $\textbf{b} = (\boldsymbol{\mu}^{b} + \boldsymbol{\sigma}^{b} \odot \boldsymbol{\varepsilon}^{b})$ with the following dimensionalities: $\boldsymbol{\mu}^{w}$, $\boldsymbol{\sigma}^{w}$, $\boldsymbol{\varepsilon}^{w} \in \mathbb{R}^{q \times p}$ implying $\textbf{w} \in \mathbb{R}^{q \times p}$, and $\boldsymbol{\mu}^{b}$, $\boldsymbol{\sigma}^{b}$, $\boldsymbol{\varepsilon}^{b} \in \mathbb{R}^{q}$ resulting in $\textbf{b} \in \mathbb{R}^{q}$. Note that $\textbf{x} \in \mathbb{R}^{p}$, $\textbf{y} \in \mathbb{R}^{q}$ and $\odot$ denotes element-wise multiplication.
@@ -370,7 +370,7 @@ Moreover, for factorized networks, we initialize $\mu_{i,j} \sim \mathcal{U}\lef
 
 \noindent For the NoisyNet + A3C algorithm, the detailed pseudocode according to \cite{noisynet-paper} is as follows:
 
-\begin{table}[h!]
+\begin{table}[H]
   \centering
   \begin{tabular}{rlll}
     \hline\hline
@@ -420,7 +420,7 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
 
 \noindent The detailed pseudocode according to \cite{rnd-paper} is as follows:
 
-\begin{table}[h!]
+\begin{table}[H]
   \centering
   \begin{tabular}{rlll}
     \hline\hline
