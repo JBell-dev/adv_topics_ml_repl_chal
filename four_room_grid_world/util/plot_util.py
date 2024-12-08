@@ -1,8 +1,11 @@
+import cv2
+import imageio
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 import gymnasium as gym
+from PIL import Image, ImageDraw, ImageFont
 
 
 def plot_heatmap(infos, global_step, env_size, save_dir=None):
@@ -39,8 +42,9 @@ def calculate_states_entropy(infos, global_step, env_size):
     return entropy
 
 
-def create_plot_env(env_id, env_size):
-    return gym.make(env_id, max_episode_steps=1_000, size=env_size)
+def create_plot_env(env_id, env_size, is_reward_free):
+    return gym.make(env_id, max_episode_steps=1_000, size=env_size, is_reward_free=is_reward_free,
+                    render_mode="rgb_array")
 
 
 def get_trajectories(env, agent, device):
@@ -124,3 +128,49 @@ def visit_count_dict_to_list(visit_count_dict, env_size):
         visit_array[x, y] = count
 
     return visit_array.tolist()
+
+
+def create_demo(rle_network, agent, plot_env, save_dir):
+    font_size = 70
+    number_trajectories = 5
+
+    try:
+        font = ImageFont.truetype("arial.ttf", font_size)
+    except IOError:
+        font = ImageFont.load_default(font_size)  # Fallback to default font
+
+    gif_path = f"{save_dir}/grid_world_demo.gif"
+    with imageio.get_writer(gif_path, mode="I", duration=1 / 30) as writer:
+        for i in range(number_trajectories):
+            obs, _ = plot_env.reset()
+            obs = torch.Tensor(obs).unsqueeze(0)
+
+            z = rle_network.sample_goals(1)
+
+            while True:
+                frame = plot_env.render()
+
+                # Convert the frame to a PIL Image
+                pil_frame = Image.fromarray(frame)
+                draw = ImageDraw.Draw(pil_frame)
+
+                # Add z_i text to the bottom-right corner
+                text = f"z_{i}"
+                width = draw.textlength(text, font=font)
+                height = font_size
+
+                position = (pil_frame.width - width - 50, pil_frame.height - height - 50)
+                draw.text(position, text, fill="red", font=font)
+
+                # Append the modified frame to the GIF
+                writer.append_data(pil_frame)
+
+                with torch.no_grad():
+                    action, _, _, _, _ = agent.get_action_and_value(obs, 0, z)
+                    action = action.item()
+
+                    next_obs, reward, terminated, truncated, _ = plot_env.step(action)
+                    obs = torch.Tensor(next_obs).unsqueeze(0)
+
+                    if terminated or truncated:
+                        break

@@ -90,30 +90,16 @@ In this project we analyze the claims of \cite{rle-paper} in the paper \href{htt
 \section{Scope of reproducibility}
 \label{sec:claims}
 
-\noindent The main quantifiable claims made by \cite{rle-paper} consist of the following:
-\textcolor{red}{@Tobias Move untested claims to appendix (make sure that numbering its sensible)}
+\noindent The main quantifiable claims made by \cite{rle-paper} that we will be testing consist of the following:
 
 \begin{enumerate}
     \item In the abstract, \cite{rle-paper} claim "[...] RLE exhibits higher overall scores across all of the tasks than other approaches, including action-noise and randomized value exploration", which they later specify for both "[...] discrete and continuous control tasks." They refer to the tasks being the \textsc{Atari}, \textsc{IssacGym} and \textsc{FourRoom} environments. The benchmark approaches are standard PPO, NoisyNet and RND.
     \item Moreover, "[...] introducting randomness to rewards influences the [... agent] to produce diverse behaviors" \citep{rle-paper} when this randomness is used to condition the policy and value networks, which manifests itself in an incentive to explore random (and thus in aggregate lager) parts of the state space.
     \item For the discrete-action discrete-states \textsc{FourRoom} environment absent of a goal reward, the authors claim that PPO's state visitation centers around the initial room (top right) concluding that action-noise methods cannot conduct deep exploration whereas RLE, NoisyNet and RND well reach across the four rooms and thus perform deep exploration.
-    \item For the more challenging discrete-action continuous-states\footnote{While the input to the action sampler is a discrete $84\times84\times4$ tensor representing the pixels it perceives, in practice \textsc{Atari} games are considered to be continuous-state environments due to the high-dimensional state space and visual complexity of each frame.} \textsc{Atari} environment, the authors claim that, in the majority of games, RLE achieves a higher IQM of the human-normalized score with a probability of $67\%$, $72\%$ and $71\%$, compared to PPO, NoisyNet and RND, respectively.\footnote{The authors mention that for the \textsc{Montezuma's Revenge} game RLE underperforms likely due to RLE not factoring in bonus-based exploration.}
-    \item In the continuous-action continuous-states \textsc{IsaacGym} environment, the authors claim that, with a probability of around $83\%$ for PPO, ca. $66\%$ for NoisyNet and roughly $65\%$ for RND, RLE improves performance in all of their selected \textsc{IsaacGym} tasks.
+    \item RLE performance improves over PPO irrespective of the distribution used to sample the 8-dim random latent vector.
 \end{enumerate}
 
-\noindent Our findings regarding these claims will be presented in \hyperlink{sec4}{section 4} \textcolor{red}{Check link before submission}. Moreover, \cite{rle-paper} performed ablation studies and claim:
-
-\begin{enumerate}
-  \setcounter{enumi}{5}
-  \item RLE performance improves over PPO irrespective of the distribution used to sample the 8-dim random latent vector.
-  \item RLE performance compared to PPO is invariant under a change in the dimensionality of the random latent vector.
-  \item RLE performance deteriorates if the policy and value networks are not conditioned on the random latent vector.
-  \item RLE performance improves slightly if a learning feature network is used in comparison to when the feature network has constant weights when evaluated on the Atari games.
-  \item RLE performance is insensitive to the feature extractor architecture.
-\end{enumerate}
-
-
-\noindent Unfortunately, due to time constraints we are not able to test all of these claims, instead we focus on claims 1, 2, 3, and 6 in this study.
+\noindent Our findings regarding these claims will be presented in \hyperlink{sec4}{section 4} \textcolor{red}{Check link before submission}. Please note that there are more claims made by the authors, however, due to time constraints we are not able to test all of them, the remaining ones are shown in \hyperlink{untested-claims}{appendix B} \textcolor{red}{check link before submission.}
 
 \section{Methodology}
 Random Latent Exploration --- The new idea that the authors \cite{rle-paper} present is to augment the reward function by adding a randomized term which incentivizes the agent to explore a larger portion of the state space. In particular, we will call this term $F(s, z)$ or intrinsic reward function, where $s \in \mathcal{S}$ is any state of the state space $\mathcal{S}$, and $\textbf{z} \in \mathbb{R}^{d}$ is a $d$-dimensional vector sampled from a given distribution $P_{\textbf{z}}$. The authors \cite{rle-paper} claim that RLE's efficiency is not significantly affected by the choice of $P_{\textbf{z}}$. If at time step $t \in \{0, 1, 2, ..., T\}$ the agent in state $s_{t}$ takes action $a_{t} \sim \pi(. | s_{t})$ from policy $\pi$, then it will obtain the task reward $r (s_{t}, a_{t})$. In RLE, we train a so-called latent-conditioned policy network $\pi(. | s, \textbf{z})$ and latent-conditioned value network $V^{\pi}(s, \textbf{z})$ to estimate and then maximize the expected sum of rewards from a given state, aware of the random term $z$:
@@ -131,10 +117,60 @@ Random Latent Exploration --- The new idea that the authors \cite{rle-paper} pre
 
 %\noindent Since we are dealing with a reinforcement learning task, we did not use any dataset to train our models but rather four different environments which will explain in \hyperlink{experimental-setup}{section 3.4} \textcolor{red}{(check link before submission)}.
 
-\subsection{Hyperparameters}
-For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-paper} were used. However, \cite{rle-paper} did not provide values for all available hyperparameters. For the missing hyperparameters we used the following values, that seemed reasonable to us although we did not spend a lot of time finetuning them:
+\hypertarget{hyperparameter-subsection}{\subsection{Hyperparameters}}
 
-\begin{table}[ht]
+\noindent In \textsc{Atari}, we mostly used the same values for the hyperparameters that the authors used. In table \ref{tab:atari-hyperparams} the hyperparameters we modified are summarized. Note that contrary to the authors, due to time constraints we were only able to run every game once for each algorithm.
+
+\begin{table}[h!]
+  \centering
+  \caption{Hyperparameters that differ from \cite{rle-paper} for the \textsc{Atari} experiments.}
+  \begin{subtable}[h]{0.32\textwidth}
+      \begin{tabular}{{ll}} 
+        \hline
+        \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+        z-Sampling Frequency & 500\\
+        (switch\_steps) & \\
+        Norm-RLE-Features & True\\
+        Target-KL & None\\
+        &\\
+    \end{tabular}
+    \caption{Modified RLE parameters.\\\textcolor{white}{.}\\\textcolor{white}{.}}
+    \label{tab:atari-rle-hyperparams}
+  \end{subtable}
+  \hfill
+  \begin{subtable}[h]{0.32\textwidth}
+      \begin{tabular}{{ll}} 
+        \hline
+        \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+        Anneal Learning Rate & False\\ 
+        Target KL Divergence & None\\
+        Sticky Action & True\\
+        Reward Normalization & True\\
+        Adam Epsilon & $10^{-5}$\\
+    \end{tabular}
+    \caption{PPO parameters used in the code but not mentioned in the paper. The same holds for NoisyNet.}
+    \label{tab:atari-ppo-hyperparams}
+  \end{subtable}
+  \hfill
+  \begin{subtable}[h]{0.32\textwidth}
+      \begin{tabular}{{ll}} 
+        \hline
+        \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+        Target KL Divergence & None\\
+        - Rest as in PPO - & \\
+        &\\
+        &\\
+        &\\
+    \end{tabular}
+    \caption{RND parameters used in the code but not mentioned in the paper.\\\textcolor{white}{.}}
+    \label{tab:atari-rnd-hyperparams}
+  \end{subtable}
+  \label{tab:atari-hyperparams}
+\end{table}
+
+\noindent For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-paper} were used. However, \cite{rle-paper} did not provide values for all available hyperparameters. For the missing hyperparameters we used the values in table \ref{tab:gridworld-missing-hyperparameters}, that seemed reasonable to us although we did not spend a lot of time finetuning them.
+
+\begin{table}[h!]
   \centering
   \caption{Hyperparameters not stated by \cite{rle-paper} for the \textsc{FourRoom} experiments.}
   \begin{tabular}{{ll}} 
@@ -150,8 +186,6 @@ For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-pa
   \label{tab:gridworld-missing-hyperparameters}
 \end{table}
 
-\noindent \textcolor{red}{@Alessia: We need your input here for Atari: Are all of the hyperparameters you used the ones from the RLE paper, or did you change/add/remove some of them, if yes which ones, what are their values and did you finetune them (how, what was the tuning range, how many different values did you try out)? Certainly, the z resampling frequency was changed.}
-
 \noindent \textcolor{red}{@Jonathan: We need your input here for IsaacLab: Are all of the hyperparameters you used the ones from the RLE paper, or did you change/add/remove some of them, if yes which ones, what are their values and did you finetune them (how, what was the tuning range, how many different values did you try out)?}
 
 \hypertarget{experimental-setup}{\subsection{Experimental setup and code}}
@@ -159,58 +193,49 @@ For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-pa
 \noindent The code for our implementations can be found in GitHub\footnote{\href{https://github.com/jonupp/adv_topics_ml_repl_chal}{https://github.com/jonupp/adv\_topics\_ml\_repl\_chal} \textcolor{red}{Change github}}. There are three types of environments in use on which we run our RL algorithms which are depicted in figure \ref{fig:environmnents}. 
 
 
-\noindent The authors of the paper at hand published code in a GitHub repository\footnote{\href{https://github.com/Improbable-AI/random-latent-exploration}{https://github.com/Improbable-AI/random-latent-exploration}}. This repository contains code for the \textsc{Atari} and \textsc{IsaacGym}\footnote{Please note that the \textsc{IsaacGym} environment is deprecated and we are using \textsc{IsaacLab} instead, however we will refer to it as \textsc{IsaacGym} for reasons of continuity.} environments with the 4 algorithms (RLE, PPO, RND, NoisyNet). 
-
-\textcolor{red}{@Alessia: The information from the following two sections need to be integrated in the corresponding subsubsections}
-
-In general, after coding the scripts, we uploaded the files to \href{https://colab.research.google.com/}{Google Colab}, of which we used/tested the available TPU/GPU for the training (for more detail see section \hyperlink{computational-requirements}{3.5} \textcolor{red}{check link before submission}), and linked a \href{https://drive.google.com}{Google Drive} to save the models, as well as a \href{https://wandb.ai}{Weights \& Biases} workspace for a live overview of the results and various parameters while the models were still training. Regarding documentation we were guided mostly by the paper at hand and the official environment documentation, as well as other papers that we found along the way.
+\noindent The authors of the paper at hand published code in a GitHub repository\footnote{\href{https://github.com/Improbable-AI/random-latent-exploration}{https://github.com/Improbable-AI/random-latent-exploration}}. This repository contains code for the \textsc{Atari} and \textsc{IsaacGym}\footnote{Please note that the \textsc{IsaacGym} environment is deprecated and we are using \textsc{IsaacLab} instead, however we will refer to it as \textsc{IsaacGym} for reasons of continuity.} environments with the 4 algorithms (RLE, PPO, RND, NoisyNet). The authors used the PPO, NoisyNet, and RND implementations from \cite{clearnrl-paper}.
 
 \subsubsection{Atari}
-\textcolor{red}{@Tobias extend description of experiments etc.}
 
-\textcolor{red}{@Who it may concern: trajectory length longer in RLE, compensating lower rewards?}
+\noindent The authors of the paper under investigation chose the \textsc{Atari} environment, introduced by \cite{atari-introduction}, to represent a discrete action-space deep-RL benchmark. This environment comprises $57$ different games, among which we performed experiments on two games, namely \textsc{Alien} and \textsc{StarGunner}. To understand the code given by the authors, we made use mainly of the official environment documentation as well as other papers that we found along the way. Here, the agent perceives the $4$ most recent $84\times84$ grayscale frames, one frame of which can be found in figure \ref{fig:sample-env-atari}. During training, every trajectory (episode) always commences from the same initial state and can be terminated in one of the two ways: A game event occurs, or the maximum episode length is reached. The former refers to e.g. the loss of a "life" or a task being completed. As the authors provided the code for this environment, we did not modify it significantly. The main claims that we tested here were the superior performance of RLE and deeper exploration.\\
 
-\noindent \textsc{Atari} represents "discrete action space deep RL benchmark". The human normalized scores are computed according to \textcolor{red}{formula: Agent57: Outperforming the Atari Human Benchmark} and the human scores are taking from
+\noindent The game score $S_{G}$ that we use to compare the different algorithms we run in this environment are normalized in the manner introduced by \cite{agent57} by taking into account the score an average human achieves $S_{H}$ as well as the score an agent achieves by always choosing a random action $S_{R}$, which gives us the human normalized score $S_{N} = \frac{S_{G} - S_{R}}{S_{H} - S_{R}}$. According to \cite{agent57}, in the case of \textsc{Alien}, we have $S_{H} = 7127.7$ and $S_{R} = 227.8$ while for \textsc{StarGunner} we have $S_{H} = 10250$ and $S_{R} = 664$. With the normalization we can get a better comparison of how much the agent behaves like a random agent ($S_{N} = 0$) or like a human player ($S_{N} = 1$), or even better $S_{N} > 1$. Moreover, the normalization allows for comparisons between games, adjusted for the general difficulty of a game.\\
 
-\noindent Moreover we have an example of the \textsc{Atari} environments in figure \ref{fig:sample-env-atari}, namely the \textsc{Alien-v5} game. In this environment, the agent perceives the $4$ most recent $84\times84$ grayscale frames.
+\noindent Each game was run with all four algorithms (RLE, PPO, NoisyNet, RND) and the most important comparative measure to evaluate the agent's performance is the game score, which was computed from the cumulative extrinsic rewards (obtained from $\text{infos["r"]}$ of the environment) over the episodes, treated as undiscounted sums to ensure a uniform weight across time steps for the purpose of investigating the algorithm's exploratory abilities. To this end, we also record the time evolution of the Shannon entropy of each algorithm, where a higher entropy indicates that the agent's selection of actions out of all available actions is broader and less concentrated, hinting at more thorough exploration capabilities.\\
 
-\noindent \textcolor{red}{Do we need to explain the environments as well?}
-\textcolor{red}{Alessia explains Atari stuff} Atari was run 5 times per game.
-
+\textcolor{red}{@Who it may concern: trajectory length longer in RLE, compensating lower rewards?\\(Tobias: I added something about it in results beyon original paper.)}
 
 \subsubsection{FourRoom}
-Figure \ref{fig:sample-env-fourroom} shows the \textsc{FourRoom} environment where we have $50\times50 + 4$ states\footnote{In \cite{rle-paper}, the authors claim that there are $50\times 50$ states. We contacted the authors, and they confirmed that it should read $50\times 50 + 4$ states.} which are divided into four rooms of size $25\times25$ and $4$ holes in the walls located at positions $10$ horizontally and $5$ vertically, starting the count at $1$ from the inner corners. Exploring the state space, beginning from the initial state marked in \textcolor{red}{red}, becomes a deep exploration task due to the holes being only $1$ "pixel" wide. However, if we want to incentivize the agent to find a reward, then we can put it at the goal position marked in \textcolor{green}{green}. The \textsc{FourRoom} environment was implemented such that we can pass a flag to the environment's constructor to choose whether the environment is reward-free or has the goal in the bottom-left corner. At every step, the agent can move one step vertically or horizontally, but if it would run into a wall it chooses to remain in place. \cite{rle-paper} refer to \cite{grid-world-paper} when introducing the \textsc{FourRoom} environment. \cite{grid-world-paper} use action stochasticity. We asked Mr. Mahankali whether they also used action stochasticity, and they stated that they did not use action stochasticity in their experiments. 
+Figure \ref{fig:sample-env-fourroom} shows the \textsc{FourRoom} environment where we have $50\times50 + 4$ states\footnote{In \cite{rle-paper}, the authors claim that there are $50\times 50$ states. We contacted the authors, and they confirmed that it should read $50\times 50 + 4$ states.} which are divided into four rooms of size $25\times25$ and $4$ holes in the walls located at positions $10$ horizontally and $5$ vertically, starting the count at $1$ from the inner corners. Exploring the state space, beginning from the initial state marked in \textcolor{red}{red}, becomes a deep exploration task due to the holes being only $1$ "pixel" wide. However, if we want to incentivize the agent to find a reward, we can add a goal state marked in \textcolor{green}{green}. The \textsc{FourRoom} environment was implemented such that we can pass a flag to the environment's constructor to choose whether the environment is reward-free or has the goal in the bottom-left corner. At every step, the agent can move one step vertically or horizontally, but if it would run into a wall it chooses to remain in place. \cite{rle-paper} refer to \cite{grid-world-paper} when introducing the \textsc{FourRoom} environment. \cite{grid-world-paper} use action stochasticity. We asked Mr. Mahankali whether they also used action stochasticity, and they stated that they did not use action stochasticity in their experiments. 
 
-The authors did not provide any code for the \textsc{FourRoom} environment, so this environment was implemented by us using the gymnasium library introduced by \cite{gymnasium-paper} together with our adaptation of the code for PPO, NoisyNet and RLE algorithms from the \textsc{Atari} environment, while we adapted the RLE code from the \textsc{IsaacGym} environment. A wrapper to record the state visitation counts per environment was also implemented. Before we adapted RLE from the existing implementation for the \textsc{Atari} environment, we implemented it based on the description in \cite{rle-paper}. However, the paper lacked a lot of details present in the \textsc{Atari} code (e.g., split critic's head, residual connection) so that we decided to proceed with the adapted code to have consistent results over the different environments. 
+The authors did not provide any code for the \textsc{FourRoom} environment, so this environment was implemented by us using the gymnasium library introduced by \cite{gymnasium-paper} together with our adaptation of the code for PPO, NoisyNet and RLE algorithms from the \textsc{Atari} environment, while we adapted the RND code from the \textsc{Isaac} environment. A wrapper to record the state visitation counts per environment was also implemented. Before we adapted RLE from the existing implementation for the \textsc{Atari} environment, we implemented it based on the description in \cite{rle-paper}. However, the paper lacked several details present in the \textsc{Atari} code (e.g., split critic's head, residual connection) so that we decided to proceed with the adapted code to have consistent results over the different environments. 
 
-First we investigate how RLE performs in a reward-free setting in comparison to PPO, NoisyNet, and RND. \cite{rle-paper} claims that RLE shows good explorative behavior based on a single heatmap of state visitation counts. To assess whether this result is expected or exceptional we trained each algorithm 20 times. Since it is not reasonable to compare 20 state visitation count heatmaps we used the Shannon entropy, introduced by \cite{shannon-entropy-paper}, of the state visitation counts as a proxy for how well an agent explored the environment. With increasing entropy the distribution of the state visitation counts becomes more uniform. Thus, the higher the entropy the better the explorative behavior. 
+First we investigate how RLE performs in a reward-free setting in comparison to PPO, NoisyNet, and RND. \cite{rle-paper} claims that RLE shows good explorative behavior based on a single heatmap of state visitation counts. To assess whether this result is expected or exceptional we trained each algorithm 20 times. Since it is not reasonable to compare 20 state visitation heatmaps we used the Shannon entropy, introduced by \cite{shannon-entropy-paper}, of the state visitation counts as a proxy for how well an agent explored the environment. With increasing entropy the distribution of the state visitation counts becomes more uniform. Thus, the higher the entropy the better the explorative behavior. 
 
 We also ran RLE, PPO, NoisyNet, and RND in the \textsc{FourRoom} environment with a goal to see how RLE compares to the other algorithms in an environment with a reward. Similar to the reward-free setting, we run each algorithm 20 times on different seeds. However, instead of assessing the performance of the algorithms using the Shannon entropy, we use the average game score. The game score is the average undiscounted return over the last 128 episodes. The average game score for a certain algorithm is the average of the game scores in the different runs for this algorithm.
 
-Furthermore, it was explored if the intrinsic reward function really guides the generation of diverse trajectories in a reward-free environment. To assess this, the intrinsic value function for four latent vectors $z$ and four trajectories generated using the same latent vector $z$ were saved at the end of each experiment. 
+Furthermore, it was explored if the intrinsic reward function really guides the generation of diverse trajectories in a reward-free environment. To assess this, the intrinsic reward function for four latent vectors $z$ and four trajectories generated using the same latent vector $z$ were saved at the end of each experiment. 
 
-We also tested to what degree RLE is indifferent to the distribution of the latent vector. To test this, we ran RLE with different latent vector distributions. The following distributions were considered: standard normal distribution, standard uniform distribution, Von-Mises distribution with $\mu=0$ and $\kappa=0.3$, and the exponential distribution with $\lambda=0.3$. We ran 20 experiments for each latent vector distribution and recorded the state visitation entropy. The same hyperparameters were used as before. Note that all latent vectors were normalized using the L2-norm, so that all latent vectors are on a unit sphere around the origin. This ensures that all intrinsic rewards are in the interval [-1,1]. \cite{rle-paper} performed a similar ablation study for the \textsc{Atari} environment. However, they did not normalize the latent vectors for all distributions. They only applied normalization for the normal distribution which they then denoted as "Sphere". They then compare the "Sphere" to the unnormalized uniform distribution and the unnormalized normal distribution. We normalized all distributions because the extrinsic reward coefficient and the intrinsic reward coefficient hyperparameters already control the weighting between the intrinsic and extrinsic rewards, so we wanted the intrinsic rewards to be in the interval [-1,1].
+We also tested to what degree RLE is indifferent to the distribution of the latent vector. To test this, we ran RLE with different latent vector distributions. The following distributions were considered: standard normal distribution, standard uniform distribution, Von-Mises distribution with $\mu=0$ and $\kappa=0.3$, and the exponential distribution with $\lambda=0.3$. We ran 20 experiments for each latent vector distribution and recorded the state visitation entropy. The same hyperparameters were used as before. Note that all latent vectors were normalized using the L2-norm, so that all latent vectors are on a unit sphere around the origin. This ensures that all intrinsic rewards are in the interval [-1,1]. \cite{rle-paper} performed a similar ablation study for the \textsc{Atari} environment. However, they did not normalize the latent vectors for all distributions. They only applied normalization for the normal distribution which they then denoted as "Sphere". They then compare the "Sphere" to the unnormalized uniform distribution and the unnormalized normal distribution. We normalized all distributions because the extrinsic and intrinsic reward coefficient hyperparameters already control the weighting between the intrinsic and extrinsic rewards, so we wanted the intrinsic rewards to be in the interval [-1,1].
 
 
 \subsubsection{IsaacGym}
 \textcolor{red}{@Jonathan explain environment and experiments (NOT RESULT)}
 
-
-
 \begin{figure}
   \centering
-  \begin{subfigure}[b]{0.32\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{tikz/fourroom-env.tex}
-    \caption{The \textsc{FourRoom} environment is a grid world, limited by walls, with the initial state is on the \textcolor{red}{top right} and the goal state where the agent receives a reward (optional) is on the \textcolor{green}{bottom left}.}
-    \label{fig:sample-env-fourroom}
-  \end{subfigure}
-  \hfill
   \begin{subfigure}[b]{0.32\textwidth}
     \centering
     \includegraphics[width=\textwidth]{figures/atari.png}
     \caption{The \textsc{Alien-v5} environment is an example of the \textsc{Atari} games consisting of a maze filled with 'eggs' to destroy while being hunted by aliens. A flamethrower or occasional power-up may be used to scare the aliens.}
     \label{fig:sample-env-atari}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{tikz/fourroom-env.tex}
+    \caption{The \textsc{FourRoom} environment is a grid world, limited by walls, with the initial state is on the \textcolor{red}{top right} and the goal state where the agent receives a reward (optional) is on the \textcolor{green}{bottom left}.}
+    \label{fig:sample-env-fourroom}
   \end{subfigure}
   \hfill
   \begin{subfigure}[b]{0.32\textwidth}
@@ -225,7 +250,7 @@ We also tested to what degree RLE is indifferent to the distribution of the late
 
 
 \subsubsection{Queue-Based Von Mises-Fisher}
-\cite{rle-paper} suggest it might be worthwhile to explore using a latent vector distribution that changes during the training. Our hypothesis is that at the start of the training the latent vector distribution $P_{\textbf{z}}$ should provide diverse $\textbf{z}$ since the agent should explore the environment. However, with increasing training progress, the agent should put less emphasis on exploration. We use the Von Mises-Fisher distribution with the parameters $\vmu$, the mean direction, and $\kappa$, the concentration to model $P_{\textbf{z}}$. The idea is to slowly change $\vmu$ during the training, so that it points to a point in the space such that $P_{\textbf{z}}$ samples $\mathbf{z}$ values that yield high returns. Furthermore, $\kappa$ should be slowly increased during the training to increase the probability to sample $\mathbf{z}$ close to $\vmu$. Since PyTorch does not provide an implementation to sample from this distribution, we used the implementation described by \cite{von-mises-fisher-paper} that is based on rejection sampling. We maintain a queue of $\textbf{z}$ values with good episodic return and a queue with the respective returns. After every finished episode, the queues are updated if necessary. We then update $\vmu$ as a linear combination of the $\textbf{z}$ values in the success memory. The weighting is done using the returns in the returns memory. $\kappa$ should be large if the model has converged to a $\vmu$ that reliably gives $\textbf{z}$ values with high returns. Thus, $\kappa$ is updated by linearly interpolation between 0 and 30. The weight is the average pairwise cosine similarity between the $\textbf{z}$ values in the success memory.
+\cite{rle-paper} suggest it might be worthwhile to explore using a latent vector distribution that changes during the training. Our hypothesis is that at the start of the training the latent vector distribution $P_{\textbf{z}}$ should provide diverse $\textbf{z}$ since the agent should explore the environment. However, with increasing training progress, the agent should put less emphasis on exploration. We use the Von Mises-Fisher distribution with the parameters $\vmu$, the mean direction, and $\kappa$, the concentration to model $P_{\textbf{z}}$. The goal is to gradually adjust $\vmu$ during training so that it converges to a point in the space where $P_{\textbf{z}}$ generates $\mathbf{z}$ samples that consistently produce high returns. Furthermore, $\kappa$ should be slowly increased during the training to increase the probability to sample $\mathbf{z}$ close to $\vmu$. Since PyTorch does not provide an implementation to sample from this distribution, we used the implementation described by \cite{von-mises-fisher-paper} that is based on rejection sampling. We maintain a queue of $\textbf{z}$ values with good episodic return and a queue with the respective returns. After every finished episode, the queues are updated if necessary. We then update $\vmu$ as a linear combination of the $\textbf{z}$ values in the success memory. The weighting is done using the returns in the returns memory. $\kappa$ should be large if the model has converged to a $\vmu$ that reliably gives $\textbf{z}$ values with high returns. Thus, $\kappa$ is updated by linearly interpolation between 0 and 30. The weight is the average pairwise cosine similarity between the $\textbf{z}$ values in the success memory.
 
 
 \subsubsection{Neural Adaptive Von Mises-Fisher}
@@ -233,14 +258,14 @@ We also tested to what degree RLE is indifferent to the distribution of the late
 
 
 \hypertarget{computational-requirements}{\subsection{Computational requirements}}
-All \textsc{FourRoom} experiments were performed on an Apple M2 Pro with 16 GB RAM. Every experiment was conducted in the reward-free environment and in the environment with a goal. Every algorithm and every RLE variant with different latent vector distribution was run 20 times with different seeds in each of the two environments. This resulted in a total of 280 runs. It took ca. 1 minute to do a single PPO run, ca. 1 minute and 20 seconds to do a single NoisyNet run, ca. 2 minutes to do a single RLE run, and ca. 2 minutes and 20 seconds to do a single RND run. The experiments for the different algorithms took at total time of ca. 4.4 hours. In addition, we trained RLE with three different latent vector distributions (apart from the standard normal distribution). These experiments took ca. 4 hours. Thus, the total computing time for all \textsc{FourRoom} experiments amounts to ca. 8.4 hours.
 
-\noindent \textcolor{red}{@Alessia: We need your input here for Atari: Did you run all of the experiments on colab (which CPU or GPU was used (name))? What are the average training times e.g. per episode or global step? How many runs did you do overall (i.e. how many compute hours did you spend on this project) for each of the algorithms?}
-\noindent For Atari, we experimented with the CPU, T4 GPU and TPU v2-8 in Google Colab. Weights \& Biases (wandb) was used for easier runtime visualization of the scores and other measures.
+\noindent All \textsc{FourRoom} experiments were performed on an Apple M2 Pro with 16 GB RAM. Every experiment was conducted in the reward-free environment and in the environment with a goal. Every algorithm and every RLE variant with different latent vector distribution was run 20 times with different seeds in each of the two environments. This resulted in a total of 280 runs. It took ca. 1 minute to do a single PPO run, ca. 1 minute and 20 seconds to do a single NoisyNet run, ca. 2 minutes to do a single RLE run, and ca. 2 minutes and 20 seconds to do a single RND run. The experiments for the different algorithms took at total time of ca. 4.4 hours. In addition, we trained RLE with three different latent vector distributions (apart from the standard normal distribution). These experiments took ca. 4 hours. Thus, the total computing time for all \textsc{FourRoom} experiments amounts to ca. 8.4 hours.
+
+\noindent All experiments in the \textsc{Atari} environment were run in \href{https://colab.research.google.com/}{Google Colab}. Here we experimented with the available CPU, T4 GPU and TPU v2-8 and used Weights \& Biases (W\&B) for a real-time visualization of the game scores and other measures. In the end we chose the GPU for all runs. We linked a \href{https://drive.google.com}{Google Drive} to Colab in order to save model checkpoints. Overall the W\&B workspace now contains 56 runs with a total compute time of ca. $241.2$ hours, of which we are using 8 runs for the results of this project. Of that amount, ca. $76.7$ compute hours were spent on \textsc{StarGunner}, the remaining ca. $164.5$ compute hours were spent on \textsc{Alien}.
 
 \noindent \textcolor{red}{@Jonatan: We need your input here for Isaac: Did you run all of the experiments on your mac/other laptop or did you use colab as well (which CPU or GPU was used (name))? What are the average training times e.g. per episode or global step? How many runs did you do overall (i.e. how many compute hours did you spend on this project) for each of the algorithms?}
 
-We would like to note, however, that \cite{rle-paper} had the HPC resources of the MIT Supercloud and the Lincoln Laboratory Supercomputing Center available. Within the framework of this course, we did not have the equivalent computing power to replicate all experiments in their original form and had to restrain ourselves to a mere few of them.
+\noindent We would like to note, however, that \cite{rle-paper} had the HPC resources of the MIT Supercloud and the Lincoln Laboratory Supercomputing Center available. Within the framework of this course, we did not have the equivalent computing power to replicate all experiments in their original form and had to restrain ourselves to a mere few of them.
 
 \hypertarget{sec4}{\section{Results}}
 \textcolor{red}{all figures in appendix as first item}
@@ -260,16 +285,56 @@ Figure \ref{fig:gridworld-score-algorithms} shows the result of the experiment w
 
 Figure \ref{fig:gridworld-entropy-distributions} depicts the result of the experiment where RLE variants with different latent vector distributions are compared in the reward-free environment by running each RLE variant 20 times. The RLE variants where the latent vector distribution follows the standard normal or Von Mises distribution perform similarly well and clearly outperform the RLE variants with standard uniform and exponential distribution. Moreover, the RLE variants with standard uniform and exponential distribution show similar performance to RND. These results indicate that the choice of the latent vector distribution is of some importance. Moreover, there are two pairs of distributions that show similar behavior although the distributions in the pair are not that similar. For instance, we chose parameters for the Von Mises distribution to make its peak small, so that it is quite different from a standard normal distribution and shows some similarity to a uniform distribution. 
 
-In figure \ref{fig:gridworld-score-distributions} the results of the experiment where RLE variants with different latent vector distributions are compared in the environment with rewards. Again, each RLE variant was run 20 times. The RLE variant with the Von Mises distribution performs best, followed by the standard normal variant, the exponential variant, and lastly the standard uniform variant. The difference in average game score between the RLE variants is large: the worst variant achieves an average game score slighlty above 0.2 while the best RLE variant achieves an average game score of appr. 0.8. The ranking of the RLE variants is the same as in the experiment described before. Again, the results indicate that the choice of the latent vector distribution impacts the performance of RLE.
+In figure \ref{fig:gridworld-score-distributions} the results of the experiment where RLE variants with different latent vector distributions are compared in the environment with rewards. Again, each RLE variant was run 20 times. The RLE variant with the Von Mises distribution performs best, followed by the standard normal variant, the exponential variant, and lastly the standard uniform variant. The difference in average game score between the RLE variants is large: the worst variant achieves an average game score slighlty above 0.2 while the best RLE variant achieves an average game score of appr. 0.8. The ranking of the RLE variants is the same as in the experiment in the reward-free environment. Again, the results indicate that the choice of the latent vector distribution impacts the performance of RLE.
 
-We generated state visitation heatmaps for each algorithm and RLE variant for both the reward-free environment and the environment with a goal. From the 20 runs for each algorithm and RLE variant we chose the run with the highest entropy in the case of the reward-free environment and the run with the highest game score in the case of the environment with a goal. In figure \ref{fig:gridworld-heatmap-nogoal-algorithms} the state visitation heatmaps for the different algorithms in the reward-free environment are displayed. RLE and NoisyNet explore all four rooms while PPO and RND have a significant number of unexplored states. Figure \ref{fig:gridworld-heatmap-nogoal-algorithms} shows the state visitation heatmaps for the different algorithms in the environment with a goal. RLE, NoisyNet, and RND are frequently visiting states on a appr. shortest path from the start to the goal while PPO has only explored a single room. Next, the state visitation for the RLE variants are considered. In figure \ref{fig:gridworld-heatmap-nogoal-distributions} we see that the standard normal, Von Mises, and exponential RLE variants explore all the four rooms well. Only the standard uniform RLE variant does not explore all states. In figure \ref{fig:gridworld-heatmap-goal-distributions} we see that all RLE variants often visit states on one of the appr. shortest path between start and goal. However, the standard normal and Von Mises variants explore almost the entire state space while the standard uniform and exponential RLE variants have large unexplored chunks.
+We generated state visitation heatmaps for each algorithm and RLE variant for both the reward-free environment and the environment with a goal. From the 20 runs for each algorithm and RLE variant we chose the run with the highest entropy in the case of the reward-free environment and the run with the highest game score in the case of the environment with a goal. In figure \ref{fig:gridworld-heatmap-nogoal-algorithms} the state visitation heatmaps for the different algorithms in the reward-free environment are displayed. RLE and NoisyNet explore all four rooms while PPO and RND have a significant number of unexplored states. Figure \ref{fig:gridworld-heatmap-goal-algorithms} shows the state visitation heatmaps for the different algorithms in the environment with a goal. RLE, NoisyNet, and RND are frequently visiting states on an appr. shortest path from the start to the goal while PPO has only explored a single room. Next, the state visitation for the RLE variants are considered. In figure \ref{fig:gridworld-heatmap-nogoal-distributions} we see that the standard normal, Von Mises, and exponential RLE variants explore all the four rooms well. Only the standard uniform RLE variant does not explore all states. In figure \ref{fig:gridworld-heatmap-goal-distributions} we see that all RLE variants often visit states on one of the appr. shortest path between start and goal. However, the standard normal and Von Mises variants also explore almost the entire state space while the standard uniform and exponential RLE variants have large unexplored chunks.
 
 Lastly, figure \ref{fig:gridworld-value-function-trajectories} shows that the intrinsic reward function guides the generation of diverse trajectories. The trajectories converge to areas where the intrinsic reward is large. 
 
 All the 95\% confidence intervals are calculated using the bootstrapping method. 
 
 \subsubsection{Atari}
-\textcolor{red}{@Alessia}
+
+\noindent After running each game for a total of $40$ million time steps, we have obtained the results shown in table \ref{tab:atari-results}.
+
+\begin{table}[h!]
+  \centering
+  \caption{Results of the \textsc{Atari} experiments.}
+  \begin{subtable}[h]{0.48\textwidth}
+      \centering
+      \begin{tabular}{{llll}} 
+        \hline
+        \textbf{Algorithm} & & Game Score & Human-Norm.\\
+        \hline
+        RLE & & $1626$ & $0.203$\\ 
+        PPO & & $1384$ & $0.168$\\
+        NoisyNet & & $648$ & $0.061$\\
+        RND & & $1048$ & $0.119$\\
+    \end{tabular}
+    \caption{The \textsc{Alien} game.}
+    \label{tab:alien-score}
+  \end{subtable}
+  \hfill
+  \begin{subtable}[h]{0.48\textwidth}
+      \centering
+      \begin{tabular}{{llll}} 
+        \hline
+        \textbf{Algorithm} & & Game Score & Human-Norm.\\
+        \hline
+        RLE & & $42481$ & $4.362$\\ 
+        PPO & & $54564$ & $5.623$\\
+        NoisyNet & & $27530$ & $2.803$\\
+        RND & & $21565$ & $2.180$\\
+    \end{tabular}
+    \caption{The \textsc{StarGunner} game.}
+    \label{tab:stargunner-score}
+  \end{subtable}
+  \label{tab:atari-results}
+\end{table}
+
+\noindent For the \textsc{Atari} game, as can be seen in table \ref{tab:alien-score}, the algorithm perform in a similar manner to the authors' result. Only NoisyNet performs much worse in our run, obtaining a score of $648$, while the authors report a score of approximately $1113$. However, regarding claim $(1)$ we can confirm that RLE obtains the highest score of them all, which is evident from the plot of human-normalized scores in figure \ref{fig:alien-score}. Additionally, we can compare the depth of exploration done by these algorithms in figure \ref{fig:alien-entropy} by looking at the entropy distribution. Here, it is evident that RLE explores the largest part of the state space in comparison to the other algorithms. Using entropy as a measure of diverse behavior, we can moreover confirm as well claim $(2)$ for this game.\\
+
+\noindent In the case of the \textsc{StarGunner} game, as becomes apparent in table \ref{tab:stargunner-score}, the RLE algorithm does not yield the best game score but PPO does. This result differs strongly from the findings of the authors. In more detail, we find that RLE obtains a game score of around $42481$ while the authors report $64011$, and in addition their implementation of NoisyNet performs much better at $42645$ while our agent only got $27530$ in the end. Thus, in this case we have to object claim $(1)$, which is shown in more detail in figure \ref{fig:stargunner-score}. On the contrary, we can confirm claim $(2)$ again as shown in figure \ref{fig:stargunner-entropy} since RLE does exhibit the most diverse behavior out of all four algorithms. Perhaps this hints at instabilities in the algorithmic behavior of the agent which are depending on e.g. the seed with which the run was initialized.
 
 \subsubsection{IsaacGym}
 \textcolor{red}{@Jonathan}
@@ -277,7 +342,13 @@ All the 95\% confidence intervals are calculated using the bootstrapping method.
 
 \subsection{Results beyond original paper}
 \texttt{Often papers don't include enough information to fully specify their experiments, so some additional experimentation may be necessary. For example, it might be the case that batch size was not specified, and so different batch sizes need to be evaluated to reproduce the original results. Include the results of any additional experiments here. Note: this won't be necessary for all reproductions.}
- 
+
+\subsubsection{Atari}
+
+\noindent One interesting observation that we made during our experiments is the fact that in \textsc{Alien}, the agent seems to obtain lower rewards on average with RLE, see figure \ref{fig:alien-rewards}, but still has the highest game score overall. We conjecture that this means the agent with RLE behaves more cautiously trying to stay alive for longer and collect lower/safer rewards but over a longer time horizon meaning the overall accumulated reward (game score) still turns out to be superior compared to the other algorithms. This would be confirmed by RLE having the largest trajectory (episode) length, see figure \ref{fig:alien-trajectorylength}. However, this is probably not the entire explanation, since in \textsc{StarGunner}, see figure \ref{fig:stargunner-rewards} and \ref{fig:stargunner-trajectorylength}, RLE also gets very low reward on average but here this cannot be compensated by having the largest trajectory length. Moreover, given that we also normalized the game scores, the result suggests that the agent is better at playing \textsc{StarGunner} and worse at playing \textsc{Alien} compared to an average human.
+
+\noindent Moreover, as mentioned in the \hyperlink{hyperparameter-subsection}{hyperparameter overview}, we increased RLE's z-sampling frequency from every 1280 time steps (authors) to every 500, but we did not find materially different results. Another observation we made is that for some reason in the RLE implementation of \textsc{Alien}, the results different drastically between using a GPU and a CPU/TPU for the computations, \textcolor{red}{but we have no idea as to why this happened}.
+
 \subsubsection{Adaptive Von Mises-Fisher}
 \textcolor{red}{@Jonathan}
 
@@ -289,14 +360,8 @@ All the 95\% confidence intervals are calculated using the bootstrapping method.
 \texttt{Give your judgment on if your experimental results support the claims of the paper. Discuss the strengths and weaknesses of your approach - perhaps you didn't have time to run all the experiments, or perhaps you did additional experiments that further strengthened the claims in the paper.}
 
 \subsection{What was easy}
-\textcolor{red}{@Tobias}
 
-- Atari code was ready to run. 
-- The concept of the paper is not hard to understand (also mathematically)
-
-\texttt{Give your judgment of what was easy to reproduce. Perhaps the author's code is clearly written and easy to run, so it was easy to verify the majority of original claims. Or, the explanation in the paper was really easy to follow and put into code.}
-
-\texttt{Be careful not to give sweeping generalizations. Something that is easy for you might be difficult for others. Put what was easy in context and explain why it was easy (e.g. code had extensive API documentation and a lot of examples that matched experiments in papers).}
+\noindent As we chose a RL paper to reproduce we did not have to deal with the hassle of downloading huge data sets for training. Moreover, for us the concept of the paper, especially the new idea introduced by \cite{rle-paper}, was fairly straight-forward and easy to understand. Moreover, the code provided by the authors for the \textsc{Atari} environment was comparatively ready to run, we did not have to make a lot of modifications here.
 
 \subsection{What was difficult}
 A major challenge we faced was evaluating RLE across three distinct environments, each presenting unique difficulties. For the FourRoom environment, no implementation was available, requiring us to develop one from scratch. We aimed to replicate the approach used by \cite{rle-paper} as closely as possible to ensure comparability. The Atari environment, on the other hand, could be used without modification, but training agents demanded substantial computational resources. \textcolor{red}{@Jonathan add something about Isaac here.} Furthermore, in the paper, an important implementation detail, the split critic's head, is omitted. The paper itself also contains some contradicting information (\textsc{Atari} feature network size, condition to resample z) and minor errors (\textsc{FourRoom} environment description and typo in pseudocode regarding feature network update). Lastly, as RLE builds upon PPO with optimizations such as generalized advantage estimation, we had to dedicate considerable time to thoroughly understand the underlying PPO framework. 
@@ -315,9 +380,9 @@ A major challenge we faced was evaluating RLE across three distinct environments
 
 \begin{itemize}
   \item Jonatan Bella: \textsc{IsaacLab} implementation, \textcolor{red}{please let me know what you want to add}
-  \item Alessia Berarducci: \textsc{Atari} implementation, \textcolor{red}{please let me know what you want to add}
+  \item Alessia Berarducci: \textsc{Atari} implementation, IQM / bootstrapped confidence interval (not used in the end due to compute time), Small Reward Compensation Hypothesis.
   \item Jonas Knupp: Implementation of the \textsc{FourRoom} environment, adaption of PPO, NoisyNet, RLE, and RND to the \textsc{FourRoom} environment, conducting the experiments with the \textsc{FourRoom} environment
-  \item Tobias Erbacher: Report writing, project management, numpy-visualization.
+  \item Tobias Erbacher: Report writing, project management, numpy-visualization of \textsc{Atari} interface, plots, assistance in conceptual questions.
 \end{itemize}
 
 \noindent However, we met regularly and assisted each other in their tasks so the split is not completely clear-cut.

@@ -1,4 +1,4 @@
-# This file contains the implementation of RLE with adaptive Von Mises latent vector distribution
+# This file contains the implementation of RLE with the queue-based adaptive Von Mises latent vector distribution
 
 import argparse
 import random

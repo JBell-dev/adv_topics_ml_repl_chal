@@ -11,15 +11,16 @@ NAME_MAPPER = {
 }
 
 COLOR_MAPPER = {
-    "PPO_RLE": "blue",
-    "PPO": "gray",
-    "PPO_NOISY_NET": "orange",
-    "PPO_RND": "green",
-    "standard_normal": "blue",
-    "standard_uniform": "gray",
-    "von_mises": "orange",
-    "exponential": "green",
+    "PPO_RLE": (84 / 255, 113 / 255, 171 / 255),
+    "PPO": (127 / 255, 127 / 255, 127 / 255),
+    "PPO_NOISY_NET": (238 / 255, 134 / 255, 54 / 255),
+    "PPO_RND": (81 / 255, 158 / 255, 63 / 255),
+    "standard_normal": (84 / 255, 113 / 255, 171 / 255),
+    "standard_uniform": (127 / 255, 127 / 255, 127 / 255),
+    "von_mises": (238 / 255, 134 / 255, 54 / 255),
+    "exponential": (81 / 255, 158 / 255, 63 / 255),
 }
+
 
 def sort(data_per_algorithm, tags):
     data_per_algorithm_sorted = {}

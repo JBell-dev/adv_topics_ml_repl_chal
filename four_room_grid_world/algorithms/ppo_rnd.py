@@ -349,7 +349,7 @@ if __name__ == "__main__":
 
     envs = StateVisitCountWrapper(envs)
 
-    plot_env = create_plot_env(args.env_id, ENV_SIZE)
+    plot_env = create_plot_env(args.env_id, ENV_SIZE, args.reward_free)
 
     agent = Agent(envs).to(device)
 
