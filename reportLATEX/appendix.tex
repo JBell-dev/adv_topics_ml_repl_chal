@@ -146,6 +146,103 @@ Since we could not fit all figures in eight pages, we include them here.
   \item RLE performance is insensitive to the feature extractor architecture.
 \end{enumerate}
 
+\hypertarget{appendix-hyperparams}{\section{Hyperparameters}}
+
+
+\noindent In \textsc{Atari}, we mostly used the same values for the hyperparameters that the authors used. In table \ref{tab:atari-hyperparams} the hyperparameters we modified are summarized. Note that contrary to the authors, due to time constraints we were only able to run every game once for each algorithm.
+
+\begin{table}[h!]
+  \centering
+  \caption{Hyperparameters that differ from \cite{rle-paper} for the \textsc{Atari} experiments.}
+  \begin{subtable}[h]{0.32\textwidth}
+      \begin{tabular}{{ll}} 
+        \hline
+        \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+        z-Sampling Frequency & 500\\
+        (switch\_steps) & \\
+        Norm-RLE-Features & True\\
+        Target-KL & None\\
+        &\\
+    \end{tabular}
+    \caption{Modified RLE parameters.\\\textcolor{white}{.}\\\textcolor{white}{.}}
+    \label{tab:atari-rle-hyperparams}
+  \end{subtable}
+  \hfill
+  \begin{subtable}[h]{0.32\textwidth}
+      \begin{tabular}{{ll}} 
+        \hline
+        \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+        Anneal Learning Rate & False\\ 
+        Target KL Divergence & None\\
+        Sticky Action & True\\
+        Reward Normalization & True\\
+        Adam Epsilon & $10^{-5}$\\
+    \end{tabular}
+    \caption{PPO parameters used in the code but not mentioned in the paper. The same holds for NoisyNet.}
+    \label{tab:atari-ppo-hyperparams}
+  \end{subtable}
+  \hfill
+  \begin{subtable}[h]{0.32\textwidth}
+      \begin{tabular}{{ll}} 
+        \hline
+        \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+        Target KL Divergence & None\\
+        - Rest as in PPO - & \\
+        &\\
+        &\\
+        &\\
+    \end{tabular}
+    \caption{RND parameters used in the code but not mentioned in the paper.\\\textcolor{white}{.}}
+    \label{tab:atari-rnd-hyperparams}
+  \end{subtable}
+  \label{tab:atari-hyperparams}
+\end{table}
+
+\noindent For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-paper} were used. However, \cite{rle-paper} did not provide values for all available hyperparameters. For the missing hyperparameters we used the values in table \ref{tab:gridworld-missing-hyperparameters}, that seemed reasonable to us although we did not spend a lot of time finetuning them.
+
+\begin{table}[h!]
+  \centering
+  \caption{Hyperparameters not stated by \cite{rle-paper} for the \textsc{FourRoom} experiments.}
+  \begin{tabular}{{ll}} 
+  \hline
+  \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+  Extrinsic Reward Coefficient & 1\\ 
+  Observation Normalization Iterations & 1 \\
+  Discount Rate & 0.99 \\ 
+  Intrinsic Discount Rate & 0.99 \\ 
+  Feature Network Update Rate $\tau$ & 0.005 \\ 
+  Learning Rate & 0.001 \\ 
+  \end{tabular}
+  \label{tab:gridworld-missing-hyperparameters}
+\end{table}
+
+%\noindent \textcolor{red}{@Jonathan: We need your input here for IsaacLab: Are all of the hyperparameters you used the ones from the RLE paper, or did you change/add/remove some of them, if yes which ones, what are their values and did you finetune them (how, what was the tuning range, how many different values did you try out)?}
+
+For the IsaacLab experiments, we assume that the not specified hyperparameters under the \textsc{RLE} experiments section of the paper, were the same as in default PPO implementation which
+comprise the following values:
+\begin{table}[ht]
+\centering
+\caption{Hyperparameters not stated by  for \textsc{IsaacLab} experiments.}
+\begin{tabular}{{ll}} 
+\hline
+\textbf{Hyperparameter} & \textbf{Value} \\ \hline
+Number of Parallel Environments & 4096 \\ 
+Rollouts & 8 \\
+Learning Epochs & 4 \\
+Mini batches & 2 \\
+Discount Rate & 0.99 \\
+Generalized Advantage Estimation $\lambda$ & 0.95 \\
+Gradient Norm Bound & 1.0 \\ 
+Used Clipped Value Loss & False \\
+Value Loss Scale & 2.0 \\
+Timesteps & 5000 \\
+\end{tabular}
+\label{tab:isaaclab-missing-hyperparameters}
+\end{table}
+There are two special mentions among these parameters. The number of parallel environments used is 4096, as it is the default value in the code in the authors repository for 
+isaacgym. In addition, we choose to use a rollout of 8 as the authors suggested for "AllegroHand" and "ShadowHand" examples for CartPole, which provided higher results than 16. 
+The timestep determination was done by observing a comparable figure with the authors and when the algorithm show a stability around a return. 
+
 \section{Random Latent Exploration}
 
 \noindent The architecture of our RLE implementation can be found in figure \ref{fig:rle-architecture}:
@@ -362,7 +459,66 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
   \end{tabular}
 \end{table}
 
-\section{Neural-adaptive VMF}
+\hypertarget{na-vmf}{\section{Neural-adaptive VMF}}
+
+Even more interesting was the development of a loss that can guide the training of the networks. We first have an \textsc{alignment} term:
+
+\begin{equation}
+    \mathcal{L}_{align} = - \sum_{t=1}^{T} \left( \boldsymbol{\mu}_{t-1} \cdot \textbf{z}_{t-1} \right) \cdot r_{t}
+\end{equation}
+
+Such that when sampled $z$ from a VMF with $\mu$ as direction produced high return $r$ that will be seen in the next step, then most we want $\mu$ to be like $z$, aligning $\mu$ with the highest rewarding $z$.
+
+The second term of the loss is the differential entropy of VMF:
+
+\begin{equation}
+    H(\text{vMF}) = -\log(C_d(\kappa)) - \kappa A_d(\kappa)
+\end{equation}
+
+where:
+\begin{equation}
+    C_d(\kappa) = \frac{\kappa^{d/2-1}}{(2\pi)^{d/2}I_{d/2-1}(\kappa)}
+\end{equation}
+
+\begin{equation}
+    A_d(\kappa) = \frac{I_{d/2}(\kappa)}{I_{d/2-1}(\kappa)}
+\end{equation}
+
+Taking the logarithm of $C_d(\kappa)$:
+\begin{equation}
+    \log(C_d(\kappa)) = (d/2-1)\log(\kappa) - \frac{d}{2}\log(2\pi) - \log(I_{d/2-1}(\kappa))
+\end{equation}
+
+Therefore, the complete entropy expression is:
+\begin{equation}
+    L(\text{vMF}) = -\left[(d/2-1)\log(\kappa) - \frac{d}{2}\log(2\pi) - \log(I_{d/2-1}(\kappa))\right] - \kappa\frac{I_{d/2}(\kappa)}{I_{d/2-1}(\kappa)}
+\end{equation}
+
+This term pushes the model for exploration (lower kappa) with two weighting parameters, one based on progress such that the term decays while training progresses and another based on stagnation, such that if the recent returns show little variation compared to the overall returns (over a short window), indicating stagnation, the function increases the exploration boost.
+
+The third term is the \textsc{reward} loss - Huber loss:
+
+\begin{equation}
+    \mathcal{L}_{huber} = \sum_{t=1}^{T} \begin{cases} 
+    \frac{1}{2} \left( r_{t} - \hat{r}_{t} \right)^{2}, & \text{if } \left| r_{t} - \hat{r}_{t} \right| < \delta \\
+    \delta \left( \left| r_{t} - \hat{r}_{t} \right| - \frac{1}{2} \delta \right), & \text{otherwise}
+    \end{cases}
+\end{equation}
+
+We use the Huber loss such that since reward can be pretty sparse and since what we finally want to teach the model is to differentiate what are good states to be in comparison to others then, we can soften the effect of this outliers such that the small errors goes under the quadratic  loss whereas the outliers receive a linear loss, reducing their impact on the final loss. 
+
+We also need to teach the model how to form a confidence around a certain $\mu$. The \textsc{kappa} loss is constructed by first estimating a good target kappa, which can be done by setting a maximum and minimum kappa bound. Visualizing the VMF distribution helps to notice that a k $\in$ [0,40] is a good range, allowing still even reaching the maximum to sample values at a certain range of distance from $\mu$, allowing for exploration.% (ADD PLOT HERE)
+
+\begin{equation}
+    \kappa_{target} = \kappa_{min} + (\kappa_{max} - \kappa_{min}) \cdot \text{returns}_{scaled}
+\end{equation}
+
+The scaled returns are passed through a sigmoid, which means that kappa final value will be proportional to the range between max and min bounds of kappa where that proportion is determined by the returns produced by the corresponding $z$. Then, this target will be the input of the Huber loss for kappa. Although, it can be use an MSE loss too. 
+
+Finally, there is an optional term, \textsc{KL-divergence} term. The idea of this term is to naturally provide a consistent exploration. The authors in the paper offered to set resampling of $z$ after certain steps, but it could be controlled naturally by restricting the distributions change in this case. However, this term is not explored give the time constrain.\footnote{The respective method is implemented in the code to be used}
+
+Is important to notice that we develop each method with PyTorch, even considering that there is no Bessel function of higher order than 1 in it. 
+However, there is a beautiful property of Bessel functions that allow to write the higher order as a function of the previous two.\footnote{\url{https://proofwiki.org/wiki/Recurrence_Formula_for_Bessel_Function_of_the_First_Kind}} Since the first two  orders of the first kind Bessel functions are implemented, then we had all the ingredients to make a perfect differentiable entropy and \textsc{KL-divergence} term which will be necessary for BPTT. In addition, could be interesting to test what would happen if we keep the cell (long term) memory of the lstm between episodes of the same parallel environment. 
 
 \begin{figure}
   \centering
@@ -394,3 +550,12 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
   \caption{Cartpole Extrinsic Returns.}
   \label{fig:cartpole-return}
 \end{figure}
+
+\hypertarget{appendix-difficult}{\section{Difficulties}}
+
+
+\noindent A major challenge we faced was evaluating RLE across three distinct environments, each presenting unique difficulties. For the FourRoom environment, no implementation was available, requiring us to develop one from scratch. We aimed to replicate the approach used by \cite{rle-paper} as closely as possible to ensure comparability. The Atari environment, on the other hand, could be used without modification, but training agents demanded substantial computational resources. Furthermore, in the paper, an important implementation detail, the split critic's head, is omitted. The paper itself also contains some contradicting information (\textsc{Atari} feature network size, condition to resample z) and minor errors (\textsc{FourRoom} environment description and typo in pseudocode regarding feature network update). Lastly, as RLE builds upon PPO with optimizations such as generalized advantage estimation, we had to dedicate considerable time to thoroughly understand the underlying PPO framework.
+
+\noindent There are not many documentation neither active blogs about IsaacLab, which it makes the migration highly difficult considering the higher complexity with respect
+to isaacgym. In addition, the deprication of isaacgym generates uncompatibilities with pre installed cuda libraries in providers as Lambda or Google which requires uninstalling
+and installing older versions which can generate other issues with other pre installed libraries or requires a high amount of time debugging NVIDIA related issues.
