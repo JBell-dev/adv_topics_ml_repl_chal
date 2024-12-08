@@ -271,8 +271,6 @@ Since we could not fit all figures in eight pages, we include them here.
 
 Moreover, for factorized networks, we initialize $\mu_{i,j} \sim \mathcal{U}\left[-\frac{1}{\sqrt{p}}, +\frac{1}{\sqrt{p}}\right]$ and $\sigma_{i,j} = \frac{\sigma_{0}}{\sqrt{p}}$ with $p$ being the number of inputs to the corresponding linear layer, $\mathcal{U}$ is a uniform distribution over the specified interval, and $\sigma_{0}$ is a hyperparameter.
 
-\textcolor{red}{Are we using independent or factorized sampling in the code? (I'm guessing factorized).}
-
 \noindent For the NoisyNet + A3C algorithm, the detailed pseudocode according to \cite{noisynet-paper} is as follows:
 
 \begin{table}[h!]
@@ -336,7 +334,7 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
     2: & \multicolumn{3}{l}{$t \leftarrow 0$}\\
     3: & \multicolumn{3}{l}{Sample state $s_{0} \sim p_{0}(s_{0})$.}\\
     4: & \multicolumn{3}{l}{\textbf{For} $m = 1, ..., M$ \textbf{do (\textsuperscript{1})}}\\
-    5: & | & \multicolumn{2}{l}{Sample action $a_{t} \sim \mathcal{U}(a_{t})$. \textcolor{red}{Are we sampling uniformly from all available actions at time $t$?}}\\
+    5: & | & \multicolumn{2}{l}{Sample action $a_{t} \sim \mathcal{U}(a_{t})$.}\\
     6: & | & \multicolumn{2}{l}{Sample state $s_{t+1} \sim p(s_{t+1}|s_{t}, a_{t})$.}\\
     7: & | & \multicolumn{2}{l}{Update observation normalization parameters using $s_{t+1}$.}\\
     8: & | & \multicolumn{2}{l}{$t \leftarrow t + 1$}\\
@@ -364,27 +362,6 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
   \end{tabular}
 \end{table}
 
-\section{Citations, figures, and tables}
-
-\paragraph{Citations}
-
-When the authors or the publication are
-included in the sentence, the citation should not be in parenthesis, using \verb|\citet{}| (as
-in ``See (CITATION REMOVED) for more information.''). Otherwise, the citation
-should be in parenthesis using \verb|\citep{}| (as in ``Deep learning shows promise to make progress
-towards AI~(CITATION REMOVED).'').
-
-\paragraph{Figures}
-
-All artwork must be neat, clean, and legible. The figure number and caption always appear after the figure. Place one line space before the figure caption, and one line space after the figure. The figure caption is lowercase (except for the first word and proper nouns). Make sure the figure caption does not get separated from the figure. Leave sufficient space to avoid splitting the figure and figure caption.
-
-\begin{figure}[ht]
-\begin{center}
-\fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
-\end{center}
-\caption{Sample figure caption.}
-\end{figure}
-
 \section{Neural-adaptive VMF}
 
 \begin{figure}
@@ -392,4 +369,28 @@ All artwork must be neat, clean, and legible. The figure number and caption alwa
   \includegraphics[width=\textwidth]{tikz/neural-adaptive-vmf.tex}
   \caption{Neural-adaptive VMF architecture.}
   \label{fig:neural-adaptive-vmf}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \begin{subfigure}[b]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/plot_Alien_VMF Human-Normalized Game Score.pdf}
+    \caption{Game Score.}
+    \label{fig:vmf-game-score}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/plot_Alien_VMF Trajectory Length.pdf}
+    \caption{Trajectory Length.}
+    \label{fig:vmf-trajectory-length}
+  \end{subfigure}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{figures/plot_Cartpole_Extrinsic Return.pdf}
+  \caption{Cartpole Extrinsic Returns.}
+  \label{fig:cartpole-return}
 \end{figure}

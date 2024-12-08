@@ -31,23 +31,26 @@ FIGURE_PARAMS = {
 # 1. --- Copy your .csv data file into the folder "csv-data" + the respective environment and specify the name of the file(s).
 # Example:
 game = "Alien"
-plot = "Entropy"
+plot = "VMF Trajectory Length"
 OUTPUT_FILENAME = "plot_" + game + "_" + plot + FIGURE_PARAMS["filetype"]
 
 human_score = 7127.7
 random_score = 227.8
 normalize_scores = False
 
-filenames = ["Entropy/alien-ppo-entropy.csv", "Entropy/alien-noisynet-entropy.csv", "Entropy/alien-rle-entropy.csv", "Entropy/alien-rnd-entropy.csv"]
-NICKNAMES = ["PPO", "NoisyNet", "RLE", "RND"]
-COLORS = [(127/255, 127/255, 127/255), (238/255, 134/255, 54/255), (84/255, 113/255, 171/255), (81/255, 158/255, 63/255)]
+#filenames = ["Entropy/alien-ppo-entropy.csv", "Entropy/alien-noisynet-entropy.csv", "Entropy/alien-rle-entropy.csv", "Entropy/alien-rnd-entropy.csv"]
+filenames = ["TrajectoryLength/alien-ppo-trajlen.csv", "TrajectoryLength/alien-rle-trajlen.csv", "alien-neural-adaptive-vmf.csv", "alien-queue-adaptive-vmf-trajlen.csv"]
+#NICKNAMES = ["PPO", "NoisyNet", "RLE", "RND"]
+NICKNAMES = ["PPO", "RLE", "NA-VMF", "Q-VMF"]
+#COLORS = [(127/255, 127/255, 127/255), (238/255, 134/255, 54/255), (84/255, 113/255, 171/255), (81/255, 158/255, 63/255)]
+COLORS = [(127/255, 127/255, 127/255), (84/255, 113/255, 171/255), "magenta", "purple"]
 
 # 2. --- Specify which column shall represent the x-axis and which ones the y-axis.
 # Example:
 globalStep = "Step"
-plotThis = "Entropy"
+plotThis = "TrajLen"
 
-yTitle = "Entropy"
+yTitle = "Trajectory Length"
 xTitle = "Global Step"
 legendPosition = "best"
 
@@ -66,7 +69,7 @@ def main():
         csv[NICKNAMES[idx]] = pd.read_csv(dirname(abspath(__file__)) + "/" + file)[[globalStep, plotThis]]
         csv[NICKNAMES[idx]]["Normalized"] = csv[NICKNAMES[idx]][plotThis].apply(scoreNormalization)
         if normalize_scores:
-            df = csv[NICKNAMES[idx]].fillna(0)
+            df = csv[NICKNAMES[idx]].dropna()
             ax.plot(df[globalStep], df["Normalized"], color=COLORS[idx], label=NICKNAMES[idx])
         else:
             df = csv[NICKNAMES[idx]].dropna()
