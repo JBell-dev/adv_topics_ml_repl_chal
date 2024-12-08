@@ -5,58 +5,67 @@ Since we could not fit all figures in eight pages, we include them here.
 
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.6\textwidth]{figures/gridworld_mean_entropy_state_visitation_algorithms.pdf}
-  \caption{Mean entropy of state visitation counts over the training steps for different algorithms. The shaded areas represent the $95\%$ confidence intervals. By the end of training, RLE achieves the highest entropy and the narrowest confidence interval.}
-  \label{fig:gridworld-entropy-algorithms}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/gridworld_mean_entropy_state_visitation_algorithms.pdf}
+    \caption{Mean entropy of state visitation counts over the training steps for different algorithms. The shaded areas represent the $95\%$ confidence intervals. By the end of training, \textsc{RLE} achieves the highest entropy and the narrowest confidence interval.}
+    \label{fig:gridworld-entropy-algorithms}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/gridworld_mean_game_score_algorithms.pdf}
+    \caption{Mean game score of different algorithms. \textsc{RLE} clearly outperforms the other algorithms.\\\\}
+    \label{fig:gridworld-score-algorithms}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/gridworld_mean_entropy_state_visitation_distributions.pdf}
+    \caption{Mean entropy of state visitation counts over the training steps for \textsc{RLE} variants with different latent vector distributions. The shaded areas represent the $95\%$ confidence intervals. The standard uniform and exponential variants explore less than the other two variants.}
+    \label{fig:gridworld-entropy-distributions}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/gridworld_mean_game_score_distributions.pdf}
+    \caption{Mean game score of \textsc{RLE} variants with different latent vector distributions. The figure shows substantial differences in the mean game score across the different \textsc{RLE} variants.\\\\}
+    \label{fig:gridworld-score-distributions}
+  \end{subfigure}
+  \caption{\textsc{FourRoom} results.}
+  \label{fig:gridworld-plots}
 \end{figure}
 
+\clearpage
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.6\textwidth]{figures/gridworld_mean_game_score_algorithms.pdf}
-  \caption{Mean game score of different algorithms. RLE clearly outperforms the other algorithms.}
-  \label{fig:gridworld-score-algorithms}
-\end{figure}
-
-\begin{figure}[h!]
-  \centering
-  \includegraphics[width=0.6\textwidth]{figures/gridworld_mean_entropy_state_visitation_distributions.pdf}
-  \caption{Mean entropy of state visitation counts over the training steps for RLE variants with different latent vector distributions. The shaded areas represent the $95\%$ confidence intervals. The standard uniform and exponential variants explore less than the other two variants.}
-  \label{fig:gridworld-entropy-distributions}
-\end{figure}
-
-\begin{figure}[h!]
-  \centering
-  \includegraphics[width=0.6\textwidth]{figures/gridworld_mean_game_score_distributions.pdf}
-  \caption{Mean game score of RLE variants with different latent vector distributions. The figure shows substantial differences in the mean game score across the different RLE variants.}
-  \label{fig:gridworld-score-distributions}
-\end{figure}
-
-\begin{figure}[h!]
-  \centering
-  \includegraphics[width=0.6\textwidth]{figures/gridworld_heatmaps_no_goal_algorithms.pdf}
-  \caption{For each algorithm, the run with the highest entropy over the state visitation counts was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the algorithms after training for $2.5$M timesteps in the reward-free environment. The start location is in the top right cell. RLE achieves the best state visitation coverage.}
-  \label{fig:gridworld-heatmap-nogoal-algorithms}
-\end{figure}
-
-\begin{figure}[h!]
-  \centering
-  \includegraphics[width=0.6\textwidth]{figures/gridworld_heatmaps_goal_algorithms.pdf}
-  \caption{For each algorithm, the run with the highest game score was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the algorithms after training for $2.5$M timesteps in the environment with a goal. The start location is in the top right cell and the goal location in the bottom left cell.}
-  \label{fig:gridworld-heatmap-goal-algorithms}
-\end{figure}
-
-\begin{figure}[h!]
-  \centering
-  \includegraphics[width=0.6\textwidth]{figures/gridworld_heatmaps_no_goal_distributions.pdf}
-  \caption{For each RLE variant with different latent vector distribution, the run with the highest entropy over the state visitation counts was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the RLE variants with different latent vector distribution after training for $2.5$M timesteps in the reward-free environment. The RLE variants where the latent vector distribution is a standard normal and the Von Mises distribution achieve the best state visitation coverage.}
-  \label{fig:gridworld-heatmap-nogoal-distributions}
-\end{figure}
-
-\begin{figure}[h!]
-  \centering
-  \includegraphics[width=0.6\textwidth]{figures/gridworld_heatmaps_goal_distributions.pdf}
-  \caption{For each RLE variant with different latent vector distribution, the run with the highest game score was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the RLE variants with different latent vector distribution after training for $2.5$M timesteps in the environment with a goal. The start location is in the top right cell and the goal location in the bottom left cell. All RLE variants reach the goal but the standard normal and Von Mises variants also explore most of the state space.}
-  \label{fig:gridworld-heatmap-goal-distributions}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/gridworld_heatmaps_no_goal_algorithms.pdf}
+    \caption{For each algorithm, the run with the highest entropy over the state visitation counts was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the algorithms after training for $2.5$M timesteps in the reward-free environment. The start location is in the top right cell. \textsc{RLE} achieves the best state visitation coverage.}
+    \label{fig:gridworld-heatmap-nogoal-algorithms}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/gridworld_heatmaps_goal_algorithms.pdf}
+    \caption{For each algorithm, the run with the highest game score was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the algorithms after training for $2.5$M timesteps in the environment with a goal. The start location is in the top right cell and the goal location in the bottom left cell.}
+    \label{fig:gridworld-heatmap-goal-algorithms}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/gridworld_heatmaps_no_goal_distributions.pdf}
+    \caption{For each \textsc{RLE} variant with different latent vector distribution, the run with the highest entropy over the state visitation counts was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the \textsc{RLE} variants with different latent vector distribution after training for $2.5$M timesteps in the reward-free environment. The \textsc{RLE} variants where the latent vector distribution is a standard normal and the Von Mises distribution achieve the best state visitation coverage.}
+    \label{fig:gridworld-heatmap-nogoal-distributions}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/gridworld_heatmaps_goal_distributions.pdf}
+    \caption{For each \textsc{RLE} variant with different latent vector distribution, the run with the highest game score was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the \textsc{RLE} variants with different latent vector distribution after training for $2.5$M timesteps in the environment with a goal. The start location is in the top right cell and the goal location in the bottom left cell. All \textsc{RLE} variants reach the goal but the standard normal and Von Mises variants also explore most of the state space.}
+    \label{fig:gridworld-heatmap-goal-distributions}
+  \end{subfigure}
+  \caption{\textsc{FourRoom} state visitation heatmaps.}
+  \label{fig:gridworld-statemaps}
 \end{figure}
 
 \begin{figure}[h!]
@@ -128,26 +137,27 @@ Since we could not fit all figures in eight pages, we include them here.
   \caption{The \textsc{StarGunner} game results.}
 \end{figure}
 
+\clearpage
 \hypertarget{untested-claims}{\section{Untested Claims}}
 
 \noindent The authors made the following claims that, due to time constraints of this project, we were not able to test:
 
 \begin{enumerate}
-  \item For the more challenging discrete-action continuous-states\footnote{While the input to the action sampler is a discrete $84\times84\times4$ tensor representing the pixels it perceives, in practice \textsc{Atari} games are considered to be continuous-state environments due to the high-dimensional state space and visual complexity of each frame.} \textsc{Atari} environment, the authors claim that, in the majority of games, RLE achieves a higher IQM of the human-normalized score with a probability of $67\%$, $72\%$ and $71\%$, compared to PPO, NoisyNet and RND, respectively.\footnote{The authors mention that for the \textsc{Montezuma's Revenge} game RLE underperforms likely due to RLE not factoring in bonus-based exploration.}
-  \item In the continuous-action continuous-states \textsc{IsaacGym} environment, the authors claim that, with a probability of around $83\%$ for PPO, ca. $66\%$ for NoisyNet and roughly $65\%$ for RND, RLE improves performance in all of their selected \textsc{IsaacGym} tasks.
+  \item For the more challenging discrete-action continuous-states\footnote{While the input to the action sampler is a discrete $84\times84\times4$ tensor representing the pixels it perceives, in practice \textsc{Atari} games are considered to be continuous-state environments due to the high-dimensional state space and visual complexity of each frame.} \textsc{Atari} environment, the authors claim that, in the majority of games, \textsc{RLE} achieves a higher IQM of the human-normalized score with a probability of $67\%$, $72\%$ and $71\%$, compared to \textsc{PPO}, \textsc{NoisyNet} and \textsc{RND}, respectively.\footnote{The authors mention that for the \textsc{Montezuma's Revenge} game \textsc{RLE} underperforms likely due to \textsc{RLE} not factoring in bonus-based exploration.}
+  \item In the continuous-action continuous-states \textsc{IsaacGym} environment, the authors claim that, with a probability of around $83\%$ for \textsc{PPO}, ca. $66\%$ for \textsc{NoisyNet} and roughly $65\%$ for \textsc{RND}, \textsc{RLE} improves performance in all of their selected \textsc{IsaacGym} tasks.
 \end{enumerate}
 
 \noindent Moreover, they performed ablation studies and claimed the following:
 
 \begin{enumerate}
-  \item RLE performance compared to PPO is invariant under a change in the dimensionality of the random latent vector.
-  \item RLE performance deteriorates if the policy and value networks are not conditioned on the random latent vector.
-  \item RLE performance improves slightly if a learning feature network is used in comparison to when the feature network has constant weights when evaluated on the \textsc{Atari} games.
-  \item RLE performance is insensitive to the feature extractor architecture.
+  \item \textsc{RLE} performance compared to \textsc{PPO} is invariant under a change in the dimensionality of the random latent vector.
+  \item \textsc{RLE} performance deteriorates if the policy and value networks are not conditioned on the random latent vector.
+  \item \textsc{RLE} performance improves slightly if a learning feature network is used in comparison to when the feature network has constant weights when evaluated on the \textsc{Atari} games.
+  \item \textsc{RLE} performance is insensitive to the feature extractor architecture.
 \end{enumerate}
 
+\clearpage
 \hypertarget{appendix-hyperparams}{\section{Hyperparameters}}
-
 
 \noindent In \textsc{Atari}, we mostly used the same values for the hyperparameters that the authors used. In table \ref{tab:atari-hyperparams} the hyperparameters we modified are summarized. Note that contrary to the authors, due to time constraints we were only able to run every game, of those that we tested, once for each algorithm.
 
@@ -160,11 +170,11 @@ Since we could not fit all figures in eight pages, we include them here.
         \textbf{Hyperparameter} & \textbf{Value} \\ \hline
         $\textbf{z}$-Sampling Frequency & $500$\\
         (switch\_steps) & \\
-        Norm-RLE-Features & True\\
+        Norm-\textsc{RLE}-Features & True\\
         Target-KL & None\\
         &\\
     \end{tabular}
-    \caption{Modified RLE parameters.\\\textcolor{white}{.}\\\textcolor{white}{.}}
+    \caption{Modified \textsc{RLE} parameters.\\\textcolor{white}{.}\\\textcolor{white}{.}}
     \label{tab:atari-rle-hyperparams}
   \end{subtable}
   \hfill
@@ -178,7 +188,7 @@ Since we could not fit all figures in eight pages, we include them here.
         Reward Normalization & True\\
         Adam Epsilon & $10^{-5}$\\
     \end{tabular}
-    \caption{PPO parameters used in the code but not mentioned in the paper. The same holds for NoisyNet.}
+    \caption{\textsc{PPO} parameters used in the code but not mentioned in the paper. The same holds for \textsc{NoisyNet}.}
     \label{tab:atari-ppo-hyperparams}
   \end{subtable}
   \hfill
@@ -187,12 +197,12 @@ Since we could not fit all figures in eight pages, we include them here.
         \hline
         \textbf{Hyperparameter} & \textbf{Value} \\ \hline
         Target KL Divergence & None\\
-        - Rest as in PPO - & \\
+        - Rest as in \textsc{PPO} - & \\
         &\\
         &\\
         &\\
     \end{tabular}
-    \caption{RND parameters used in the code but not mentioned in the paper.\\\textcolor{white}{.}}
+    \caption{\textsc{RND} parameters used in the code but not mentioned in the paper.\\\textcolor{white}{.}}
     \label{tab:atari-rnd-hyperparams}
   \end{subtable}
   \label{tab:atari-hyperparams}
@@ -216,9 +226,7 @@ Since we could not fit all figures in eight pages, we include them here.
   \label{tab:gridworld-missing-hyperparameters}
 \end{table}
 
-%\noindent \textcolor{red}{@Jonathan: We need your input here for IsaacLab: Are all of the hyperparameters you used the ones from the RLE paper, or did you change/add/remove some of them, if yes which ones, what are their values and did you finetune them (how, what was the tuning range, how many different values did you try out)?}
-
-For the IsaacLab experiments, we assume that the not specified hyperparameters under the \textsc{RLE} experiments section of the paper, were the same as in default PPO implementation which
+For the IsaacLab experiments, we assume that the not specified hyperparameters under the \textsc{RLE} experiments section of the paper, were the same as in default \textsc{PPO} implementation which
 comprise the following values:
 \begin{table}[ht]
 \centering
@@ -243,19 +251,20 @@ There are two special mentions among these parameters. The number of parallel en
 \textsc{IsaacGym}. In addition, we choose to use a rollout of $8$ as the authors suggested for "AllegroHand" and "ShadowHand" examples for \textsc{CartPole}, which provided higher results than $16$. 
 The timestep determination was done by observing a comparable figure with the authors and when the algorithm show a stability around a return. 
 
+\clearpage
 \section{Random Latent Exploration}
 
-\noindent The architecture of our RLE implementation can be found in figure \ref{fig:rle-architecture}:
+\noindent The architecture of our \textsc{RLE} implementation can be found in figure \ref{fig:rle-architecture}.
 
 \begin{figure}[h!]
   \centering
   %\includegraphics[width=0.5\textwidth]{tikz/rle-architecture.tex}
   \includegraphics[width=\textwidth]{tikz/rle-architecture-modified.tex}
-  \caption{In RLE, the policy and critic networks are conditioned on the latent vector $\textbf{z}$. \cite{rle-paper} split the critic's head in two: one head predicts the extrinsic value and the other head predicts the intrinsic value. In the vector dimension, $o$ represents the dimension of a single observation, $d$ represents the RLE feature dimension, and $a$ is the cardinality of the action space.}
+  \caption{In \textsc{RLE}, the policy and critic networks are conditioned on the latent vector $\textbf{z}$. \cite{rle-paper} split the critic's head in two: one head predicts the extrinsic value and the other head predicts the intrinsic value. In the vector dimension, $o$ represents the dimension of a single observation, $d$ represents the \textsc{RLE} feature dimension, and $a$ is the cardinality of the action space.}
   \label{fig:rle-architecture}
 \end{figure}
 
-\noindent For the RLE algorithm, the detailed pseudocode according to \cite{rle-paper} is as follows:
+\noindent For the \textsc{RLE} algorithm, the detailed pseudocode according to \cite{rle-paper} is as follows:
 
 \hypertarget{algo-rle}{
 \begin{table}[h!]
@@ -296,7 +305,7 @@ The timestep determination was done by observing a comparable figure with the au
 \clearpage
 \hypertarget{algo-ppo}{\section{Proximal Policy Optimization}}
 
-\noindent The algorithm constituting the foundation of RLE is Proximal Policy Iteration (PPO), described in \cite{ppo-paper}, which can itself be run to solve RL problems. It is an on-line policy gradient method where after running the policy $\boldsymbol{\pi}_{\theta_{\text{old}}}$ in parallel with $N$ actors for $T << E$ timesteps, where $E$ is the length of an episode, we compute the advantage estimator as proposed by \cite{generalized-advantage-estimation-paper} for each time index $t \in [0, T]$:
+\noindent The algorithm constituting the foundation of \textsc{RLE} is Proximal Policy Iteration (\textsc{PPO}), described in \cite{ppo-paper}, which can itself be run to solve RL problems. It is an on-line policy gradient method where after running the policy $\boldsymbol{\pi}_{\theta_{\text{old}}}$ in parallel with $N$ actors for $T << E$ timesteps, where $E$ is the length of an episode, we compute the advantage estimator as proposed by \cite{generalized-advantage-estimation-paper} for each time index $t \in [0, T]$:
 
 \begin{equation}
   \hat{A}_{t} = \delta_{t} + \left(\gamma \lambda\right) \delta_{t+1} + ... + \left(\gamma \lambda\right)^{T-t+1} \delta_{T - 1}
@@ -330,7 +339,7 @@ The timestep determination was done by observing a comparable figure with the au
 
 \noindent Moreover in \eqref{eq:ppo-vf-objective}, $V_{t}^{\text{targ}}$ represents some target state-value function that is to be obtained. Note that there exist also other objective functions mentioned in \cite{ppo-paper} that can substitute $L_{t}^{\text{CLIP}}(\theta)$ in \eqref{eq:ppo-objective-function}. In \eqref{eq:clipping-function}, we make use of a hyperparameter $\epsilon \in [0, 1]$ and in combination with the minimizer from \eqref{eq:ppo-clip-objective} we can prevent a single policy update to accidentally ruin the policy forever by sending the algorithm to a gradient region with a worse local extremum.
 
-\noindent For the PPO algorithm, the detailed pseudocode according to \cite{ppo-paper} is as follows:
+\noindent For the \textsc{PPO} algorithm, the detailed pseudocode according to \cite{ppo-paper} is as follows:
 
 \begin{table}[h!]
   \centering
@@ -353,14 +362,14 @@ The timestep determination was done by observing a comparable figure with the au
   \end{tabular}
 \end{table}
 
-%\clearpage
+\clearpage
 \hypertarget{algo-noisynet}{\section{NoisyNet}}
 
-\noindent The central idea in a NoisyNet architecture brought forward by \cite{noisynet-paper} is to introduce random noise into the weights learned by the network ($p$ inputs, $q$ outputs), i.e. if we have a neural network whose output can be parametrized by a vector of weights $\boldsymbol{\theta}$ as $\textbf{y} = f_{\boldsymbol{\theta}}(\textbf{x}) = \textbf{w} \cdot \textbf{x} + \textbf{b}$, then we can learn the set of parameter vectors $\zeta = (\boldsymbol{\mu}, \boldsymbol{\Sigma})$ to compute $\textbf{w} = (\boldsymbol{\mu}^{w} + \boldsymbol{\sigma}^{w} \odot \boldsymbol{\varepsilon}^{w})$ and $\textbf{b} = (\boldsymbol{\mu}^{b} + \boldsymbol{\sigma}^{b} \odot \boldsymbol{\varepsilon}^{b})$ with the following dimensionalities: $\boldsymbol{\mu}^{w}$, $\boldsymbol{\sigma}^{w}$, $\boldsymbol{\varepsilon}^{w} \in \mathbb{R}^{q \times p}$ implying $\textbf{w} \in \mathbb{R}^{q \times p}$, and $\boldsymbol{\mu}^{b}$, $\boldsymbol{\sigma}^{b}$, $\boldsymbol{\varepsilon}^{b} \in \mathbb{R}^{q}$ resulting in $\textbf{b} \in \mathbb{R}^{q}$. Note that $\textbf{x} \in \mathbb{R}^{p}$, $\textbf{y} \in \mathbb{R}^{q}$ and $\odot$ denotes element-wise multiplication.
+\noindent The central idea in a \textsc{NoisyNet} architecture brought forward by \cite{noisynet-paper} is to introduce random noise into the weights learned by the network ($p$ inputs, $q$ outputs), i.e. if we have a neural network whose output can be parametrized by a vector of weights $\boldsymbol{\theta}$ as $\textbf{y} = f_{\boldsymbol{\theta}}(\textbf{x}) = \textbf{w} \cdot \textbf{x} + \textbf{b}$, then we can learn the set of parameter vectors $\zeta = (\boldsymbol{\mu}, \boldsymbol{\Sigma})$ to compute $\textbf{w} = (\boldsymbol{\mu}^{w} + \boldsymbol{\sigma}^{w} \odot \boldsymbol{\varepsilon}^{w})$ and $\textbf{b} = (\boldsymbol{\mu}^{b} + \boldsymbol{\sigma}^{b} \odot \boldsymbol{\varepsilon}^{b})$ with the following dimensionalities: $\boldsymbol{\mu}^{w}$, $\boldsymbol{\sigma}^{w}$, $\boldsymbol{\varepsilon}^{w} \in \mathbb{R}^{q \times p}$ implying $\textbf{w} \in \mathbb{R}^{q \times p}$, and $\boldsymbol{\mu}^{b}$, $\boldsymbol{\sigma}^{b}$, $\boldsymbol{\varepsilon}^{b} \in \mathbb{R}^{q}$ resulting in $\textbf{b} \in \mathbb{R}^{q}$. Note that $\textbf{x} \in \mathbb{R}^{p}$, $\textbf{y} \in \mathbb{R}^{q}$ and $\odot$ denotes element-wise multiplication.
 
 \noindent We optimize the loss $\bar{L}(\zeta) = \mathbb{E}_{\varepsilon}[L(\boldsymbol{\theta})]$, i.e. the expectation of the loss $L(\boldsymbol{\theta})$ over the noise $\varepsilon$ which has a mean of zero and fixed statistics, using gradient descent on the parameters $\zeta$. The noise can be sampled either independently or in a factorized way from a Gaussian. The former method samples the noise $\varepsilon^{w}_{i,j} \in \boldsymbol{\varepsilon}^{w}$ and $\varepsilon^{b}_{j} \in \boldsymbol{\varepsilon}^{b}$ for every input to the network leading to a total of $pq + q$ random samples. Factorized sampling on the other hand greatly reduces computational complexity by factorizing $\varepsilon^{w}_{i,j} = f(\varepsilon_{i}) f(\varepsilon_{j})$ and then $\varepsilon^{b}_{j} = f(\varepsilon_{j})$ thereby lowering the number of required random samples to $p + q$, where $f: \mathbb{R} \rightarrow \mathbb{R}$. In \cite{noisynet-paper} the function $f(x) = \sign(x) \sqrt{|x|}$ is used. After sampling the noise, in theory we compute the gradients $\nabla\bar{L}(\zeta) = \nabla\mathbb{E}_{\varepsilon}[L(\boldsymbol{\theta})] = \mathbb{E}_{\varepsilon}[\nabla_{\boldsymbol{\mu}, \boldsymbol{\Sigma}}L(\boldsymbol{\mu} + \boldsymbol{\Sigma} \odot \boldsymbol{\varepsilon})]$, whereas in practice we approximate $\nabla\bar{L}(\zeta) \approx \nabla_{\boldsymbol{\mu}, \boldsymbol{\Sigma}}L(\boldsymbol{\mu} + \boldsymbol{\Sigma} \odot \boldsymbol{\varepsilon})$ with the Monte Carlo method.
 
-\noindent In the code of \cite{rle-paper}, a NoisyNet is used in conjunction with the A3C-algorithm, in particular the loss is computed from the action-value function is estimated using:
+\noindent In the code of \cite{rle-paper}, a \textsc{NoisyNet} is used in conjunction with the A3C-algorithm, in particular the loss is computed from the action-value function is estimated using:
 
 \begin{equation}
   \hat{Q}_{i} = \sum_{j=i}^{k-1} \gamma^{j-i} r_{t+j} + \gamma^{k-i} V(x_{t+k} | \zeta, \varepsilon_{i})
@@ -368,7 +377,7 @@ The timestep determination was done by observing a comparable figure with the au
 
 Moreover, for factorized networks, we initialize $\mu_{i,j} \sim \mathcal{U}\left[-\frac{1}{\sqrt{p}}, +\frac{1}{\sqrt{p}}\right]$ and $\sigma_{i,j} = \frac{\sigma_{0}}{\sqrt{p}}$ with $p$ being the number of inputs to the corresponding linear layer, $\mathcal{U}$ is a uniform distribution over the specified interval, and $\sigma_{0}$ is a hyperparameter.
 
-\noindent For the NoisyNet + A3C algorithm, the detailed pseudocode according to \cite{noisynet-paper} is as follows:
+\noindent For the \textsc{NoisyNet} + A3C algorithm, the detailed pseudocode according to \cite{noisynet-paper} is as follows:
 
 \begin{table}[H]
   \centering
@@ -412,11 +421,12 @@ Moreover, for factorized networks, we initialize $\mu_{i,j} \sim \mathcal{U}\lef
   \end{tabular}
 \end{table}
 
+\clearpage
 \hypertarget{algo-rnd}{\section{Random Network Distillation}}
 
 In Random Network Distillation, as described by \cite{rnd-paper}, we compose the reward which the agent obtains as $r_{t} = e_{t} + i_{t}$ where $e_{t}$ represents a sparse extrinsic (environment's) reward and $i_{t}$ is the intrinsic reward for transitioning, i.e. the exploration bonus emanating from the transition at time step $t$. The latter measures the novelty of a state and should yield a higher value, the less frequently a state has been visited so far. In case of a finite state space we can use $i_{t} = \frac{1}{n_{t}}$ or $i_{t} = \frac{1}{\sqrt{s}}$ where $n_{t}(s)$ denotes the number of times state $s$ has been visited until time step $t$. However, there exist alternatives, e.g. we could use state density based approaches to calculate an exploration bonus, which are described in the paper mentioned above. Moreover, they specify that in the paper the intrinsic reward is the prediction error of a randomly generated problem $i_{t} = \|\hat{f}(x|\theta) - f(x)\|^{2}$ involving a target network $f: \mathcal{O} \rightarrow \mathbb{R}^{k}$ (fixed and randomly initialized, maps an observation $\mathcal{O}$ to an embedding $\mathbb{R}^{k}$) to sample the problem as well as a predictor network $\hat{f}: \mathcal{O} \rightarrow \mathbb{R}^{k}$ which was trained on the agent's data by gradient descent to optimize $i_{t}$ w.r.t. parameters $\theta_{\hat{f}}$.
 
-\noindent Since the overall return can be composed as a sum of returns $R = R_{E} + R_{I}$ we can train two heads $V_{E}$ and $V_{I}$ to estimate the value function $V = V_{E} + V_{I}$ and in extension the advantages. In the end, a policy is trained with standard PPO using the advantage estimators. Note that the intrinsic rewards have to be normalized in order to be useful because otherwise we could not guarantee that they are on a consistent scale, which is done by dividing $i_{t}$ by a running estimate of the standard deviations of the intrinsic return. Furthermore, the observation also has to be normalized as $x \leftarrow \text{clip}(\frac{x - \mu}{\sigma}, -5, 5)$. The normalization parameters can be initialized by letting a random agent briefly move in the environment before beginning the optimization.
+\noindent Since the overall return can be composed as a sum of returns $R = R_{E} + R_{I}$ we can train two heads $V_{E}$ and $V_{I}$ to estimate the value function $V = V_{E} + V_{I}$ and in extension the advantages. In the end, a policy is trained with standard \textsc{PPO} using the advantage estimators. Note that the intrinsic rewards have to be normalized in order to be useful because otherwise we could not guarantee that they are on a consistent scale, which is done by dividing $i_{t}$ by a running estimate of the standard deviations of the intrinsic return. Furthermore, the observation also has to be normalized as $x \leftarrow \text{clip}(\frac{x - \mu}{\sigma}, -5, 5)$. The normalization parameters can be initialized by letting a random agent briefly move in the environment before beginning the optimization.
 
 \noindent The detailed pseudocode according to \cite{rnd-paper} is as follows:
 
@@ -451,7 +461,7 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
     22: & | & \multicolumn{2}{l}{Calculate combined advantages $A_{i} = A_{I,i} + A_{E,i}$.}\\
     23: & | & \multicolumn{2}{l}{Update observation normalization parameters using $B_{i}$.}\\
     24: & | & \multicolumn{2}{l}{\textbf{For} $j = 1, ..., N_{\text{opt}}$ \textbf{do (\textsuperscript{4})}}\\
-    25: & | & | & Optimize $\theta_{\pi}$ w.r.t. PPO loss on batch $B_{i}, R_{i}, A_{i}$ using Adam.\\
+    25: & | & | & Optimize $\theta_{\pi}$ w.r.t. \textsc{PPO} loss on batch $B_{i}, R_{i}, A_{i}$ using Adam.\\
     26: & | & | & Optimize $\theta_{\hat{f}}$ w.r.t. distillation loss on $B_{i}$ using Adam.\\
     27: & | & \multicolumn{2}{l}{\textbf{(\textsuperscript{4})}}\\
     28: & \multicolumn{3}{l}{\textbf{(\textsuperscript{2})}}\\
@@ -459,6 +469,7 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
   \end{tabular}
 \end{table}
 
+\clearpage
 \hypertarget{na-vmf}{\section{Neural-adaptive VMF}}
 
 Even more interesting was the construction of the loss that can guide the training of the networks. We first have an \textsc{alignment} term:
@@ -555,8 +566,7 @@ However, there is a beautiful property of Bessel functions that allow to write t
 
 \hypertarget{appendix-difficult}{\section{Difficulties}}
 
-
-\noindent A major challenge we faced was evaluating RLE across three distinct environments, each presenting unique difficulties. For the \textsc{FourRoom} environment, no implementation was available, requiring us to develop one from scratch. We aimed to replicate the approach used by \cite{rle-paper} as closely as possible to ensure comparability. The \textsc{Atari} environment, on the other hand, could be used without modification, but training agents demanded substantial computational resources. Furthermore, in the paper, an important implementation detail, the split critic's head, is omitted. The paper itself also contains some contradicting information (\textsc{Atari} feature network size, condition to resample $\textbf{z}$) and minor errors (\textsc{FourRoom} environment description and typo in pseudocode regarding feature network update). Lastly, as RLE builds upon PPO with optimizations such as generalized advantage estimation, we had to dedicate considerable time to thoroughly understand the underlying PPO framework.
+\noindent A major challenge we faced was evaluating \textsc{RLE} across three distinct environments, each presenting unique difficulties. For the \textsc{FourRoom} environment, no implementation was available, requiring us to develop one from scratch. We aimed to replicate the approach used by \cite{rle-paper} as closely as possible to ensure comparability. The \textsc{Atari} environment, on the other hand, could be used without modification, but training agents demanded substantial computational resources. Furthermore, in the paper, an important implementation detail, the split critic's head, is omitted. The paper itself also contains some contradicting information (\textsc{Atari} feature network size, condition to resample $\textbf{z}$) and minor errors (\textsc{FourRoom} environment description and typo in pseudocode regarding feature network update). Lastly, as \textsc{RLE} builds upon \textsc{PPO} with optimizations such as generalized advantage estimation, we had to dedicate considerable time to thoroughly understand the underlying \textsc{PPO} framework.
 
 \noindent There are not many documentation neither active blogs about \textsc{IsaacLab}, which it makes the migration highly difficult considering the higher complexity with respect
 to \textsc{IsaacGym}. In addition, the deprication of \textsc{IsaacGym} generates uncompatibilities with pre installed cuda libraries in providers as Lambda or Google which requires uninstalling
