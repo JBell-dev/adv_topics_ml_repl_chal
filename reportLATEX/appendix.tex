@@ -6,7 +6,7 @@ Since we could not fit all figures in eight pages, we include them here.
 \begin{figure}[h!]
   \centering
   \includegraphics[width=0.6\textwidth]{figures/gridworld_mean_entropy_state_visitation_algorithms.pdf}
-  \caption{Mean entropy of state visitation counts over the training steps for different algorithms. The shaded areas represent the 95\% confidence intervals. By the end of training, RLE achieves the highest entropy and the narrowest confidence interval.}
+  \caption{Mean entropy of state visitation counts over the training steps for different algorithms. The shaded areas represent the $95\%$ confidence intervals. By the end of training, RLE achieves the highest entropy and the narrowest confidence interval.}
   \label{fig:gridworld-entropy-algorithms}
 \end{figure}
 
@@ -20,7 +20,7 @@ Since we could not fit all figures in eight pages, we include them here.
 \begin{figure}[h!]
   \centering
   \includegraphics[width=0.6\textwidth]{figures/gridworld_mean_entropy_state_visitation_distributions.pdf}
-  \caption{Mean entropy of state visitation counts over the training steps for RLE variants with different latent vector distributions. The shaded areas represent the 95\% confidence intervals. The standard uniform and exponential variants explore less than the other two variants.}
+  \caption{Mean entropy of state visitation counts over the training steps for RLE variants with different latent vector distributions. The shaded areas represent the $95\%$ confidence intervals. The standard uniform and exponential variants explore less than the other two variants.}
   \label{fig:gridworld-entropy-distributions}
 \end{figure}
 
@@ -34,28 +34,28 @@ Since we could not fit all figures in eight pages, we include them here.
 \begin{figure}[h!]
   \centering
   \includegraphics[width=0.6\textwidth]{figures/gridworld_heatmaps_no_goal_algorithms.pdf}
-  \caption{For each algorithm, the run with the highest entropy over the state visitation counts was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the algorithms after training for 2.5M timesteps in the reward-free environment. The start location is in the top right cell. RLE achieves the best state visitation coverage.}
+  \caption{For each algorithm, the run with the highest entropy over the state visitation counts was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the algorithms after training for $2.5$M timesteps in the reward-free environment. The start location is in the top right cell. RLE achieves the best state visitation coverage.}
   \label{fig:gridworld-heatmap-nogoal-algorithms}
 \end{figure}
 
 \begin{figure}[h!]
   \centering
   \includegraphics[width=0.6\textwidth]{figures/gridworld_heatmaps_goal_algorithms.pdf}
-  \caption{For each algorithm, the run with the highest game score was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the algorithms after training for 2.5M timesteps in the environment with a goal. The start location is in the top right cell and the goal location in the bottom left cell.}
+  \caption{For each algorithm, the run with the highest game score was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the algorithms after training for $2.5$M timesteps in the environment with a goal. The start location is in the top right cell and the goal location in the bottom left cell.}
   \label{fig:gridworld-heatmap-goal-algorithms}
 \end{figure}
 
 \begin{figure}[h!]
   \centering
   \includegraphics[width=0.6\textwidth]{figures/gridworld_heatmaps_no_goal_distributions.pdf}
-  \caption{For each RLE variant with different latent vector distribution, the run with the highest entropy over the state visitation counts was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the RLE variants with different latent vector distribution after training for 2.5M timesteps in the reward-free environment. The RLE variants where the latent vector distribution is a standard normal and the Von Mises distribution achieve the best state visitation coverage.}
+  \caption{For each RLE variant with different latent vector distribution, the run with the highest entropy over the state visitation counts was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the RLE variants with different latent vector distribution after training for $2.5$M timesteps in the reward-free environment. The RLE variants where the latent vector distribution is a standard normal and the Von Mises distribution achieve the best state visitation coverage.}
   \label{fig:gridworld-heatmap-nogoal-distributions}
 \end{figure}
 
 \begin{figure}[h!]
   \centering
   \includegraphics[width=0.6\textwidth]{figures/gridworld_heatmaps_goal_distributions.pdf}
-  \caption{For each RLE variant with different latent vector distribution, the run with the highest game score was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the RLE variants with different latent vector distribution after training for 2.5M timesteps in the environment with a goal. The start location is in the top right cell and the goal location in the bottom left cell. All RLE variants reach the goal but the standard normal and Von Mises variants also explore most of the state space.}
+  \caption{For each RLE variant with different latent vector distribution, the run with the highest game score was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the RLE variants with different latent vector distribution after training for $2.5$M timesteps in the environment with a goal. The start location is in the top right cell and the goal location in the bottom left cell. All RLE variants reach the goal but the standard normal and Von Mises variants also explore most of the state space.}
   \label{fig:gridworld-heatmap-goal-distributions}
 \end{figure}
 
@@ -142,14 +142,14 @@ Since we could not fit all figures in eight pages, we include them here.
 \begin{enumerate}
   \item RLE performance compared to PPO is invariant under a change in the dimensionality of the random latent vector.
   \item RLE performance deteriorates if the policy and value networks are not conditioned on the random latent vector.
-  \item RLE performance improves slightly if a learning feature network is used in comparison to when the feature network has constant weights when evaluated on the Atari games.
+  \item RLE performance improves slightly if a learning feature network is used in comparison to when the feature network has constant weights when evaluated on the \textsc{Atari} games.
   \item RLE performance is insensitive to the feature extractor architecture.
 \end{enumerate}
 
 \hypertarget{appendix-hyperparams}{\section{Hyperparameters}}
 
 
-\noindent In \textsc{Atari}, we mostly used the same values for the hyperparameters that the authors used. In table \ref{tab:atari-hyperparams} the hyperparameters we modified are summarized. Note that contrary to the authors, due to time constraints we were only able to run every game once for each algorithm.
+\noindent In \textsc{Atari}, we mostly used the same values for the hyperparameters that the authors used. In table \ref{tab:atari-hyperparams} the hyperparameters we modified are summarized. Note that contrary to the authors, due to time constraints we were only able to run every game, of those that we tested, once for each algorithm.
 
 \begin{table}[h!]
   \centering
@@ -158,7 +158,7 @@ Since we could not fit all figures in eight pages, we include them here.
       \begin{tabular}{{ll}} 
         \hline
         \textbf{Hyperparameter} & \textbf{Value} \\ \hline
-        z-Sampling Frequency & 500\\
+        $\textbf{z}$-Sampling Frequency & $500$\\
         (switch\_steps) & \\
         Norm-RLE-Features & True\\
         Target-KL & None\\
@@ -206,10 +206,10 @@ Since we could not fit all figures in eight pages, we include them here.
   \begin{tabular}{{ll}} 
   \hline
   \textbf{Hyperparameter} & \textbf{Value} \\ \hline
-  Extrinsic Reward Coefficient & 1\\ 
-  Observation Normalization Iterations & 1 \\
-  Intrinsic Discount Rate & 0.99 \\ 
-  Feature Network Update Rate $\tau$ & 0.005 \\ 
+  Extrinsic Reward Coefficient & $1$\\ 
+  Observation Normalization Iterations & $1$\\
+  Intrinsic Discount Rate & $0.99$ \\ 
+  Feature Network Update Rate $\tau$ & $0.005$\\ 
   Anneal Learning Rate & False\\ 
   Target KL Divergence & None\\
   \end{tabular}
@@ -222,25 +222,25 @@ For the IsaacLab experiments, we assume that the not specified hyperparameters u
 comprise the following values:
 \begin{table}[ht]
 \centering
-\caption{Hyperparameters not stated by  for \textsc{IsaacLab} experiments.}
+\caption{Hyperparameters not stated by \textcolor{red}{\cite{rle-paper} (I'm assuming you wanted to reference them here)} for \textsc{IsaacLab} experiments.}
 \begin{tabular}{{ll}} 
 \hline
-\textbf{Hyperparameter} & \textbf{Value} \\ \hline
-Number of Parallel Environments & 4096 \\ 
-Rollouts & 8 \\
-Learning Epochs & 4 \\
-Mini batches & 2 \\
-Discount Rate & 0.99 \\
-Generalized Advantage Estimation $\lambda$ & 0.95 \\
-Gradient Norm Bound & 1.0 \\ 
+\textbf{Hyperparameter} & \textbf{Value}\\\hline
+Number of Parallel Environments & $4096$\\ 
+Rollouts & $8$\\
+Learning Epochs & $4$\\
+Mini batches & $2$\\
+Discount Rate & $0.99$\\
+Generalized Advantage Estimation $\lambda$ & $0.95$\\
+Gradient Norm Bound & $1.0$\\ 
 Used Clipped Value Loss & False \\
-Value Loss Scale & 2.0 \\
-Timesteps & 5000 \\
+Value Loss Scale & $2.0$\\
+Timesteps & $5000$\\
 \end{tabular}
 \label{tab:isaaclab-missing-hyperparameters}
 \end{table}
-There are two special mentions among these parameters. The number of parallel environments used is 4096, as it is the default value in the code in the authors repository for 
-isaacgym. In addition, we choose to use a rollout of 8 as the authors suggested for "AllegroHand" and "ShadowHand" examples for CartPole, which provided higher results than 16. 
+There are two special mentions among these parameters. The number of parallel environments used is $4096$, as it is the default value in the code in the authors repository for 
+\textsc{IsaacGym}. In addition, we choose to use a rollout of $8$ as the authors suggested for "AllegroHand" and "ShadowHand" examples for \textsc{CartPole}, which provided higher results than $16$. 
 The timestep determination was done by observing a comparable figure with the authors and when the algorithm show a stability around a return. 
 
 \section{Random Latent Exploration}
@@ -251,7 +251,7 @@ The timestep determination was done by observing a comparable figure with the au
   \centering
   %\includegraphics[width=0.5\textwidth]{tikz/rle-architecture.tex}
   \includegraphics[width=\textwidth]{tikz/rle-architecture-modified.tex}
-  \caption{In RLE, the policy and critic networks are conditioned on the latent vector z. \cite{rle-paper} split the critic's head in two: one head predicts the extrinsic value and the other head predicts the intrinsic value. In the vector dimension, $o$ represents the dimension of a single observation, $d$ represents the RLE feature dimension, and $a$ is the cardinality of the action space.}
+  \caption{In RLE, the policy and critic networks are conditioned on the latent vector $\textbf{z}$. \cite{rle-paper} split the critic's head in two: one head predicts the extrinsic value and the other head predicts the intrinsic value. In the vector dimension, $o$ represents the dimension of a single observation, $d$ represents the RLE feature dimension, and $a$ is the cardinality of the action space.}
   \label{fig:rle-architecture}
 \end{figure}
 
@@ -494,9 +494,9 @@ Therefore, the complete entropy expression is:
   \mathcal{L}_{entropy} = -\left[(d/2-1)\log(\kappa) - \frac{d}{2}\log(2\pi) - \log(I_{d/2-1}(\kappa))\right] - \kappa\frac{I_{d/2}(\kappa)}{I_{d/2-1}(\kappa)}
 \end{equation}
 
-This term pushes the model for exploration (lower kappa) with two weighting parameters, one based on progress such that the term decays while training progresses and another based on stagnation, such that if the recent returns show little variation compared to the overall returns (over a short window), indicating stagnation, the function increases the exploration boost.
+This term pushes the model for exploration (lower $\kappa$) with two weighting parameters, one based on progress such that the term decays while training progresses and another based on stagnation, such that if the recent returns show little variation compared to the overall returns (over a short window), indicating stagnation, the function increases the exploration boost.
 
-The third term is the \textsc{reward} loss - Huber loss:
+The third term is the \textsc{reward} loss -- Huber loss:
 
 \begin{equation}
     \mathcal{L}_{huber} = \sum_{t=1}^{T} \begin{cases} 
@@ -507,7 +507,7 @@ The third term is the \textsc{reward} loss - Huber loss:
 
 We use the Huber loss since reward can be sparse and since what we finally want to teach the model is to differentiate what are good states to be in compared to others then, we can soften the effect of these outliers such that the small errors goes under the quadratic loss whereas the outliers receive a linear loss, reducing their impact on the final loss. 
 
-We also need to teach the model how to form a confidence around a certain $\mu$. The \textsc{kappa} loss is constructed by first estimating a good target kappa, which can be done by setting a maximum and minimum kappa bound. Visualizing the VMF distribution helps to notice that a k $\in$ [0,40] is a good range, allowing still even reaching the maximum to sample values at a certain range of distance from $\mu$, allowing for exploration.% (ADD PLOT HERE)
+We also need to teach the model how to form a confidence around a certain $\mu$. The $\kappa$-loss is constructed by first estimating a good target $\kappa$, which can be done by setting a maximum and minimum $\kappa$ bound. Visualizing the VMF distribution helps to notice that a $k \in [0,40]$ is a good range, allowing still even reaching the maximum to sample values at a certain range of distance from $\mu$, allowing for exploration.
 
 \begin{equation}
     \kappa_{target} = \kappa_{min} + (\kappa_{max} - \kappa_{min}) \cdot \text{returns}_{scaled}
@@ -515,7 +515,7 @@ We also need to teach the model how to form a confidence around a certain $\mu$.
 
 The scaled returns are passed through a sigmoid, which means that kappa final value will be proportional to the range between max and min bounds of kappa where that proportion is determined by the returns produced by the corresponding $z$. Then, this target will be the input of the Huber loss for kappa. Although, it can be use an MSE loss too. 
 
-Finally, there is an optional term, \textsc{KL-divergence} term. The idea of this term is to naturally provide a consistent exploration. The authors in the paper offered to set resampling of $z$ after certain steps, but it could be controlled naturally by restricting the distributions change in this case. However, this term is not exploited in Alien due to the time constrain.\footnote{The respective method is implemented in the code}
+Finally, there is an optional term, \textsc{KL-divergence} term. The idea of this term is to naturally provide a consistent exploration. The authors in the paper offered to set resampling of $z$ after certain steps, but it could be controlled naturally by restricting the distributions change in this case. However, this term is not exploited in \textsc{Alien} due to the time constrain.\footnote{The respective method is implemented in the code.}
 
 Is important to notice that we develop each method with PyTorch, even considering that there is no Bessel function of higher order than one in the library. 
 However, there is a beautiful property of Bessel functions that allow to write the higher order as a function of the previous two.\footnote{\url{https://proofwiki.org/wiki/Recurrence_Formula_for_Bessel_Function_of_the_First_Kind}} Since the first two  orders of the first kind Bessel functions are implemented, then we had all the ingredients to make a perfect differentiable \textsc{entropy} and \textsc{KL-divergence} term which will be necessary for BPTT. In addition, could be interesting to test what would happen if we keep the cell (long term) memory of the LSTM between episodes of the same parallel environment.
@@ -542,20 +542,22 @@ However, there is a beautiful property of Bessel functions that allow to write t
     \caption{Trajectory Length.}
     \label{fig:vmf-trajectory-length}
   \end{subfigure}
+  \label{fig:vmf-variant}
+  \caption{The \textsc{Alien} game variant with the VMF algorithms.}
 \end{figure}
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figures/plot_Cartpole_Extrinsic Return.pdf}
-  \caption{Cartpole Extrinsic Returns.}
+  \caption{\textsc{CartPole} Extrinsic Returns.}
   \label{fig:cartpole-return}
 \end{figure}
 
 \hypertarget{appendix-difficult}{\section{Difficulties}}
 
 
-\noindent A major challenge we faced was evaluating RLE across three distinct environments, each presenting unique difficulties. For the FourRoom environment, no implementation was available, requiring us to develop one from scratch. We aimed to replicate the approach used by \cite{rle-paper} as closely as possible to ensure comparability. The Atari environment, on the other hand, could be used without modification, but training agents demanded substantial computational resources. Furthermore, in the paper, an important implementation detail, the split critic's head, is omitted. The paper itself also contains some contradicting information (\textsc{Atari} feature network size, condition to resample z) and minor errors (\textsc{FourRoom} environment description and typo in pseudocode regarding feature network update). Lastly, as RLE builds upon PPO with optimizations such as generalized advantage estimation, we had to dedicate considerable time to thoroughly understand the underlying PPO framework.
+\noindent A major challenge we faced was evaluating RLE across three distinct environments, each presenting unique difficulties. For the \textsc{FourRoom} environment, no implementation was available, requiring us to develop one from scratch. We aimed to replicate the approach used by \cite{rle-paper} as closely as possible to ensure comparability. The \textsc{Atari} environment, on the other hand, could be used without modification, but training agents demanded substantial computational resources. Furthermore, in the paper, an important implementation detail, the split critic's head, is omitted. The paper itself also contains some contradicting information (\textsc{Atari} feature network size, condition to resample $\textbf{z}$) and minor errors (\textsc{FourRoom} environment description and typo in pseudocode regarding feature network update). Lastly, as RLE builds upon PPO with optimizations such as generalized advantage estimation, we had to dedicate considerable time to thoroughly understand the underlying PPO framework.
 
-\noindent There are not many documentation neither active blogs about IsaacLab, which it makes the migration highly difficult considering the higher complexity with respect
-to isaacgym. In addition, the deprication of isaacgym generates uncompatibilities with pre installed cuda libraries in providers as Lambda or Google which requires uninstalling
+\noindent There are not many documentation neither active blogs about \textsc{IsaacLab}, which it makes the migration highly difficult considering the higher complexity with respect
+to \textsc{IsaacGym}. In addition, the deprication of \textsc{IsaacGym} generates uncompatibilities with pre installed cuda libraries in providers as Lambda or Google which requires uninstalling
 and installing older versions which can generate other issues with other pre installed libraries or requires a high amount of time debugging NVIDIA related issues.
