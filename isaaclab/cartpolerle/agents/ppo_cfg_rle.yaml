@@ -1,0 +1,69 @@
+
+seed: 42
+
+models:
+  separate: True
+  policy:
+    class: rlepolicymodel
+    clip_actions: True
+    feature_size: 32
+  value:
+    class: rlevaluemodel
+    feature_size: 32
+
+memory:
+  class: RandomMemory
+  memory_size: -1
+
+agent:
+  class: ppo
+  rollouts: 8 
+  learning_epochs: 4 
+  mini_batches: 2 
+  discount_factor: 0.99
+  lambda: 0.95
+  learning_rate: 0.001
+  learning_rate_scheduler: KLAdaptiveLR 
+  learning_rate_scheduler_kwargs:
+    kl_threshold: 0.008
+  state_preprocessor: RunningStandardScaler
+  state_preprocessor_kwargs: {}
+  value_preprocessor: RunningStandardScaler
+  value_preprocessor_kwargs: {}
+  random_timesteps: 0
+  learning_starts: 0
+  grad_norm_clip: 1.0
+  ratio_clip: 0.2
+  value_clip: 0.0
+  clip_predicted_values: False
+  entropy_loss_scale: 0.0 
+  value_loss_scale: 2.0
+  kl_threshold: 0.016
+  rewards_shaper_scale: 1.0
+  time_limit_bootstrap: True
+
+  
+  # RLE specific parameters
+  feature_size: 32
+  tau: 0.005
+  int_coef: 0.01 
+  ext_coef: 1.0
+  z_reset_freq: 16
+  int_value_loss_scale: 0.5
+
+  experiment:
+    directory: "cartpole_rle"
+    experiment_name: "rle_ppo"
+    write_interval: auto
+    checkpoint_interval: auto
+
+trainer:
+  class: SequentialTrainer
+  timesteps: 5000
+  environment_info: log
+
+scene:
+  num_envs: 4096
+  max_episode_length: 500
+
+  

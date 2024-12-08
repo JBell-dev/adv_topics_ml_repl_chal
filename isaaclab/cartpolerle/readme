@@ -1,0 +1,16 @@
+To run the code properly in a windows machine it is important to first install the following:
+
+- Omniverse  -> Isaac Sim -> Isaac Lab (https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/binaries_installation.html)
+
+in particular conda environment
+
+Once the conda environment is setup. The files are made to be run with each part in the respetive directories:
+- {ISAAC_ROOT}\source\extensions\omni.isaac.lab_tasks\omni\isaac\lab_tasks\direct\cartpolerle 
+- {ISAAC_ROOT}\source\standalone\workflows\skrl -> TRAINER FILES
+- {CONDA_ENV_ROOT}\Lib\site-packages\skrl\agents\torch\ppo -> PPO FILES
+
+Finally, to run the code from the ISAAC_ROOT path:
+
+- python source/standalone/workflows/skrl/train_rle.py --task=Isaac-Cartpole-rle (--headless)      -> for rle
+- python source/standalone/workflows/skrl/train.py --task=Isaac-Cartpole-(ppo)(noisy) (--headless)      -> for ppo or noisy accordingly 
+
