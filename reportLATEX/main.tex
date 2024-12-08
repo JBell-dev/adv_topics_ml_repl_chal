@@ -342,7 +342,7 @@ All the 95\% confidence intervals are calculated using the bootstrapping method.
 
 \noindent One interesting observation that we made during our experiments is the fact that in \textsc{Alien}, the agent seems to obtain lower rewards on average with RLE, see figure \ref{fig:alien-rewards}, but still has the highest game score overall. We conjecture that this means the agent with RLE behaves more cautiously trying to stay alive for longer and collect lower/safer rewards but over a longer time horizon meaning the overall accumulated reward (game score) still turns out to be superior compared to the other algorithms. This would be confirmed by RLE having the largest trajectory (episode) length, see figure \ref{fig:alien-trajectorylength}. However, this is probably not the entire explanation, since in \textsc{StarGunner}, see figure \ref{fig:stargunner-rewards} and \ref{fig:stargunner-trajectorylength}, RLE also gets very low reward on average but here this cannot be compensated by having the largest trajectory length. Moreover, given that we also normalized the game scores, the result suggests that the agent is better at playing \textsc{StarGunner} and worse at playing \textsc{Alien} compared to an average human.
 
-\noindent Moreover, as mentioned in the \hyperlink{hyperparameter-subsection}{hyperparameter overview}, we increased RLE's z-sampling frequency from every 1280 time steps (authors) to every 500, but we did not find materially different results.
+\noindent Moreover, as mentioned in the \hyperlink{hyperparameter-subsection}{hyperparameter overview}, we increased RLE's z-sampling frequency from every 1280 time steps (authors) to every 500, but we did not find materially different results. Another observation we made is that for some reason in the RLE implementation of \textsc{Alien}, the results different drastically between using a GPU and a CPU/TPU for the computations, \textcolor{red}{but we have no idea as to why this happened}.
 
 \subsubsection{Adaptive Von Mises-Fisher}
 \textcolor{red}{@Jonathan}
@@ -381,9 +381,9 @@ A major challenge we faced was evaluating RLE across three distinct environments
 
 \begin{itemize}
   \item Jonatan Bella: \textsc{IsaacLab} implementation, \textcolor{red}{please let me know what you want to add}
-  \item Alessia Berarducci: \textsc{Atari} implementation, \textcolor{red}{please let me know what you want to add}
+  \item Alessia Berarducci: \textsc{Atari} implementation, IQM / bootstrapped confidence interval (not used in the end due to compute time), Small Reward Compensation Hypothesis.
   \item Jonas Knupp: Implementation of the \textsc{FourRoom} environment, adaption of PPO, NoisyNet, RLE, and RND to the \textsc{FourRoom} environment, conducting the experiments with the \textsc{FourRoom} environment
-  \item Tobias Erbacher: Report writing, project management, numpy-visualization.
+  \item Tobias Erbacher: Report writing, project management, numpy-visualization of \textsc{Atari} interface, plots, assistance in conceptual questions.
 \end{itemize}
 
 \noindent However, we met regularly and assisted each other in their tasks so the split is not completely clear-cut.
