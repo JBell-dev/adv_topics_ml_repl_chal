@@ -208,10 +208,10 @@ Since we could not fit all figures in eight pages, we include them here.
   \textbf{Hyperparameter} & \textbf{Value} \\ \hline
   Extrinsic Reward Coefficient & 1\\ 
   Observation Normalization Iterations & 1 \\
-  Discount Rate & 0.99 \\ 
   Intrinsic Discount Rate & 0.99 \\ 
   Feature Network Update Rate $\tau$ & 0.005 \\ 
-  Learning Rate & 0.001 \\ 
+  Anneal Learning Rate & False\\ 
+  Target KL Divergence & None\\
   \end{tabular}
   \label{tab:gridworld-missing-hyperparameters}
 \end{table}
