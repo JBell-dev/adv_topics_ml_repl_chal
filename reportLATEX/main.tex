@@ -149,18 +149,18 @@ We also tested to what degree RLE is indifferent to the distribution of the late
 
 \subsubsection{IsaacLab}
 %\textcolor{red}{@Jonathan explain environment and experiments (NOT RESULT)}
-In the case for this implementation, the code provided was develop in IsaacGym, which is depricated. \footnote{The poor documentation for migrating from IsaacGym to IsaacLab provided by NVIDIA \url{https://isaac-sim.github.io/IsaacLab/main/source/migration/migrating_from_isaacgymenvs.html}} Therefore, we decided to reimplement it in IsaacLab which is a 
+In the case for this implementation, the code provided was develop in IsaacGym, which is deprecated.\footnote{The poor documentation for migrating from IsaacGym to IsaacLab provided by NVIDIA: \url{https://isaac-sim.github.io/IsaacLab/main/source/migration/migrating_from_isaacgymenvs.html}} Therefore, we decided to reimplement it in IsaacLab which is a 
 reinforcement learning framework built on top of IsaacSim. However, the are changes in terms of the code architecture and features of the software. As an example, 
 the physics engine is an improved version with respect to IsaacGym, with different asset extensions.
 
 Therefore, for implementing the paper we based in an example provided by \href{https://skrl.readthedocs.io/en/latest/#}{SKRL}.
 Using their based implementation for PPO as an example, we could identify the main structure to develop our own version. 
 
-I will proceed to describe each component of the implementation. The $environment$ file ($cartpole\_rle\_env.py$) extends the basic Cartpole environment class with the RLE necessary components as for example, 
-the latent vector generation and the intrinsic and extrinsic rewards. The configuration file ($ppo_cfg_rle.yaml$) contains the hyperparameters for the training process. The $models.py$ file contains the policy and value networks
-implementation for the rle case. Whereas, the $rle\_network.py$ file contains the feature network implementation for the latent vector generation. 
-Besides these files, we needed to implement the trainer file ($train\_rle.py$) which handles the arguments - acting as entry point, initialize IsaacSim, setup up the trackings, configures the environment and 
-instantiates the runner ($runner\_rle.py$) which instantiates the agent, coordinates the interactions between the agent and the environment and executes the training. Finally, the PPO-RLE algorithm ($ppo\_rle\_sk.py$)
+I will proceed to describe each component of the implementation. The \textsc{environment} file (\url{cartpole\_rle\_env.py}) extends the basic Cartpole environment class with the RLE necessary components as for example, 
+the latent vector generation and the intrinsic and extrinsic rewards. The configuration file (\url{ppo\_cfg\_rle.yaml}) contains the hyperparameters for the training process. The \url{models.py} file contains the policy and value networks
+implementation for the rle case. Whereas, the \url{rle\_network.py} file contains the feature network implementation for the latent vector generation. 
+Besides these files, we needed to implement the trainer file (\url{train\_rle.py}) which handles the arguments - acting as entry point, initialize IsaacSim, setup up the trackings, configures the environment and 
+instantiates the runner (\url{runner\_rle.py}) which instantiates the agent, coordinates the interactions between the agent and the environment and executes the training. Finally, the PPO-RLE algorithm (\url{ppo\_rle\_sk.py})
 which is the custom PPO that handles the dual rewards for the two heads of the value network, the generalized advantage estimation and the learning scheduling among others. 
 
 For the development of each of the parts we did not relay in the authors code unless to check the default parameters when they were not stated in the paper and as a double check of the logic of the optimization since the 
