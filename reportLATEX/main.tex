@@ -112,23 +112,56 @@ Random Latent Exploration --- The new idea that the authors \cite{rle-paper} pre
 
 %\noindent Since we are dealing with a reinforcement learning task, we did not use any dataset to train our models but rather four different environments which will explain in \hyperlink{experimental-setup}{section 3.4} \textcolor{red}{(check link before submission)}.
 
-\subsection{Hyperparameters}
+\hypertarget{hyperparameter-subsection}{\subsection{Hyperparameters}}
 
-\noindent In \textsc{Atari}, we mostly used the same values for the hyperparameters that the authors used. In table \ref{tab:atari-hyperparams} the hyperparameters we modified are summarized. Note that in the code, the z-sampling frequency is referred to as switch\_steps.
+\noindent In \textsc{Atari}, we mostly used the same values for the hyperparameters that the authors used. In table \ref{tab:atari-hyperparams} the hyperparameters we modified are summarized. Note that contrary to the authors, due to time constraints we were only able to run every game once for each algorithm.
 
 \begin{table}[h!]
   \centering
   \caption{Hyperparameters that differ from \cite{rle-paper} for the \textsc{Atari} experiments.}
-  \begin{tabular}{{ll}} 
-  \hline
-  \textbf{Hyperparameter} & \textbf{Value} \\ \hline
-  z-Sampling Frequency & 500\\ 
-  Number of Runs per Game & 1 \\
-  \end{tabular}
+  \begin{subtable}[h]{0.32\textwidth}
+      \begin{tabular}{{ll}} 
+        \hline
+        \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+        z-Sampling Frequency & 500\\
+        (switch\_steps) & \\
+        Norm-RLE-Features & True\\
+        Target-KL & None\\
+        &\\
+    \end{tabular}
+    \caption{Modified RLE parameters.\\\textcolor{white}{.}\\\textcolor{white}{.}}
+    \label{tab:atari-rle-hyperparams}
+  \end{subtable}
+  \hfill
+  \begin{subtable}[h]{0.32\textwidth}
+      \begin{tabular}{{ll}} 
+        \hline
+        \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+        Anneal Learning Rate & False\\ 
+        Target KL Divergence & None\\
+        Sticky Action & True\\
+        Reward Normalization & True\\
+        Adam Epsilon & $10^{-5}$\\
+    \end{tabular}
+    \caption{PPO parameters used in the code but not mentioned in the paper. The same holds for NoisyNet.}
+    \label{tab:atari-ppo-hyperparams}
+  \end{subtable}
+  \hfill
+  \begin{subtable}[h]{0.32\textwidth}
+      \begin{tabular}{{ll}} 
+        \hline
+        \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+        Target KL Divergence & None\\ 
+        \textcolor{red}{Batch Size} & \textcolor{red}{?}\\
+        - Rest as in PPO - & \\
+        &\\
+        &\\
+    \end{tabular}
+    \caption{RND parameters used in the code but not mentioned in the paper.\\\textcolor{white}{.}}
+    \label{tab:atari-rnd-hyperparams}
+  \end{subtable}
   \label{tab:atari-hyperparams}
 \end{table}
-
-\noindent \textcolor{red}{@Alessia: Are there undeclared hyperparameters in the code not listed in the paper?}
 
 \noindent For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-paper} were used. However, \cite{rle-paper} did not provide values for all available hyperparameters. For the missing hyperparameters we used the values in table \ref{tab:gridworld-missing-hyperparameters}, that seemed reasonable to us although we did not spend a lot of time finetuning them.
 
@@ -308,6 +341,8 @@ All the 95\% confidence intervals are calculated using the bootstrapping method.
 \subsubsection{Atari}
 
 \noindent One interesting observation that we made during our experiments is the fact that in \textsc{Alien}, the agent seems to obtain lower rewards on average with RLE, see figure \ref{fig:alien-rewards}, but still has the highest game score overall. We conjecture that this means the agent with RLE behaves more cautiously trying to stay alive for longer and collect lower/safer rewards but over a longer time horizon meaning the overall accumulated reward (game score) still turns out to be superior compared to the other algorithms. This would be confirmed by RLE having the largest trajectory (episode) length, see figure \ref{fig:alien-trajectorylength}. However, this is probably not the entire explanation, since in \textsc{StarGunner}, see figure \ref{fig:stargunner-rewards} and \ref{fig:stargunner-trajectorylength}, RLE also gets very low reward on average but here this cannot be compensated by having the largest trajectory length. Moreover, given that we also normalized the game scores, the result suggests that the agent is better at playing \textsc{StarGunner} and worse at playing \textsc{Alien} compared to an average human.
+
+\noindent Moreover, as mentioned in the \hyperlink{hyperparameter-subsection}{hyperparameter overview}, we increased RLE's z-sampling frequency from every 1280 time steps (authors) to every 500, but we did not find materially different results.
 
 \subsubsection{Adaptive Von Mises-Fisher}
 \textcolor{red}{@Jonathan}
