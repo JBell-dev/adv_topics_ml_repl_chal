@@ -461,10 +461,10 @@ In Random Network Distillation, as described by \cite{rnd-paper}, we compose the
 
 \hypertarget{na-vmf}{\section{Neural-adaptive VMF}}
 
-Even more interesting was the development of a loss that can guide the training of the networks. We first have an \textsc{alignment} term:
+Even more interesting was the construction of the loss that can guide the training of the networks. We first have an \textsc{alignment} term:
 
 \begin{equation}
-    \mathcal{L}_{align} = - \sum_{t=1}^{T} \left( \boldsymbol{\mu}_{t-1} \cdot \textbf{z}_{t-1} \right) \cdot r_{t}
+    \mathcal{L}_{align} = - \sum_{t=1}^{T} \langle \boldsymbol{\mu}_{t-1}, \textbf{z}_{t-1} \rangle \cdot r_{t}
 \end{equation}
 
 Such that when sampled $z$ from a VMF with $\mu$ as direction produced high return $r$ that will be seen in the next step, then most we want $\mu$ to be like $z$, aligning $\mu$ with the highest rewarding $z$.
@@ -491,7 +491,7 @@ Taking the logarithm of $C_d(\kappa)$:
 
 Therefore, the complete entropy expression is:
 \begin{equation}
-    L(\text{vMF}) = -\left[(d/2-1)\log(\kappa) - \frac{d}{2}\log(2\pi) - \log(I_{d/2-1}(\kappa))\right] - \kappa\frac{I_{d/2}(\kappa)}{I_{d/2-1}(\kappa)}
+  \mathcal{L}_{entropy} = -\left[(d/2-1)\log(\kappa) - \frac{d}{2}\log(2\pi) - \log(I_{d/2-1}(\kappa))\right] - \kappa\frac{I_{d/2}(\kappa)}{I_{d/2-1}(\kappa)}
 \end{equation}
 
 This term pushes the model for exploration (lower kappa) with two weighting parameters, one based on progress such that the term decays while training progresses and another based on stagnation, such that if the recent returns show little variation compared to the overall returns (over a short window), indicating stagnation, the function increases the exploration boost.
@@ -505,7 +505,7 @@ The third term is the \textsc{reward} loss - Huber loss:
     \end{cases}
 \end{equation}
 
-We use the Huber loss such that since reward can be pretty sparse and since what we finally want to teach the model is to differentiate what are good states to be in comparison to others then, we can soften the effect of this outliers such that the small errors goes under the quadratic  loss whereas the outliers receive a linear loss, reducing their impact on the final loss. 
+We use the Huber loss since reward can be sparse and since what we finally want to teach the model is to differentiate what are good states to be in compared to others then, we can soften the effect of these outliers such that the small errors goes under the quadratic loss whereas the outliers receive a linear loss, reducing their impact on the final loss. 
 
 We also need to teach the model how to form a confidence around a certain $\mu$. The \textsc{kappa} loss is constructed by first estimating a good target kappa, which can be done by setting a maximum and minimum kappa bound. Visualizing the VMF distribution helps to notice that a k $\in$ [0,40] is a good range, allowing still even reaching the maximum to sample values at a certain range of distance from $\mu$, allowing for exploration.% (ADD PLOT HERE)
 
@@ -515,19 +515,19 @@ We also need to teach the model how to form a confidence around a certain $\mu$.
 
 The scaled returns are passed through a sigmoid, which means that kappa final value will be proportional to the range between max and min bounds of kappa where that proportion is determined by the returns produced by the corresponding $z$. Then, this target will be the input of the Huber loss for kappa. Although, it can be use an MSE loss too. 
 
-Finally, there is an optional term, \textsc{KL-divergence} term. The idea of this term is to naturally provide a consistent exploration. The authors in the paper offered to set resampling of $z$ after certain steps, but it could be controlled naturally by restricting the distributions change in this case. However, this term is not explored give the time constrain.\footnote{The respective method is implemented in the code to be used}
+Finally, there is an optional term, \textsc{KL-divergence} term. The idea of this term is to naturally provide a consistent exploration. The authors in the paper offered to set resampling of $z$ after certain steps, but it could be controlled naturally by restricting the distributions change in this case. However, this term is not exploited in Alien due to the time constrain.\footnote{The respective method is implemented in the code}
 
-Is important to notice that we develop each method with PyTorch, even considering that there is no Bessel function of higher order than 1 in it. 
-However, there is a beautiful property of Bessel functions that allow to write the higher order as a function of the previous two.\footnote{\url{https://proofwiki.org/wiki/Recurrence_Formula_for_Bessel_Function_of_the_First_Kind}} Since the first two  orders of the first kind Bessel functions are implemented, then we had all the ingredients to make a perfect differentiable entropy and \textsc{KL-divergence} term which will be necessary for BPTT. In addition, could be interesting to test what would happen if we keep the cell (long term) memory of the lstm between episodes of the same parallel environment. 
+Is important to notice that we develop each method with PyTorch, even considering that there is no Bessel function of higher order than one in the library. 
+However, there is a beautiful property of Bessel functions that allow to write the higher order as a function of the previous two.\footnote{\url{https://proofwiki.org/wiki/Recurrence_Formula_for_Bessel_Function_of_the_First_Kind}} Since the first two  orders of the first kind Bessel functions are implemented, then we had all the ingredients to make a perfect differentiable \textsc{entropy} and \textsc{KL-divergence} term which will be necessary for BPTT. In addition, could be interesting to test what would happen if we keep the cell (long term) memory of the LSTM between episodes of the same parallel environment.
 
-\begin{figure}
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{tikz/neural-adaptive-vmf.tex}
   \caption{Neural-adaptive VMF architecture.}
   \label{fig:neural-adaptive-vmf}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[H]
   \centering
   \begin{subfigure}[b]{0.49\textwidth}
     \centering
@@ -544,7 +544,7 @@ However, there is a beautiful property of Bessel functions that allow to write t
   \end{subfigure}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figures/plot_Cartpole_Extrinsic Return.pdf}
   \caption{Cartpole Extrinsic Returns.}
