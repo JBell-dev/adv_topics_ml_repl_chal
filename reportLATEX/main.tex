@@ -294,8 +294,9 @@ All the 95\% confidence intervals are calculated using the bootstrapping method.
 \noindent In the case of the \textsc{StarGunner} game, as becomes apparent in table \ref{tab:stargunner-score}, the RLE algorithm does not yield the best game score but PPO does. This result differs strongly from the findings of the authors. In more detail, we find that RLE obtains a game score of around $42481$ while the authors report $64011$, and in addition their implementation of NoisyNet performs much better at $42645$ while our agent only got $27530$ in the end. Thus, in this case we have to object claim $(1)$, which is shown in more detail in figure \ref{fig:stargunner-score}. On the contrary, we can confirm claim $(2)$ again as shown in figure \ref{fig:stargunner-entropy} since RLE does exhibit the most diverse behavior out of all four algorithms. Perhaps this hints at instabilities in the algorithmic behavior of the agent which are depending on e.g. the seed with which the run was initialized.
 
 \subsubsection{IsaacLab}
-\textcolor{red}{@Jonathan}
-
+The results from our IsaacLab replication show similar results to the authors'. The RLE algorithm shows the most stable performance in the CartPole environment, see figure \ref{fig:cartpole-return} which replicates
+figure 28 and 22 of the paper. The difference on the maximum score comes from the maximum length of the episodes which are kept in 299 steps in out replication for computational reasons, besides that is not directly manipulable 
+in the environment wrapper as on previous IsaacGym. Notice that we also use the same hyperparameters as the authors' implementation for PPO, under the default set of parameters of skrl the results can differ from the authors.
 
 \subsection{Results beyond original paper}
 %\texttt{Often papers don't include enough information to fully specify their experiments, so some additional experimentation may be necessary. For example, it might be the case that batch size was not specified, and so different batch sizes need to be evaluated to reproduce the original results. Include the results of any additional experiments here. Note: this won't be necessary for all reproductions.}
@@ -307,8 +308,34 @@ All the 95\% confidence intervals are calculated using the bootstrapping method.
 \noindent Moreover, as mentioned in the \hyperlink{hyperparameter-subsection}{hyperparameter overview}, we increased RLE's z-sampling frequency from every 1280 time steps (authors) to every 500, but we did not find materially different results. Another observation we made is that for some reason in the RLE implementation of \textsc{Alien}, the results different drastically between using a GPU and a CPU/TPU for the computations, but the underlying cause of this is beyond our understanding.
 
 \subsubsection{Adaptive Von Mises-Fisher}
-\textcolor{red}{@Jonathan}
+The observed results from the adaptive VMF are promising (see figure \ref{fig:vmf-game-score}), with the following comparable scores: 
 
+\begin{table}[h!]
+  \centering
+  \caption{Results of the \textsc{Atari} experiments with Adaptive VMF}
+  \begin{subtable}[h]{0.48\textwidth}
+      \centering
+      \begin{tabular}{{llll}} 
+        \hline
+        \textbf{Algorithm} & & Game Score & Human-Norm.\\
+        \hline
+        QVMF & & $2184$ & $0.285$\\
+        NAVMF & & $2109$ & $0.273$\\ 
+        RLE & & $1626$ & $0.203$\\ 
+        PPO & & $1384$ & $0.168$\\
+    \end{tabular}
+    \caption{\textsc{Alien-V5}}
+    \label{tab:alien-score-vmf}
+  \end{subtable}
+  \label{tab:atari-results-vmf}
+\end{table}
+
+In addition, trajectories were the longest for NA-VMF and equally long with respect to RLE for QVMF, see figure \ref{fig:vmf-trajectory-length}. This implies that 
+in the Q-VMF case the agent was able to kill more aliens relative to the other algorithms. Therefore, both of our adaptive VMF implementations outperforms the other algorithms for 
+\textsc{Alien-V5}, pointing us to further investigate this approach for other \textsc{Atari} games and continuous action spaces. 
+
+Furthermore, we keep the same resampling frequency as in RLE, however, for adaptive VMF the loss terms, as explained, can naturally provide the agent with the feedback needed to resample z's in the appropriate moment, 
+which can be not fixed a priori since many decisions change on the state context. 
 
 \section{Discussion}
 \textcolor{red}{Discuss claims}
