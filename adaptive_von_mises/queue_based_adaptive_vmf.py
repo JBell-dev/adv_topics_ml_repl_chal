@@ -1,5 +1,5 @@
 # This file contains the implementation of RLE with the queue-based adaptive Von Mises latent vector distribution
-
+#© 2024 Jonatan Bella and Jonas Knupp. All rights reserved.
 import argparse
 import random
 import time
