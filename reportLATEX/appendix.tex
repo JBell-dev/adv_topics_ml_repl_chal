@@ -163,50 +163,22 @@ Since we could not fit all figures in eight pages, we include them here.
 
 \begin{table}[h!]
   \centering
-  \caption{Hyperparameters that differ from \cite{rle-paper} for the \textsc{Atari} experiments.}
-  \begin{subtable}[h]{0.32\textwidth}
-      \begin{tabular}{{ll}} 
-        \hline
-        \textbf{Hyperparameter} & \textbf{Value} \\ \hline
-        $\textbf{z}$-Sampling Frequency & $500$\\
-        (switch\_steps) & \\
-        Norm-\textsc{RLE}-Features & True\\
-        Target-KL & None\\
-        &\\
-    \end{tabular}
-    \caption{Modified \textsc{RLE} parameters.\\\textcolor{white}{.}\\\textcolor{white}{.}}
-    \label{tab:atari-rle-hyperparams}
-  \end{subtable}
-  \hfill
-  \begin{subtable}[h]{0.32\textwidth}
-      \begin{tabular}{{ll}} 
-        \hline
-        \textbf{Hyperparameter} & \textbf{Value} \\ \hline
-        Anneal Learning Rate & False\\ 
-        Target KL Divergence & None\\
-        Sticky Action & True\\
-        Reward Normalization & True\\
-        Adam Epsilon & $10^{-5}$\\
-    \end{tabular}
-    \caption{\textsc{PPO} parameters used in the code but not mentioned in the paper. The same holds for \textsc{NoisyNet}.}
-    \label{tab:atari-ppo-hyperparams}
-  \end{subtable}
-  \hfill
-  \begin{subtable}[h]{0.32\textwidth}
-      \begin{tabular}{{ll}} 
-        \hline
-        \textbf{Hyperparameter} & \textbf{Value} \\ \hline
-        Target KL Divergence & None\\
-        - Rest as in \textsc{PPO} - & \\
-        &\\
-        &\\
-        &\\
-    \end{tabular}
-    \caption{\textsc{RND} parameters used in the code but not mentioned in the paper.\\\textcolor{white}{.}}
-    \label{tab:atari-rnd-hyperparams}
-  \end{subtable}
+  \caption{Hyperparameters not stated by \cite{rle-paper} for the \textsc{Atari} experiments.}
+  \begin{tabular}{{ll}} 
+  \hline
+  \textbf{Hyperparameter} & \textbf{Value} \\ \hline
+  $\textbf{z}$-Sampling Frequency & $500$\\
+  (switch\_steps) & \\
+  Norm-\textsc{RLE}-Features & True\\
+  Target-KL & None\\
+  Anneal Learning Rate & False\\ 
+  Target KL Divergence & None\\
+  Sticky Action & True\\
+  Reward Normalization & True\\
+  \end{tabular}
   \label{tab:atari-hyperparams}
 \end{table}
+
 
 \noindent For the \textsc{FourRoom} experiments the hyperparameters stated in \cite{rle-paper} were used. However, \cite{rle-paper} did not provide values for all available hyperparameters. For the missing hyperparameters we used the values in table \ref{tab:gridworld-missing-hyperparameters}, that seemed reasonable to us although we did not spend a lot of time finetuning them.
 
@@ -538,24 +510,26 @@ However, there is a beautiful property of Bessel functions that allow to write t
   \label{fig:neural-adaptive-vmf}
 \end{figure}
 
-\begin{figure}[H]
+\begin{table}[h!]
   \centering
-  \begin{subfigure}[b]{0.49\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{figures/plot_Alien_VMF Human-Normalized Game Score.pdf}
-    \caption{Game Score.}
-    \label{fig:vmf-game-score}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.49\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{figures/plot_Alien_VMF Trajectory Length.pdf}
-    \caption{Trajectory Length.}
-    \label{fig:vmf-trajectory-length}
-  \end{subfigure}
-  \label{fig:vmf-variant}
-  \caption{The \textsc{Alien} game variant with the VMF algorithms.}
-\end{figure}
+  \caption{Results of the \textsc{Atari} experiments with Adaptive VMF}
+  \begin{subtable}[h]{0.48\textwidth}
+      \centering
+      \begin{tabular}{{llll}} 
+        \hline
+        \textbf{Algorithm} & & Game Score & Human-Norm.\\
+        \hline
+        QVMF & & $2184$ & $0.285$\\
+        NAVMF & & $2109$ & $0.273$\\ 
+        \textsc{RLE} & & $1626$ & $0.203$\\ 
+        \textsc{PPO} & & $1384$ & $0.168$
+    \end{tabular}
+    \caption{\textsc{Alien-V5}}
+    \label{tab:alien-score-vmf}
+  \end{subtable}
+  \label{tab:atari-results-vmf}
+  \vspace{-18pt}
+\end{table}
 
 \begin{figure}[H]
   \centering

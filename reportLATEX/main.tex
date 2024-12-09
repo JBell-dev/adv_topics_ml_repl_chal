@@ -264,9 +264,9 @@ After running each game for a total of $40$ million time steps, we have obtained
   \vspace{-12pt}
 \end{table}
 
-\noindent For the \textsc{Atari} game, as can be seen in table \ref{tab:alien-score}, the algorithm perform in a similar manner to the authors' result. Only \textsc{NoisyNet} performs much worse in our run, obtaining a score of $648$, while the authors report a score of approximately $1113$. However, regarding claim $(1)$ we can confirm that \textsc{RLE} obtains the highest score of them all, which is evident from the plot of human-normalized scores in figure \ref{fig:alien-score}. Additionally, we can compare the depth of exploration done by these algorithms in figure \ref{fig:alien-entropy} by looking at the entropy distribution. Here, it is evident that \textsc{RLE} explores the largest part of the state space in comparison to the other algorithms. Using entropy as a measure of diverse behavior, we can moreover confirm as well claim $(2)$ for this game.
+\noindent For the \textsc{Atari} game, as can be seen in table \ref{tab:alien-score}, the algorithm perform similarly to the authors' result. Only \textsc{NoisyNet} performs much worse in our run, obtaining a score of $648$, while the authors report a score of approximately $1113$. However, regarding claim $(1)$ we can confirm that \textsc{RLE} obtains the highest score of them all, which is evident from the plot of human-normalized scores in figure \ref{fig:alien-score}. As can be seen in figure \ref{fig:alien-entropy}, there is a correlation between the game score and the entropy bonus. As noted by \cite{ppo-description-paper}, the entropy bonus is added to the PPO loss to enhance the agent's exploratory behavior. One could take the fact that \textsc{RLE} has the highest entropy bonus as a hint that it shows the best explorative behavior.
 
-\noindent In the case of the \textsc{StarGunner} game, as becomes apparent in table \ref{tab:stargunner-score}, the \textsc{RLE} algorithm does not yield the best game score but \textsc{PPO} does. This result differs strongly from the findings of the authors. In more detail, we find that \textsc{RLE} obtains a game score of around $42481$ while the authors report $64011$, and in addition their implementation of \textsc{NoisyNet} performs much better at $42645$ while our agent only got $27530$ in the end. Thus, in this case we have to object claim $(1)$, which is shown in more detail in figure \ref{fig:stargunner-score}. On the contrary, we can confirm claim $(2)$ again as shown in figure \ref{fig:stargunner-entropy} since \textsc{RLE} does exhibit the most diverse behavior out of all four algorithms. Perhaps this hints at instabilities in the algorithmic behavior of the agent which are depending on e.g. the seed with which the run was initialized.
+\noindent In the case of the \textsc{StarGunner} game, as becomes apparent in table \ref{tab:stargunner-score}, the \textsc{RLE} algorithm does not yield the best game score but \textsc{PPO} does. This result differs strongly from the findings of the authors. In more detail, we find that \textsc{RLE} obtains a game score of around $42481$ while the authors report $64011$, and in addition their implementation of \textsc{NoisyNet} performs much better at $42645$ while our agent only got $27530$ in the end. Thus, in this case we have to object claim $(1)$, which is shown in more detail in figure \ref{fig:stargunner-score}. As can be seen in figure \ref{fig:stargunner-entropy}, \textsc{RLE} has the largest entropy bonus. This indicates that \textsc{RLE} samples actions with the greatest variety, potentially reflecting diverse behavior.
 
 \subsubsection{IsaacLab}
 
@@ -281,28 +281,24 @@ One interesting observation that we made during our experiments is that in \text
 \noindent Furthermore, as mentioned in the \hyperlink{hyperparameter-subsection}{hyperparameter overview}, we increased \textsc{RLE}'s $\textbf{z}$-sampling frequency from every $1280$ time steps (authors) to every $500$, but we did not find materially different results. Another observation we made is that for some reason in the \textsc{RLE} implementation of \textsc{Alien}, the results differ drastically between using a GPU and a CPU/TPU for the computations, but the underlying cause of this is beyond our understanding.
 
 \subsubsection{Adaptive von Mises-Fisher}
-The observed results from the adaptive VMF are promising (see figure \ref{fig:vmf-game-score}), with the comparable scores visible in table \ref{tab:atari-results-vmf}. In addition, trajectories were the longest for NA-VMF and equally long with respect to \textsc{RLE} for QVMF, see figure \ref{fig:vmf-trajectory-length}. This implies that in the Q-VMF case the agent was able to kill more aliens relative to the other algorithms. Therefore, both of our adaptive VMF implementations outperforms the other algorithms for \textsc{Alien-V5}, pointing us to further investigate this approach for other \textsc{Atari} games and continuous action spaces.  
+The observed results from the adaptive VMF are promising (see figure \ref{fig:vmf-game-score} and table \ref{tab:atari-results-vmf}), with the comparable scores visible in table \ref{tab:atari-results-vmf}. In addition, trajectories were the longest for NA-VMF and equally long with respect to \textsc{RLE} for QVMF, see figure \ref{fig:vmf-trajectory-length}. This implies that in the Q-VMF case the agent was able to kill more aliens relative to the other algorithms. Therefore, both of our adaptive VMF implementations outperforms the other algorithms for \textsc{Alien-V5}, pointing us to further investigate this approach for other \textsc{Atari} games and continuous action spaces.  
 
-\begin{table}[h!]
+\begin{figure}[h]
   \centering
-  \caption{Results of the \textsc{Atari} experiments with Adaptive VMF}
-  \begin{subtable}[h]{0.48\textwidth}
-      \centering
-      \begin{tabular}{{llll}} 
-        \hline
-        \textbf{Algorithm} & & Game Score & Human-Norm.\\
-        \hline
-        QVMF & & $2184$ & $0.285$\\
-        NAVMF & & $2109$ & $0.273$\\ 
-        \textsc{RLE} & & $1626$ & $0.203$\\ 
-        \textsc{PPO} & & $1384$ & $0.168$
-    \end{tabular}
-    \caption{\textsc{Alien-V5}}
-    \label{tab:alien-score-vmf}
-  \end{subtable}
-  \label{tab:atari-results-vmf}
-  \vspace{-18pt}
-\end{table}
+  \begin{subfigure}[b]{0.35\textwidth}
+    \includegraphics[width=\textwidth]{figures/plot_Alien_VMF Human-Normalized Game Score.pdf}
+    \caption{Game Score.}
+    \label{fig:vmf-game-score}
+  \end{subfigure}
+  \hspace{0.1\textwidth}
+  \begin{subfigure}[b]{0.35\textwidth}
+    \includegraphics[width=\textwidth]{figures/plot_Alien_VMF Trajectory Length.pdf}
+    \caption{Trajectory Length.}
+    \label{fig:vmf-trajectory-length}
+  \end{subfigure}
+  \label{fig:vmf-variant}
+  \caption{The \textsc{Alien} game variant with the VMF algorithms.}
+\end{figure}
 
 %\vspace{-12pt}
 Furthermore, we keep the same resampling frequency as in \textsc{RLE}, however, for adaptive VMF the loss terms, as explained, can naturally provide the agent with the feedback needed to resample z's in the appropriate moment, 
