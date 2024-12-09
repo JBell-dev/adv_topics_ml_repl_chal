@@ -147,7 +147,7 @@ Since we could not fit all figures in eight pages, we include them here.
 \clearpage
 \hypertarget{untested-claims}{\section{Untested Claims}}
 
-\noindent The authors made the following claims that, due to time constraints of this project, we were not able to test:
+\noindent The authors made the following claims that. Due to time constraints of this project, we were not able to test:
 
 \begin{enumerate}
   \item For the more challenging discrete-action continuous-states\footnote{While the input to the action sampler is a discrete $84\times84\times4$ tensor representing the pixels it perceives, in practice \textsc{Atari} games are considered to be continuous-state environments due to the high-dimensional state space and visual complexity of each frame.} \textsc{Atari} environment, the authors claim that, in the majority of games, \textsc{RLE} achieves a higher IQM of the human-normalized score with a probability of $67\%$, $72\%$ and $71\%$, compared to \textsc{PPO}, \textsc{NoisyNet} and \textsc{RND}, respectively.\footnote{The authors mention that for the \textsc{Montezuma's Revenge} game \textsc{RLE} underperforms likely due to \textsc{RLE} not factoring in bonus-based exploration.}
