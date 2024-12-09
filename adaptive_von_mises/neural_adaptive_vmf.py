@@ -531,17 +531,15 @@ class RLEModel(nn.Module):
         while found < n:
             m = min(n - found, int((n - found) * 1.5))
             
-            # Ensure valid parameters for Beta distribution
             alpha = (d-1)/2
             if alpha <= 0:
-                alpha = 1.0  # Minimum valid value
+                alpha = 1.0  
                 
             # Sample from Beta distribution
             beta_dist = torch.distributions.Beta(alpha, alpha)
             z = beta_dist.sample((m,)).to(device)
             
             t = (1 - (1 + b) * z) / (1 - (1 - b) * z)
-            
             # Acceptance test
             test = kappa * t + (d - 1) * torch.log(1 - x0 * t) - c
             accept = test >= -torch.distributions.Exponential(1.0).sample((m,)).to(device)
@@ -658,12 +656,11 @@ class RLEModel(nn.Module):
         with torch.no_grad():
             self.return_ema.update(aligned_returns.cpu().numpy())
 
-        # Compute normalized returns while maintaining gradient flow
+        # normalized returns 
         returns_mean = torch.tensor(self.return_ema.mean, device=self.device)
-        returns_std = torch.tensor(np.sqrt(self.return_ema.var), device=self.device)  # Changed from .std to sqrt(.var)
+        returns_std = torch.tensor(np.sqrt(self.return_ema.var), device=self.device) 
         normalized_returns = (aligned_returns - returns_mean) / (returns_std + 1e-8)
 
-        # And similarly for the kappa weight calculation:
         with torch.no_grad():
             return_uncertainty = np.sqrt(self.return_ema.var) / (self.return_ema.mean + 1e-8)
             kappa_weight = 1.0 / (1.0 + return_uncertainty + 1e-8)
@@ -671,11 +668,8 @@ class RLEModel(nn.Module):
         # Convert to range [0,1] using sigmoid, maintaining gradients
         scaled_returns = torch.sigmoid(normalized_returns)
         
-        # Target kappa with gradient flow
+        # Target kappa 
         target_kappa = self.min_kappa + (self.max_kappa - self.min_kappa) * scaled_returns
-
-        # Add temporal smoothing to target kappa #WE CAN CONSIDER AFTER ADD A CONSISTENCY TERM BASED ON THE KL DIV
-        #smoothed_target = F.avg_pool1d(target_kappa.unsqueeze(0), kernel_size=3, padding=1, stride=1).squeeze(0)
 
         # we get z for each timestep using corresponding parameters
         z = self.random_VMF(mu_causes, kappa_causes)
@@ -794,7 +788,6 @@ class RLEModel(nn.Module):
         """Compute the entropy of the von Mises-Fisher (vMF) distribution."""
         dim = mu.shape[-1]
         
-        # Ensure kappa is a tensor and requires gradient
         if not isinstance(kappa, torch.Tensor):
             kappa = torch.tensor(kappa, device=self.device, requires_grad=True)
         elif not kappa.requires_grad:
@@ -802,7 +795,6 @@ class RLEModel(nn.Module):
         else:
             kappa = kappa.to(self.device)
         
-        # Clamp kappa to prevent numerical issues
         kappa = torch.clamp(kappa, min=self.min_kappa, max=self.max_kappa)
         
         order = dim / 2.0 - 1  # v = p/2 - 1
@@ -829,10 +821,9 @@ class RLEModel(nn.Module):
             
         returns = np.array(list(self.returns_history))
         
-        # Compute rolling mean and std
         rolling_mean = np.convolve(returns, np.ones(10)/10, mode='valid')
         
-        # If recent means are too similar, we're stagnating
+        # if recent means are too similar, we're stagnating
         recent_variation = np.std(rolling_mean[-20:])
         baseline_variation = np.std(returns)
         
@@ -844,19 +835,17 @@ class RLEModel(nn.Module):
     def compute_vmf_log_kl(self, mu0, kappa0, mu1, kappa1):
         """Compute KL divergence between two VMF distributions using log space"""
         try:
-            # Ensure all inputs are on correct device and have correct shape
             kappa0 = torch.as_tensor(kappa0, device=self.device)
             kappa1 = torch.as_tensor(kappa1, device=self.device)
             
-            # Clamp kappas
-            kappa0 = torch.clamp(kappa0, min=0, max=30)
-            kappa1 = torch.clamp(kappa1, min=0, max=30)
+            kappa0 = torch.clamp(kappa0, min=0, max=self.max_kappa)
+            kappa1 = torch.clamp(kappa1, min=0, max=self.min_kappa)
             
             # Get dimension from feature size
             dim = mu0.shape[-1]
             order = dim/2.0
             
-            # Compute log normalization constants
+            # log normalization constants
             log_cp0 = (
                 (order - 1) * torch.log(kappa0) 
                 - (dim/2.0) * torch.log(torch.tensor(2.0 * np.pi, device=self.device))
@@ -868,14 +857,14 @@ class RLEModel(nn.Module):
                 - self.compute_log_modified_bessel(order - 1, kappa1)
             )
             
-            # Compute log of mean resultant length
+            # log of mean resultant length
             log_bessel_v = self.compute_log_modified_bessel(order, kappa0)
             log_bessel_v_minus_1 = self.compute_log_modified_bessel(order-1, kappa0)
             log_ap_kappa0 = log_bessel_v - log_bessel_v_minus_1
             ap_kappa0 = torch.exp(log_ap_kappa0)
             
-            # Compute cosine similarity with numerical stability
-            cos_theta = torch.sum(mu0 * mu1, dim=-1)  # Changed to handle batched inputs
+            # cosine similarity with numerical stability
+            cos_theta = torch.sum(mu0 * mu1, dim=-1)  
             cos_theta = torch.clamp(cos_theta, -1 + 0.000001, 1 - 0.000001)
             
             # KL divergence
@@ -1145,10 +1134,9 @@ if __name__ == "__main__":
         prev_rewards[0] = rle_rewards[-1] * args.int_coef  # last step of prev rollout
         it_start_time = time.time()
 
-        # Store current obs for RLE
+        # current obs for RLE
         rle_network.current_obs = next_obs
 
-        # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (update - 1.0) / num_updates
             lrnow = frac * args.learning_rate
@@ -1163,9 +1151,7 @@ if __name__ == "__main__":
             rle_dones[step] = rle_network.switch_goals_mask  # rle_done is True if the goal is switched in the previous step
             goals[step] = rle_network.goals
 
-            # Compute the obs before stepping
             rle_obs = next_obs.clone().float()
-            # Compute mean and std over all the envs of norm of rle_obs for logging
             rle_obs_norm = rle_obs.pow(2).sum(dim=(1, 2, 3)).sqrt()
 
             # ALGO LOGIC: action logic
@@ -1184,7 +1170,6 @@ if __name__ == "__main__":
             next_obs, reward, done, info = envs.step(action.cpu().numpy())
             rewards[step] = torch.tensor(reward).to(device).view(-1).clone()
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
-            #next_obss[step] = next_obs
 
             #  experience to trajectories
             agent_features = agent.get_features(next_obs)
@@ -1237,10 +1222,9 @@ if __name__ == "__main__":
                         'hidden': rle_network.init_hidden()
                     }
 
-                    # Reset episode-specific tracking
                     env_episode_returns[idx] = 0
                     
-                    # Log episode info
+                    #  episode info
                     if args.track:
                         wandb.log({
                             "training/episode_return": episode_return,
@@ -1249,8 +1233,6 @@ if __name__ == "__main__":
                             "training/running_length_mean": np.mean(list(avg_ep_lens))
                         }, step=global_step)
 
-                    
-
             # Compute intrinsic rewards for current states
             rle_reward = rle_network.compute_intrinsic_reward(
                 agent.get_features(next_obs),
@@ -1258,7 +1240,7 @@ if __name__ == "__main__":
             )
             rle_rewards[step] = rle_reward.clone()
 
-            # Update goals if needed
+            # Update goals (if required)
             switch_mask = rle_network.step(
                 next_done=next_done,
                 next_ep_done=info["terminated"] | info["TimeLimit.truncated"],
