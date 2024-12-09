@@ -54,14 +54,14 @@ Since we could not fit all figures in eight pages, we include them here.
   \begin{subfigure}[b]{0.45\textwidth}
     \centering
     \includegraphics[width=\textwidth]{figures/gridworld_heatmaps_no_goal_distributions.pdf}
-    \caption{For each \textsc{RLE} variant with different latent vector distribution, the run with the highest entropy over the state visitation counts was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the \textsc{RLE} variants with different latent vector distribution after training for $2.5$M timesteps in the reward-free environment. The \textsc{RLE} variants where the latent vector distribution is a standard normal and the Von Mises distribution achieve the best state visitation coverage.}
+    \caption{For each \textsc{RLE} variant with different latent vector distribution, the run with the highest entropy over the state visitation counts was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the \textsc{RLE} variants with different latent vector distribution after training for $2.5$M timesteps in the reward-free environment. The \textsc{RLE} variants where the latent vector distribution is a standard normal and the von Mises distribution achieve the best state visitation coverage.}
     \label{fig:gridworld-heatmap-nogoal-distributions}
   \end{subfigure}
   \hfill
   \begin{subfigure}[b]{0.45\textwidth}
     \centering
     \includegraphics[width=\textwidth]{figures/gridworld_heatmaps_goal_distributions.pdf}
-    \caption{For each \textsc{RLE} variant with different latent vector distribution, the run with the highest game score was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the \textsc{RLE} variants with different latent vector distribution after training for $2.5$M timesteps in the environment with a goal. The start location is in the top right cell and the goal location in the bottom left cell. All \textsc{RLE} variants reach the goal but the standard normal and Von Mises variants also explore most of the state space.}
+    \caption{For each \textsc{RLE} variant with different latent vector distribution, the run with the highest game score was selected to generate the heatmap. The heatmap illustrates the state visitation counts of all the \textsc{RLE} variants with different latent vector distribution after training for $2.5$M timesteps in the environment with a goal. The start location is in the top right cell and the goal location in the bottom left cell. All \textsc{RLE} variants reach the goal but the standard normal and von Mises variants also explore most of the state space.}
     \label{fig:gridworld-heatmap-goal-distributions}
   \end{subfigure}
   \caption{\textsc{FourRoom} state visitation heatmaps.}
@@ -137,6 +137,13 @@ Since we could not fit all figures in eight pages, we include them here.
   \caption{The \textsc{StarGunner} game results.}
 \end{figure}
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/plot_Cartpole_Extrinsic Return.pdf}
+  \caption{\textsc{CartPole} Extrinsic Returns.}
+  \label{fig:cartpole-return}
+\end{figure}
+
 \clearpage
 \hypertarget{untested-claims}{\section{Untested Claims}}
 
@@ -202,7 +209,7 @@ For the IsaacLab experiments, we assume that the not specified hyperparameters u
 comprise the following values:
 \begin{table}[ht]
 \centering
-\caption{Hyperparameters not stated by \textcolor{red}{\cite{rle-paper} (I'm assuming you wanted to reference them here)} for \textsc{IsaacLab} experiments.}
+\caption{Hyperparameters not stated by \cite{rle-paper} for the \textsc{IsaacLab} experiments.}
 \begin{tabular}{{ll}} 
 \hline
 \textbf{Hyperparameter} & \textbf{Value}\\\hline
@@ -529,13 +536,6 @@ However, there is a beautiful property of Bessel functions that allow to write t
   \label{tab:atari-results-vmf}
   \vspace{-18pt}
 \end{table}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\textwidth]{figures/plot_Cartpole_Extrinsic Return.pdf}
-  \caption{\textsc{CartPole} Extrinsic Returns.}
-  \label{fig:cartpole-return}
-\end{figure}
 
 \hypertarget{appendix-difficult}{\section{Difficulties}}
 
