@@ -1,1 +1,0 @@
-These are the code files for ATARI games.

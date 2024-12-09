@@ -8,5 +8,5 @@ For the FourRoom and Atari experiments, we heavily relied on [Weights and Biases
 The codebase is structured in the following directories:
 * **four_room_grid_world**: Contains the Gymnasium FourRoom environment, the adopted PPO, NoisyNet, RND, and RLE algorithms for the FourRoom environment, and the code to run the experiments described in our report. In particular, we added visualization capabilities to the algorithms.
 * **ATARI games**: Contains the code for the PPO, NoisyNet, RND, and RLE algorithms for the Atari environment that was copied from the Mahankali et al.
-* **Isaac Gym**: @Jonathan
-- **adaptive_von_mises**: Implements both queue-based and neural-based adaptive Von Mises Fisher algorithms for the Atari environment.
+* **Isaac Gym**: Contains the code to evaluate RLE in the CartPole environment of IsaacLab. 
+- **adaptive_von_mises**: Implements both queue-based and neural-based adaptive von Mises-Fisher algorithms for the Atari environment.

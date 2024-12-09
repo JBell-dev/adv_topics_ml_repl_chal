@@ -164,14 +164,15 @@ class FourRoomGridWorld(gym.Env):
         )
 
         # Draw the target cell in green
-        pygame.draw.rect(
-            canvas,
-            (0, 255, 0),  # Green for target
-            pygame.Rect(
-                pix_square_size * self._target_location,
-                (pix_square_size, pix_square_size),
-            ),
-        )
+        if not self._is_reward_free:
+            pygame.draw.rect(
+                canvas,
+                (0, 255, 0),  # Green for target
+                pygame.Rect(
+                    pix_square_size * self._target_location,
+                    (pix_square_size, pix_square_size),
+                ),
+            )
 
         # Draw the agent
         pygame.draw.circle(
