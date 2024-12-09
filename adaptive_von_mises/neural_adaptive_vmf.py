@@ -1,8 +1,5 @@
-# This file implements the PPO algorithm with RLE as the exploration method
-# The RLE intrinsic reward is based on features from the value function
-# The policy network is a CNN
-
-
+## This file contains the implementation of RLE with the neural adaptive Von Mises latent vector distribution
+#© 2024 Jonatan Bella. All rights reserved.
 
 import argparse
 import os
