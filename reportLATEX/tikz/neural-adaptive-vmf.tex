@@ -36,7 +36,7 @@
 \node[op] (vmf) at (8, 0) {VMF Sampling};
 \node[tensor, anchor=west] (z) at (11, 0) {$\textbf{z} \in \mathbb{R}^{feature\_size}$};
 
-% Reward network (moved slightly higher)
+% Reward network 
 \node[op] (reward_net) at (13, -2.0) {Reward Network};
 \node[tensor, anchor=west] (reward) at (16, -2.0) {Intrinsic Reward $r \in \mathbb{R}$};
 
@@ -53,7 +53,7 @@
 \draw[arrow] (vmf) -- (z);
 \draw[arrow] (z) -- (reward_net);
 % Modified path for hidden to reward_net to go under kappa_net
-\draw[arrow] (hidden) -- ++(0,-3.2) -- ++(14,0) -- (reward_net);
+\draw[arrow] (state) -- ++(0,-3.2) -- ++(14,0) -- (reward_net);
 \draw[arrow] (reward_net) -- (reward);
 
 \end{tikzpicture}
