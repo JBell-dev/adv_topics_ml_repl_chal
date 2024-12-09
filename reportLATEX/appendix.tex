@@ -224,7 +224,7 @@ There are two special mentions among these parameters. The number of parallel en
 The timestep determination was done by observing a comparable figure with the authors and when the algorithm show a stability around a return. 
 
 \clearpage
-\section{Random Latent Exploration}
+\hypertarget{link-rle}{\section{Random Latent Exploration}}
 
 \noindent The architecture of our \textsc{RLE} implementation can be found in figure \ref{fig:rle-architecture}.
 
@@ -238,7 +238,6 @@ The timestep determination was done by observing a comparable figure with the au
 
 \noindent For the \textsc{RLE} algorithm, the detailed pseudocode according to \cite{rle-paper} is as follows:
 
-\hypertarget{algo-rle}{
 \begin{table}[h!]
   \centering
   \begin{tabular}{rlllll}
@@ -272,10 +271,10 @@ The timestep determination was done by observing a comparable figure with the au
     21: & \multicolumn{5}{l}{\textbf{(\textsuperscript{1}) until convergence}}\\
     \hline\hline
   \end{tabular}
-\end{table}}
+\end{table}
 
 \clearpage
-\hypertarget{algo-ppo}{\section{Proximal Policy Optimization}}
+\hypertarget{link-ppo}{\section{Proximal Policy Optimization}}
 
 \noindent The algorithm constituting the foundation of \textsc{RLE} is Proximal Policy Iteration (\textsc{PPO}), described in \cite{ppo-paper}, which can itself be run to solve RL problems. It is an on-line policy gradient method where after running the policy $\boldsymbol{\pi}_{\theta_{\text{old}}}$ in parallel with $N$ actors for $T << E$ timesteps, where $E$ is the length of an episode, we compute the advantage estimator as proposed by \cite{generalized-advantage-estimation-paper} for each time index $t \in [0, T]$:
 
@@ -335,7 +334,7 @@ The timestep determination was done by observing a comparable figure with the au
 \end{table}
 
 \clearpage
-\hypertarget{algo-noisynet}{\section{NoisyNet}}
+\hypertarget{link-noisynet}{\section{NoisyNet}}
 
 \noindent The central idea in a \textsc{NoisyNet} architecture brought forward by \cite{noisynet-paper} is to introduce random noise into the weights learned by the network ($p$ inputs, $q$ outputs), i.e. if we have a neural network whose output can be parametrized by a vector of weights $\boldsymbol{\theta}$ as $\textbf{y} = f_{\boldsymbol{\theta}}(\textbf{x}) = \textbf{w} \cdot \textbf{x} + \textbf{b}$, then we can learn the set of parameter vectors $\zeta = (\boldsymbol{\mu}, \boldsymbol{\Sigma})$ to compute $\textbf{w} = (\boldsymbol{\mu}^{w} + \boldsymbol{\sigma}^{w} \odot \boldsymbol{\varepsilon}^{w})$ and $\textbf{b} = (\boldsymbol{\mu}^{b} + \boldsymbol{\sigma}^{b} \odot \boldsymbol{\varepsilon}^{b})$ with the following dimensionalities: $\boldsymbol{\mu}^{w}$, $\boldsymbol{\sigma}^{w}$, $\boldsymbol{\varepsilon}^{w} \in \mathbb{R}^{q \times p}$ implying $\textbf{w} \in \mathbb{R}^{q \times p}$, and $\boldsymbol{\mu}^{b}$, $\boldsymbol{\sigma}^{b}$, $\boldsymbol{\varepsilon}^{b} \in \mathbb{R}^{q}$ resulting in $\textbf{b} \in \mathbb{R}^{q}$. Note that $\textbf{x} \in \mathbb{R}^{p}$, $\textbf{y} \in \mathbb{R}^{q}$ and $\odot$ denotes element-wise multiplication.
 
@@ -394,7 +393,7 @@ Moreover, for factorized networks, we initialize $\mu_{i,j} \sim \mathcal{U}\lef
 \end{table}
 
 \clearpage
-\hypertarget{algo-rnd}{\section{Random Network Distillation}}
+\hypertarget{link-rnd}{\section{Random Network Distillation}}
 
 In Random Network Distillation, as described by \cite{rnd-paper}, we compose the reward which the agent obtains as $r_{t} = e_{t} + i_{t}$ where $e_{t}$ represents a sparse extrinsic (environment's) reward and $i_{t}$ is the intrinsic reward for transitioning, i.e. the exploration bonus emanating from the transition at time step $t$. The latter measures the novelty of a state and should yield a higher value, the less frequently a state has been visited so far. In case of a finite state space we can use $i_{t} = \frac{1}{n_{t}}$ or $i_{t} = \frac{1}{\sqrt{s}}$ where $n_{t}(s)$ denotes the number of times state $s$ has been visited until time step $t$. However, there exist alternatives, e.g. we could use state density based approaches to calculate an exploration bonus, which are described in the paper mentioned above. Moreover, they specify that in the paper the intrinsic reward is the prediction error of a randomly generated problem $i_{t} = \|\hat{f}(x|\theta) - f(x)\|^{2}$ involving a target network $f: \mathcal{O} \rightarrow \mathbb{R}^{k}$ (fixed and randomly initialized, maps an observation $\mathcal{O}$ to an embedding $\mathbb{R}^{k}$) to sample the problem as well as a predictor network $\hat{f}: \mathcal{O} \rightarrow \mathbb{R}^{k}$ which was trained on the agent's data by gradient descent to optimize $i_{t}$ w.r.t. parameters $\theta_{\hat{f}}$.
 
