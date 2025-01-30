@@ -1,5 +1,5 @@
 # Advanced Topics in Machine Learning: Paper Replication Project
-Authors: Jonathan Bella, Alessia Berarducci, Tobias Erbacher, Jonas Knupp
+Authors: Jonatan Bella, Alessia Berarducci, Tobias Erbacher, Jonas Knupp
 
 This repository contains the codebase and LaTeX sources for the replication study of the paper "[Random Latent Exploration for Deep Reinforcement Learning](https://arxiv.org/pdf/2407.13755)". Mahankali et al. provide some code in their [GitHub](https://github.com/Improbable-AI/random-latent-exploration) repository. This study was conducted as part of the **Advanced Topics in Machine Learning** course at Università della Svizzera italiana in the autumn semester 2024.
 
